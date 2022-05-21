@@ -1,2 +1,2 @@
-# KnowledgeGraphViz
-Visualization tools for KnowledgeGraphDemo
+# KnowledgeGraphDemo
+Visualization demo for an exemplary knowledge graph.
