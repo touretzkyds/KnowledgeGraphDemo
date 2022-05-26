@@ -71,6 +71,7 @@
     function convert_to_cytoscape(data) {
         var nodes_lst = []
         var edges_lst = []
+        var node_names = []
         var rank_node_edges = {} //consists of objects that have ranks and nodes that are connected by an edge
         var edge_object = {}
         var root = 'noRoot'
@@ -78,6 +79,7 @@
 
         bindings = data.results.bindings;
         len = bindings.length;
+
 
         if (len > 0){
             root = bindings [0].root_name.value
@@ -91,13 +93,16 @@
             parent = bindings [i].parent_name.value;
             rank = bindings [i].rank_name.value;
 
-            //creating a node for a parent and a child
-            data_obj = {data: {id: child, name: child, color: '#ADD8E6', width: 150, height: 150}};
-            nodes_lst.push(data_obj);
-            data_obj = {data: {id: parent, name: parent, color: '#ADD8E6', width: 150, height: 150}};
-            nodes_lst.push(data_obj);
-            //creating a node object for rank
+            child_obj = {data: {id: child, name: child,
+               color: '#ADD8E6', width: 150, height: 150}};
+            nodes_lst.push(child_obj)
+
             
+            parent_obj = {data: {id: parent, name: parent, 
+              color: '#ADD8E6', width: 150, height: 150}};
+            nodes_lst.push(parent_obj);
+          
+
         }
         //adding edges between parent and child
         for (let i = 0; i < len; i++){
@@ -106,7 +111,8 @@
             rank = bindings [i].rank_name.value;
             
             //adding an edge between the parent and child
-            pc_edge = {data: {id: child.concat('-'.concat(parent)), source: child, target: parent, label:'subTaxonOf'}};
+            pc_edge = {data: {id: child.concat('-'.concat(parent)), 
+            source: child, target: parent, label:'subTaxonOf'}};
             edges_lst.push(pc_edge);
 
             edge_object[child] = parent //source is the key and target is the value
@@ -116,7 +122,9 @@
 
         edge_object[root] = 'root'
         rank_node_edges[root] = root_rank
-        return {nodes: nodes_lst, edges: edges_lst, rn_edges: rank_node_edges, pc_edges: edge_object, root_rank: root_rank, root: root};
+        return {nodes: nodes_lst, edges: edges_lst, 
+          rn_edges: rank_node_edges, pc_edges: edge_object, 
+          root_rank: root_rank, root: root};
     }
     //graphType variable is used to keep track of if the Full, Concise, or Moderate button was pressed
 
@@ -159,10 +167,12 @@
               keep_target = correct_ranks.includes(rn_edges[target_node])
 
               if (keep_source){  //if the source node is connected to a rank we want to display
-                  new_nodes.push({data: {id: source_node, name: source_node, color: '#ADD8E6', width: 150, height: 150}})
+                  new_nodes.push({data: {id: source_node, 
+                    name: source_node, color: '#ADD8E6', width: 150, height: 150}})
               }
               if (keep_target){  //if the target node is connected to a rank we want to display
-                  new_nodes.push({data: {id: target_node, name: target_node, color: '#ADD8E6', width: 150, height: 150}})
+                  new_nodes.push({data: {id: target_node, 
+                    name: target_node, color: '#ADD8E6', width: 150, height: 150}})
               }
 
 
@@ -181,7 +191,8 @@
                                         missing: "source",
                                         old_edge: curr_edge,       
                                     }
-                                    edges_missing[target_node] = new_obj //we know source_node is attached to a valid rank from else clause
+                                    edges_missing[target_node] = new_obj 
+                                    //we know source_node is attached to a valid rank from else clause
                                 }
                                   
                               }
@@ -203,15 +214,19 @@
         //at this point don't really need to add anymore nodes
         
         for (node in edges_missing){
-            curr_data = edges_missing[node]  //of the form {missing: "source/target", old_edge: {id: , source:, target: }}
+            curr_data = edges_missing[node]  
+            //of the form {missing: "source/target", old_edge: {id: , source:, target: }}
 
             //don't need to worry about curr_data.missing target 
             if (curr_data.missing == 'target'){
                 old_target = curr_data.old_edge.data.target
                 curr_source = curr_data.old_edge.data.source
                 //now we want to find a new target
-                new_target = find_new_target(old_target, rn_edges, pc_edges, correct_ranks)
-                new_edge = {data: {id: curr_source.concat('-'.concat(new_target)), source: curr_source, target: new_target, label:'subTaxonOf'}};
+                new_target = find_new_target(old_target, 
+                rn_edges, pc_edges, correct_ranks)
+
+                new_edge = {data: {id: curr_source.concat('-'.concat(new_target)), 
+                source: curr_source, target: new_target, label:'subTaxonOf'}};
                 new_edges.push(new_edge)
 
             }
@@ -230,14 +245,14 @@
     function query(endpoint, sparql, callback, graphType){
       var url = endpoint + "?query=" + encodeURIComponent(sparql)
       var res = d3.json(url).then(function(json){
-        callback(json, graphType, {given_data: 'null'})
+        callback(json, graphType, {given_data: 'null'}, "root")
       })
     }
 
 
     //givenData is an object {given_data: 'null'} if we're not going to be given anything, otherwise
     //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
-    function render(data, graphType, givenData) {
+    function render(data, graphType, givenData, given_taxon) {
 
         if (givenData.given_data != 'null'){ //this implies we are already given what convert_to_cytoscape would produce
             var converted_data = givenData.given_data
@@ -245,16 +260,22 @@
             var converted_data = convert_to_cytoscape(data);
         }
         root_rank = converted_data.root_rank
+        root = converted_data.root
+
 
         if (graphType == ('Concise')){
-            new_data = create_new(converted_data, [root_rank, "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species", "noRank"])
+            new_data = create_new(converted_data, [
+              root_rank, "Kingdom", "Phylum", "Class", 
+              "Order", "Family", "Genus", "Species", "noRank"])
             nodes_lst = new_data.nodes
             edge_lst = new_data.edges
         } else if (graphType == 'Moderate') {
             new_data = create_new(converted_data, 
-            [ "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species", "noRank", "Subkingdom", "Superfamily",
-             "Infraclass", "Suborder", "Parvorder", "Subfamily", "Superorder", "Infraphylum", "Subtribe", "Tribe", "Megaclass", "Subclass", "Superclass",
-             "Infraorder", "Subphylum", "Variety", "Superphylum", "Division", "Domain", "Subdivision", root_rank])
+            [ "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", 
+            "Species", "noRank", "Subkingdom", "Superfamily", "Infraclass", "Suborder", 
+            "Parvorder", "Subfamily", "Superorder", "Infraphylum", "Subtribe", "Tribe", 
+            "Megaclass", "Subclass", "Superclass","Infraorder", "Subphylum", "Variety", 
+            "Superphylum", "Division", "Domain", "Subdivision", root_rank])
             console.log(new_data)
             nodes_lst = new_data.nodes
             edge_lst = new_data.edges
@@ -374,16 +395,27 @@
         }
         //adding ranks to the graph along with edges
 
-      var eles = cy.add(add_eles);
+          var eles = cy.add(add_eles);
+          if (given_taxon == "root"){
+            var id_label = "[id = '".concat(root).concat("']")
+          } else {
+            var id_label = "[id = '".concat(given_taxon).concat("']")
+          }
+          cy.nodes(id_label).style('background-color', 'red');
 
     }
 
 
       //changes the buttons for the new input node 
-      function change_buttons(new_data, full_json){
-            document.getElementById("Full").onclick = function () {render(full_json, 'Full', {given_data: new_data})}
-            document.getElementById("Moderate").onclick = function () {render(full_json, 'Moderate', {given_data: new_data})}
-            document.getElementById("Concise").onclick = function () {render(full_json, 'Concise', {given_data: new_data})}
+      function change_buttons(new_data, full_json, rootVal){
+            document.getElementById("Full").onclick = 
+                  function () {render(full_json, 'Full', {given_data: new_data}, rootVal)}
+
+            document.getElementById("Moderate").onclick = 
+                  function () {render(full_json, 'Moderate', {given_data: new_data}, rootVal)}
+
+            document.getElementById("Concise").onclick = 
+                  function () {render(full_json, 'Concise', {given_data: new_data}, rootVal)}
 
       }
 
@@ -393,7 +425,7 @@
           
           var short_data = convert_to_cytoscape(short_json)
           var full_data = convert_to_cytoscape(full_json);
-
+          var old_pc_edges = short_data.pc_edges
           var pc_edges = full_data.pc_edges //grabs the source-target edges so that we can form new edges and add new nodes
           var root = full_data.root
           var old_nodes = short_data.nodes;
@@ -403,7 +435,8 @@
             //now we want to tell the user they have input something invalid
             var place = document.getElementById("hierarchy-entry");
             var error_message = document.createElement("p");
-            error_message.innerHTML = "Concept '".concat(rootVal).concat("' is not found. Please try again.");
+            error_message.innerHTML = "Concept '".concat(rootVal)
+            .concat("' is not found. Please try again.");
             error_message.id = "error_message"
             place.appendChild(error_message);
             error_message.style.color = 'red';
@@ -417,18 +450,27 @@
           while (curr_node != root){
             next_node = pc_edges[curr_node];
             //add this node and a new edge
-            var new_node = {data: {id: next_node, name: next_node, color: '#ADD8E6', width: 150, height: 150}}
+            var new_node = {data: {id: next_node, name: next_node, 
+              color: '#ADD8E6', width: 150, height: 150}}
             old_nodes.push(new_node);
-            var new_edge = {data: {id: curr_node.concat(next_node), source: curr_node, target: next_node, label: 'subTaxonOf'}}
-            old_edges.push(new_edge)
+            
+            //only add a new edge if it hasn't already been added
+            if (old_pc_edges[curr_node] == undefined){
+              var new_edge = {data: {id: curr_node.concat(next_node), 
+                source: curr_node, target: next_node, label: 'subTaxonOf'}}
+              old_edges.push(new_edge)
+            }
+
             curr_node = next_node;
           }
-          var new_data = {edges: old_edges, nodes: old_nodes, pc_edges: pc_edges, rn_edges: full_data.rn_edges, root_rank: full_data.root_rank}
+          var new_data = {edges: old_edges, nodes: old_nodes, 
+            pc_edges: pc_edges, rn_edges: full_data.rn_edges, 
+            root_rank: full_data.root_rank, root: full_data.root}
           //so we've updated our edges and nodes to include the ones above the root we queried, so 
           //now we want to display the graph.
 
-          change_buttons(new_data, full_json);
-          render(full_json, 'Concise', {given_data: new_data});
+          change_buttons(new_data, full_json, rootVal);
+          render(full_json, 'Concise', {given_data: new_data}, rootVal);
           document.getElementById("Concise").style.background='green';
           document.getElementById("Moderate").style.background='black';
           document.getElementById("Full").style.background='black';
@@ -439,18 +481,38 @@
     function change_to_root(){
           var prevquery = document.getElementById("sparql");
           prevquery.innerHTML = 
-                "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>"
-                .concat(" \n PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>")
-                .concat("\n PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n PREFIX qudt:  <http://qudt.org/schema/qudt/> \n ")
-                .concat("PREFIX unit:  <http://qudt.org/vocab/unit/> \n  PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n")
-                .concat("PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n WHERE \n {")
-                .concat( "\n BIND ('Biota'@en AS ?root_name). \n ?root kgo:taxonName ?root_name .")
-                .concat(" \n  ?root kgo:taxonRank [rdfs:label ?root_rank] . \n ?child kgo:subTaxonOf+ ?root . \n ?child kgo:subTaxonOf ?parent . ")
-                .concat("\n ?child kgo:taxonName ?child_name . \n ?child kgo:taxonRank ?rank . \n ?rank rdfs:label ?rank_name . \n ?parent kgo:taxonName ?parent_name . \n}")
 
-          document.getElementById("Full").onclick = function () {exec('Full')}
-          document.getElementById("Moderate").onclick = function () {exec('Moderate')}
-          document.getElementById("Concise").onclick = function () {exec('Concise')}
+          "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
+                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
+                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
+                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
+                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
+                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
+                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
+                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n \
+                WHERE \n \
+                {  \n \
+                  BIND ('Biota'@en AS ?root_name).  \n \
+                  ?root kgo:taxonName ?root_name .  \n \
+                  ?root kgo:taxonRank [rdfs:label ?root_rank] . \n \
+                  ?child kgo:subTaxonOf* ?root .  \n \
+                  ?child kgo:subTaxonOf ?parent .  \n \
+                  ?child kgo:taxonName ?child_name .  \n \
+                  ?child kgo:taxonRank ?rank .  \n \
+                  ?rank rdfs:label ?rank_name .  \n \
+                  ?parent kgo:taxonName ?parent_name . \n \
+                }"
+
+          document.getElementById("Full").onclick = 
+                function () {exec('Full')}
+
+          document.getElementById("Moderate").onclick = 
+                function () {exec('Moderate')}
+          document.getElementById("Concise").onclick = 
+                function () {exec('Concise')}
+
           exec('Concise')
           document.getElementById("Concise").style.background='green';
           document.getElementById("Moderate").style.background='black';
@@ -505,7 +567,8 @@
 
         var hierarchyVal = document.getElementById("hierarchySpecies").value;
         if (hierarchyVal.length >= 2){
-            hierarchyVal = hierarchyVal.charAt(0).toUpperCase() + (hierarchyVal.toLowerCase()).slice(1);
+            hierarchyVal = hierarchyVal.charAt(0).toUpperCase()
+             + (hierarchyVal.toLowerCase()).slice(1);
           }
         var prevquery = document.getElementById("sparql");
         var old_prevquery = prevquery.value;
@@ -514,22 +577,38 @@
         var endpoint2 = d3.select("#endpoint").property("value");
         var sparql2 = d3.select("#sparql").property("value");
         var url2 = endpoint2 + "?query=" + encodeURIComponent(sparql2); 
+        
 
         prevquery.innerHTML = 
-              "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>"
-              .concat(" \n PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>")
-              .concat("\n PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n PREFIX qudt:  <http://qudt.org/schema/qudt/> \n ")
-              .concat("PREFIX unit:  <http://qudt.org/vocab/unit/> \n  PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n")
-              .concat("PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n WHERE \n {")
-              .concat( "\n BIND (").concat("'").concat(hierarchyVal).concat("'").concat("@en AS ?root_name). \n ?root kgo:taxonName ?root_name .")
-              .concat(" \n  ?root kgo:taxonRank [rdfs:label ?root_rank] . \n ?child kgo:subTaxonOf+ ?root . \n ?child kgo:subTaxonOf ?parent . ")
-              .concat("\n ?child kgo:taxonName ?child_name . \n ?child kgo:taxonRank ?rank . \n ?rank rdfs:label ?rank_name . \n ?parent kgo:taxonName ?parent_name . \n}")
+               "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
+                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
+                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
+                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
+                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
+                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
+                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
+                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n \
+                WHERE \n \
+                {  \n \
+                  BIND ('".concat(hierarchyVal).concat("'@en AS ?root_name).  \n \
+                  ?root kgo:taxonName ?root_name .  \n \
+                  ?root kgo:taxonRank [rdfs:label ?root_rank] . \n \
+                  ?child kgo:subTaxonOf* ?root .  \n \
+                  ?child kgo:subTaxonOf ?parent .  \n \
+                  ?child kgo:taxonName ?child_name .  \n \
+                  ?child kgo:taxonRank ?rank .  \n \
+                  ?rank rdfs:label ?rank_name .  \n \
+                  ?parent kgo:taxonName ?parent_name . \n \
+                }")
 
 
           //so now preform the new query on the new input node
           var endpoint = d3.select("#endpoint").property("value");
           var sparql = d3.select("#sparql").property("value");
           var url = endpoint + "?query=" + encodeURIComponent(sparql); 
+ 
           var short_data;
           var full_data;
 
@@ -557,14 +636,14 @@
       <h1 class = 'title'>Knowledge Graph Query and Display</h1>
       <form class="form-inline">
         <div class="input-append">
-          <input id="endpoint" class="span5" value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
-
+          <input id="endpoint" class="span5" 
+          value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
+    
           <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
           <button id="Moderate" class="btn" type="button" onclick = "exec('Moderate')">Moderate</button>
           <button id="Concise" class="btn2" type="button" onclick = "exec('Concise')">Concise</button>
           <div id ="hierarchy-entry">
-            <input id="hierarchySpecies" class="input-species" placeholder="Enter Hierarchy Species">
-            <button class = "hierarchy-entry-button" type="button" onclick="gethierarchy()">Enter</button>
+            <input id="hierarchySpecies" class="input-species" placeholder="Enter Taxon Name">
           </div>
 
         </div>
@@ -587,7 +666,7 @@
           BIND ("Biota"@en AS ?root_name).
           ?root kgo:taxonName ?root_name .
           ?root kgo:taxonRank [rdfs:label ?root_rank] .
-          ?child kgo:subTaxonOf+ ?root .
+          ?child kgo:subTaxonOf* ?root .
           ?child kgo:subTaxonOf ?parent .
           ?child kgo:taxonName ?child_name .
           ?child kgo:taxonRank ?rank .
@@ -595,7 +674,6 @@
           ?parent kgo:taxonName ?parent_name .
         }
       </textarea>
-
 
     </div>
     <div id="cy"></div>
@@ -605,19 +683,41 @@
       let moderateButton = document.querySelector('#Moderate');
       let conciseButton = document.querySelector('#Concise');
 
-      fullButton.addEventListener('click', () => fullButton.style.backgroundColor = 'green')
-      fullButton.addEventListener('click', () => conciseButton.style.backgroundColor = '#000000')
-      fullButton.addEventListener('click', () => moderateButton.style.backgroundColor = '#000000')
+      fullButton.addEventListener('click', () => 
+      fullButton.style.backgroundColor = 'green')
+
+      fullButton.addEventListener('click', () => 
+      conciseButton.style.backgroundColor = '#000000')
+
+      fullButton.addEventListener('click', () => 
+      moderateButton.style.backgroundColor = '#000000')
 
 
-      moderateButton.addEventListener('click', () => moderateButton.style.backgroundColor = 'green')
-      moderateButton.addEventListener('click', () => fullButton.style.backgroundColor = '#000000')
-      moderateButton.addEventListener('click', () => conciseButton.style.backgroundColor = '#000000')
+      moderateButton.addEventListener('click', () => 
+      moderateButton.style.backgroundColor = 'green')
+
+      moderateButton.addEventListener('click', () => 
+      fullButton.style.backgroundColor = '#000000')
+
+      moderateButton.addEventListener('click', () => 
+      conciseButton.style.backgroundColor = '#000000')
 
 
-      conciseButton.addEventListener('click', () => conciseButton.style.backgroundColor = 'green')
-      conciseButton.addEventListener('click', () => fullButton.style.backgroundColor = '#000000')
-      conciseButton.addEventListener('click', () => moderateButton.style.backgroundColor = '#000000')
+      conciseButton.addEventListener('click', () => 
+      conciseButton.style.backgroundColor = 'green')
+
+      conciseButton.addEventListener('click', () => 
+      fullButton.style.backgroundColor = '#000000')
+
+      conciseButton.addEventListener('click', () => 
+      moderateButton.style.backgroundColor = '#000000')
+
+      var taxonSpecies = document.getElementById("hierarchySpecies");
+        taxonSpecies.addEventListener("keydown", function (e){
+          if (e.key == "Enter"){
+            gethierarchy();
+          }
+        });
 
     </script> 
 
