@@ -389,7 +389,7 @@
                       ?Q ?pred [ rdf:type kgo:Location ]. \n \
                       ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
 		      OPTIONAL { ?obj skos:prefLabel ?objLabel. } \n \
-		      OPTIONAL { ?pred rdfs:label ?predLabel. } \n \
+		      OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } \n \
               } ORDER BY ?pred ?pos ?pred2 \n \
           ")
           var endpoint = d3.select("#endpoint2").property("value")
@@ -828,7 +828,7 @@
       <form class="form-inline">
         <div class="input-append">
           <input id="endpoint" class="span5" 
-          value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
+          value="http://solid.boltz.cs.cmu.edu:3030/NoInference/sparql" type="text" style="display:none;">
     
           <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
           <button id="Moderate" class="btn" type="button" onclick = "exec('Moderate')">Moderate</button>
@@ -867,7 +867,7 @@
       </textarea>
 
       <input id="endpoint2" class="span6" 
-      value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
+      value="http://solid.boltz.cs.cmu.edu:3030/NoInference/sparql" type="text" style="display:none;">
       <textarea id="sparql2" class="spans10" style="display:none;">
                 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
                 PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
