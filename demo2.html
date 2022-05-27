@@ -414,7 +414,10 @@
       }
 
 
-      function get_properties(node_name, cy_graph){
+      function get_properties(node_name, cy_graph, moderate_ranks){
+        if (moderate_ranks.includes(node_name) || node_name == "Clade"){
+          return false;
+        }
         var prev_node_query = document.getElementById("sparql2");
           prev_node_query.innerHTML = 
               "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
@@ -507,7 +510,9 @@
             'border-width': 20,
             'border-color': '#FF007F',
             'border-style': 'solid',
-            'font-size': 75
+            'font-size': 75,
+            'font-family': 'Garamond',
+            'line-height': 1.15
 
           });
           var edge_id_label = "[id = '".concat(def.concat(node_name)).concat("']");
@@ -746,7 +751,7 @@
           cy.nodes(id_label).style('background-color', 'red');
 
           cy.nodes().on('select', function(evt){
-                get_properties(this.id(), cy);
+                get_properties(this._private.data.name, cy, moderate_ranks);
           })
           .on('unselect', function(evt){
                 return_to_normal(this.id(), cy, given_taxon, moderate_ranks);
