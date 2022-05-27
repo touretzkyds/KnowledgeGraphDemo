@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<html>
+  <head>
+    <script src="external/d3.v7.min.js"></script>
+    <script src="external/cytoscape.min.js"></script>
+
+    <script src="external/dagre.js"></script>
+    <script src="external/cytoscape-dagre.js"></script>
+
+    <style type="text/css">
+      #cy {
+        display: none;
+        height: 70vh;
+        width: 100%;
+        border-style: solid;
+      }
+
+      .title {
+        text-align: center;
+      }
+
+      .btn {
+        background-color: black;
+        color: white;
+        padding: 10px;
+        width: 100px;
+      }
+      
+
+      .btn2 {
+        background-color: green;
+        color: white;
+        padding: 10px;
+        width: 100px;
+      }
+
+      .input-species {
+        background-color: white;
+        color: black;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        margin-right: 5px; 
+        height: 20px;
+        width: 150px;
+      }
+
+      .hierarchy-entry-button {
+        background-color: white;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        width: 100px; 
+        height: 30px;
+      }
+      
+    </style>
+
+    <script> 
+
+      var my_result;
+      var bindings;
+      var len
+      var nodes;
+      var child;
+      var parent;
+      var data_obj;
+
+    /*convert_to_cytoscape will return an object
+    that stores the nodes, the edges, the positions of all
+    the nodes, and the ranks for each of the nodes*/
+    function convert_to_cytoscape(data) {
+        var nodes_lst = []
+        var edges_lst = []
+        var node_names = []
+        var rank_node_edges = {} //consists of objects that have ranks and nodes that are connected by an edge
+        var edge_object = {}
+        var root = 'noRoot'
+        var root_rank = "noRank"
+
+        bindings = data.results.bindings;
+        len = bindings.length;
+
+
+        if (len > 0){
+            root = bindings [0].root_name.value
+            root_rank = bindings [0].root_rank.value
+        }
+
+        //adding nodes
+        for (let i = 0; i < len; i++){
+            root = bindings [i].root_name.value;
+            child = bindings [i].child_name.value;
+            parent = bindings [i].parent_name.value;
+            rank = bindings [i].rank_name.value;
+
+            child_obj = {data: {id: child, name: child,
+               color: '#ADD8E6', width: 150, height: 150}};
+            nodes_lst.push(child_obj)
+
+            
+            parent_obj = {data: {id: parent, name: parent, 
+              color: '#ADD8E6', width: 150, height: 150}};
+            nodes_lst.push(parent_obj);
+          
+
+        }
+        //adding edges between parent and child
+        for (let i = 0; i < len; i++){
+            child = bindings [i].child_name.value;
+            parent = bindings [i].parent_name.value;
+            rank = bindings [i].rank_name.value;
+            
+            //adding an edge between the parent and child
+            pc_edge = {data: {id: child.concat('-'.concat(parent)), 
+            source: child, target: parent, label:'subTaxonOf'}};
+            edges_lst.push(pc_edge);
+
+            edge_object[child] = parent //source is the key and target is the value
+            rank_node_edges[child] = rank
+            
+        }
+
+        edge_object[root] = 'root'
+        rank_node_edges[root] = root_rank
+        return {nodes: nodes_lst, edges: edges_lst, 
+          rn_edges: rank_node_edges, pc_edges: edge_object, 
+          root_rank: root_rank, root: root};
+    }
+    //graphType variable is used to keep track of if the Full, Concise, or Moderate button was pressed
+
+    function find_new_target(old_target, rn_edges, pc_edges, correct_ranks){
+        //pc_edges is an object where the sources are keys and the values are the targets
+        var curr_source = old_target
+        var curr_target = pc_edges[curr_source]
+        var is_valid_rank = correct_ranks.includes(rn_edges[curr_target])
+        
+        while (!is_valid_rank) {
+           curr_source = curr_target //idea is to keep "climbing up" this tree
+           //assumption is that curr_source is never going to be undefined
+           curr_target = pc_edges[curr_source]
+           is_valid_rank = correct_ranks.includes(rn_edges[curr_target])
+        }
+        return curr_target
+    }
+    
+    /*so we're given the original nodes and edges and we want to output new nodes/edges
+    such that there are only nodes with ranks: 
+    [Kingdom, Phylum, Class, Order, Family, Genus, Species] and 
+    all missing edges are filled in, also will want to return the rn_edges */
+    function create_new(data, correct_ranks){
+        //data is of the form: {nodes: nodes_lst, edges: edges_lst, rn_edges: rank_node_edges}
+        var nodes = data.nodes
+        var edges = data.edges
+        var rn_edges = data.rn_edges
+        var pc_edges = data.pc_edges  //keys are sources and values are targets
+        var new_edges = []
+        var new_nodes = []
+        var edges_missing = {} //keeps track of the nodes that now no longer have edges because of the removed ranks
+
+        //iterating through all the edges and figuring out which ones are going to be removed 
+        for (let i = 0; i < edges.length; i++){
+              curr_edge = edges[i]  //of the form: {id: __, source: '', target: '', ...}
+              source_node = curr_edge.data.source
+              target_node = curr_edge.data.target
+
+              keep_source = correct_ranks.includes(rn_edges[source_node])
+              keep_target = correct_ranks.includes(rn_edges[target_node])
+
+              if (keep_source){  //if the source node is connected to a rank we want to display
+                  new_nodes.push({data: {id: source_node, 
+                    name: source_node, color: '#ADD8E6', width: 150, height: 150}})
+              }
+              if (keep_target){  //if the target node is connected to a rank we want to display
+                  new_nodes.push({data: {id: target_node, 
+                    name: target_node, color: '#ADD8E6', width: 150, height: 150}})
+              }
+
+
+              if (!keep_source && !keep_target){
+                  //this means both the target and the source node aren't going to be added
+                  var count = "pass"
+
+              } else if (!keep_source|| !keep_target)  {
+                  //adding missing: "target" regardless, b/c that's what we want to prioritize
+                  //and only adding missing: "source" if the em object doesn't already have something there
+                              if (!keep_source){
+                                //target_node is valid source_node is going to be removed
+                              
+                                if (edges_missing[target_node] == undefined){
+                                    new_obj = {
+                                        missing: "source",
+                                        old_edge: curr_edge,       
+                                    }
+                                    edges_missing[target_node] = new_obj 
+                                    //we know source_node is attached to a valid rank from else clause
+                                }
+                                  
+                              }
+
+                              if (!keep_target){
+                                  new_obj = {
+                                      missing: "target",                
+                                      old_edge: curr_edge               
+                                  }
+                                  edges_missing[source_node] = new_obj
+                              }
+
+              } else {
+                new_edges.push(curr_edge)
+              }
+
+         }
+         
+        //at this point don't really need to add anymore nodes
+        
+        for (node in edges_missing){
+            curr_data = edges_missing[node]  
+            //of the form {missing: "source/target", old_edge: {id: , source:, target: }}
+
+            //don't need to worry about curr_data.missing target 
+            if (curr_data.missing == 'target'){
+                old_target = curr_data.old_edge.data.target
+                curr_source = curr_data.old_edge.data.source
+                //now we want to find a new target
+                new_target = find_new_target(old_target, 
+                rn_edges, pc_edges, correct_ranks)
+
+                new_edge = {data: {id: curr_source.concat('-'.concat(new_target)), 
+                source: curr_source, target: new_target, label:'subTaxonOf'}};
+                new_edges.push(new_edge)
+
+            }
+        }
+        
+        return {nodes: new_nodes, edges: new_edges, em: edges_missing}
+
+
+    }
+      //when a specific node is clicked,i.e. node_name
+      //all other nodes and edges become transparent
+      function shade_other_nodes(node_name, cy_graph){
+          cy_graph.elements().nodes().style( { 'opacity' : '.2' });
+          cy_graph.elements().nodes().style( { 'text-opacity' : '0' });
+
+          var id_label = "[id = '".concat(node_name).concat("']");
+          cy_graph.nodes(id_label).style("background-color", "#FF69B4");
+          cy_graph.nodes(id_label).style("text-opacity", "1");
+          cy_graph.nodes(id_label).style("opacity", "1");
+          /*cy_graph.zoom({
+            position: 
+          })*/
+
+          cy_graph.elements().edges().style( { 'line-opacity' : '.2' });
+          cy_graph.elements().edges().style( { 'text-opacity' : '0' });
+      }
+
+      
+      //adds the nodes and edges that resemble the properties for the
+      //node with id node_name
+      function create_property_nodes(node_name, data, cy_graph, pos){
+            var x_pos = pos.x
+            var y_pos = pos.y
+            var added_els = []
+            console.log(data);
+            var bindings = data.results.bindings
+            var len = bindings.length
+            for (let x = 0; x < len; x ++){
+                var node_val = bindings[x].objLabel ? bindings[x].objLabel.value : bindings[x].obj.value
+                if (node_val != undefined && node_val != node_name){
+                    console.log("node_val", node_val);
+                    var new_property_node = 
+                          {
+                              group: 'nodes',
+                              data: {
+                                id: node_val,
+                                color: '#FFA500',
+                                name: node_val,
+                                opacity: 1,
+                                width: 300,
+                                height: 300
+                              },
+                               position: {x: x_pos, y: y_pos + 100}
+                          }
+		    var pred_val = bindings[x].predLabel ? bindings[x].predLabel.value : bindings[x].pred.value
+                    var new_edge = 
+                          {
+                            group: 'edges',
+                            data: 
+                                {
+                                    id: node_val.concat(node_name),
+                                    source: node_name, 
+                                    target: node_val,
+                                    label: pred_val
+                                }
+                          }
+                    added_els.push(new_property_node);
+                    added_els.push(new_edge);
+                }
+                
+            }
+            cy_graph.add(added_els)
+            console.log(cy_graph.elements('node[width = 300]'));
+            cy_graph.elements('node[width = 300]').makeLayout({
+              name: 'circle'
+            }).run();
+           // console.log(cy_graph.elements().nodes())
+
+        }
+
+      
+      function show_property_nodes(node_name, data, cy_graph){
+
+          var id_label = "[id = '".concat(node_name).concat("']");
+          //console.log(cy_graph.nodes(id_label))
+          var pos = cy_graph.nodes(id_label).position();
+
+
+          /*cy_graph.zoom({
+            level: .5,
+            position: pos
+          })*/
+
+          shade_other_nodes(node_name, cy_graph);
+          create_property_nodes(node_name, data, cy_graph, pos)
+
+      }
+
+
+
+      function return_to_normal(node_name, cy_graph, given_taxon, ranks){
+
+            console.log(ranks)
+
+            //changing the nodes back to their original styles
+            cy_graph.elements().nodes().style( { 'opacity' : '1' });
+            cy_graph.elements().nodes().style( { 'text-opacity' : '1' });
+
+            var nodes = cy_graph.elements().nodes()
+            for (let i = 0; i < nodes.length; i++){
+                var curr_node_name = nodes[i]._private.data.name
+                var curr_node_id = nodes[i]._private.id
+
+                var id_label = "[id = '".concat(curr_node_id).concat("']");
+
+                if (ranks.includes(curr_node_name)){
+                    cy_graph.nodes(id_label).style("background-color", "#90EE90");
+                }else{
+                    cy_graph.nodes(id_label).style("background-color", "#ADD8E6");
+                }
+            }
+
+            var id_label = "[id = '".concat(node_name).concat("']");
+            cy_graph.nodes(id_label).style("background-color", "#ADD8E6");
+            
+            var id_label = "[id = '".concat(given_taxon).concat("']");
+            cy_graph.nodes(id_label).style("background-color", "red");
+
+            //changing the edges back to their original styles
+            cy_graph.elements().edges().style( { 'line-opacity' : '1' });
+            cy_graph.elements().edges().style( { 'text-opacity' : '1' });
+
+            cy_graph.remove("node[width = 300]");
+      }
+
+      function get_properties(node_name, cy_graph){
+        var prev_node_query = document.getElementById("sparql2");
+          prev_node_query.innerHTML = 
+              "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
+                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
+                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
+                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
+                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
+                PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/> \n \
+                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
+                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
+                SELECT DISTINCT ?pred ?predLabel ?obj ?objLabel ?list ?pred2 ?obj2  \n \
+                WHERE { \n \
+                BIND ('".concat(node_name).concat("'@en AS ?name). \n \
+                      ?Q skos:prefLabel|kgo:taxonName ?name. \n \
+                      ?Q ?pred ?obj. \n \
+                      OPTIONAL {  \n \
+                      ?Q ?pred [ list:index (?pos ?list) ] } \n \
+                      OPTIONAL { \n \
+                      ?Q ?pred [ rdf:type qudt:Quantity ]. \n \
+                      ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
+                      OPTIONAL { \n \
+                      ?Q ?pred [ rdf:type kgo:Location ]. \n \
+                      ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
+		      OPTIONAL { ?obj skos:prefLabel ?objLabel. } \n \
+		      OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } \n \
+              } ORDER BY ?pred ?pos ?pred2 \n \
+          ")
+          var endpoint = d3.select("#endpoint2").property("value")
+          var sparql = d3.select("#sparql2").property("value")
+          var url = endpoint + "?query=" + encodeURIComponent(sparql)
+          console.log('nodename', node_name)
+          d3.json(url).then(function(json){
+            show_property_nodes(node_name, json, cy_graph)
+          })
+      }
+
+
+
+    function exec(graphType) {
+      var endpoint = d3.select("#endpoint").property("value")
+      var sparql = d3.select("#sparql").property("value")
+      query(endpoint, sparql, render, graphType)
+    }
+    function query(endpoint, sparql, callback, graphType){
+      var url = endpoint + "?query=" + encodeURIComponent(sparql)
+      var res = d3.json(url).then(function(json){
+        callback(json, graphType, {given_data: 'null'}, "root")
+      })
+    }
+
+
+    //givenData is an object {given_data: 'null'} if we're not going to be given anything, otherwise
+    //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
+    function render(data, graphType, givenData, given_taxon) {
+
+        var zoom_out_level = 0.016;
+
+        if (givenData.given_data != 'null'){ 
+          //this implies we are already given what convert_to_cytoscape would produce
+            var converted_data = givenData.given_data
+        }else{
+            var converted_data = convert_to_cytoscape(data);
+        }
+        root_rank = converted_data.root_rank
+        root = converted_data.root
+
+        var moderate_ranks = [ "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", 
+            "Species", "noRank", "Subkingdom", "Superfamily", "Infraclass", "Suborder", 
+            "Parvorder", "Subfamily", "Superorder", "Infraphylum", "Subtribe", "Tribe", 
+            "Megaclass", "Subclass", "Superclass","Infraorder", "Subphylum", "Variety", 
+            "Superphylum", "Division", "Domain", "Subdivision", root_rank]
+        
+        var concise_ranks = [
+              root_rank, "Kingdom", "Phylum", "Class", 
+              "Order", "Family", "Genus", "Species", "noRank"]
+
+        if (graphType == ('Concise')){
+            zoom_out_level = .088
+            new_data = create_new(converted_data, concise_ranks)
+            nodes_lst = new_data.nodes
+            edge_lst = new_data.edges
+        } else if (graphType == 'Moderate') {
+            zoom_out_level = .028
+            new_data = create_new(converted_data, moderate_ranks)
+            console.log(new_data)
+            nodes_lst = new_data.nodes
+            edge_lst = new_data.edges
+        }
+        else {
+          nodes_lst = converted_data.nodes
+          edge_lst = converted_data.edges
+        }
+        
+        const cyDiv = document.querySelector('#cy')
+        cyDiv.style.display = 'block';
+        var cy = cytoscape({
+            container: document.getElementById('cy'),
+            elements: {
+              nodes: nodes_lst,
+              edges: edge_lst
+            },
+            layout: {
+              name: 'dagre', 
+              spacingFactor: 3,
+              rankDir: 'BT',
+              avoidOverlap: true,
+            },
+            style: [
+                    {
+                      selector: 'node[name]',
+                        style: {
+                            'content': 'data(name)',
+                            'text-valign': 'center',
+
+                      }
+
+                  },
+                  {
+                    selector: 'node',
+                    style: {
+                      'width': 'data(width)',
+                      'height': 'data(height)',
+                      'font-size': 30,
+                      'background-color': 'data(color)'
+                    }
+
+                  },
+                  {
+                    selector: 'edge',
+                    style: {
+                        'curve-style': 'bezier',
+                        'target-arrow-shape': 'triangle',
+                        'label': 'data(label)',
+                        'width': 10
+
+                      }
+                  },
+                  {
+                    selector: '.eh-handle',
+                      style: {
+                        'background-color': 'red',
+                        'width': 12,
+                        'height': 12,
+                        'shape': 'ellipse',
+                        'overlay-opacity': 0,
+                        'border-width': 12, // makes the handle easier to hit
+                        'border-opacity': 0
+                      }
+                  }
+                ]
+        });
+        
+        var rank_edges = converted_data.rn_edges
+        var nodes = cy.elements().nodes()
+
+        var rank_node_id;
+
+        var add_eles = []
+        for (let x = 0; x < nodes.length; x++){
+            node_pos = nodes[x]._private.position
+            node_id = nodes[x]._private.data.id
+            var x_pos = node_pos.x 
+            var y_pos = node_pos.y
+            var rank_node = rank_edges[node_id]
+            var rank_node_id = rank.node
+            if (rank_node_id == undefined){
+              rank_node_id = "noRank".concat(x.toString())
+            }else{
+              rank_node_id = rank.node.concat(x.toString())
+            }
+            
+            //rank_node_id is undefined in some places
+
+            new_node = 
+            {
+              group: 'nodes',
+              data: {
+                id: rank_node_id,
+                color: '#90EE90',
+                name: rank_node,
+                width: 100,
+                height: 100
+              },
+              position: {x: x_pos - 250, y: y_pos}
+            }
+
+            add_eles.push(new_node)
+
+            new_edge = 
+                {
+                  group: 'edges',
+                  data: 
+                      {
+                          id: node_id.concat(rank_node),
+                          source: node_id, 
+                          target: rank_node_id,
+                          label: 'taxonRank'
+                      }
+                }
+            add_eles.push(new_edge)
+        }
+        //adding ranks to the graph along with edges
+
+          var eles = cy.add(add_eles);
+          if (given_taxon == "root"){
+            var id_label = "[id = '".concat(root).concat("']")
+            given_taxon = root
+          } else {
+            var id_label = "[id = '".concat(given_taxon).concat("']")
+          }
+          cy.nodes(id_label).style('background-color', 'red');
+
+          cy.nodes().on('select', function(evt){
+                get_properties(this.id(), cy)
+          })
+          .on('unselect', function(evt){
+
+                var id_label = "[id = '".concat(this.id()).concat("']");
+                var pos = cy.nodes(id_label).position();
+
+                cy.zoom({
+                  level: zoom_out_level,
+                  position: pos
+                })
+                return_to_normal(this.id(), cy, given_taxon, moderate_ranks)
+            
+          })
+         
+
+    }
+
+
+      //changes the buttons for the new input node 
+      function change_buttons(new_data, full_json, rootVal){
+            document.getElementById("Full").onclick = 
+                  function () {render(full_json, 'Full', {given_data: new_data}, rootVal)}
+
+            document.getElementById("Moderate").onclick = 
+                  function () {render(full_json, 'Moderate', {given_data: new_data}, rootVal)}
+
+            document.getElementById("Concise").onclick = 
+                  function () {render(full_json, 'Concise', {given_data: new_data}, rootVal)}
+
+      }
+
+    /*transform_data is a function that takes in the query from the new root node
+    and then updates it so that it returns all the nodes above the queried node*/
+    function transform_data(short_json, full_json, rootVal){
+          
+          var short_data = convert_to_cytoscape(short_json)
+          var full_data = convert_to_cytoscape(full_json);
+          var old_pc_edges = short_data.pc_edges
+          var pc_edges = full_data.pc_edges //grabs the source-target edges so that we can form new edges and add new nodes
+          var root = full_data.root
+          var old_nodes = short_data.nodes;
+
+          if (pc_edges[rootVal]== undefined){
+            console.log('error');
+            //now we want to tell the user they have input something invalid
+            var place = document.getElementById("hierarchy-entry");
+            var error_message = document.createElement("p");
+            error_message.innerHTML = "Concept '".concat(rootVal)
+            .concat("' is not found. Please try again.");
+            error_message.id = "error_message"
+            place.appendChild(error_message);
+            error_message.style.color = 'red';
+            return false;
+          }
+
+          var old_edges = short_data.edges;
+          var curr_node = rootVal 
+          var next_node;
+
+          while (curr_node != root){
+            next_node = pc_edges[curr_node];
+            //add this node and a new edge
+            var new_node = {data: {id: next_node, name: next_node, 
+              color: '#ADD8E6', width: 150, height: 150}}
+            old_nodes.push(new_node);
+            
+            //only add a new edge if it hasn't already been added
+            if (old_pc_edges[curr_node] == undefined){
+              var new_edge = {data: {id: curr_node.concat(next_node), 
+                source: curr_node, target: next_node, label: 'subTaxonOf'}}
+              old_edges.push(new_edge)
+            }
+
+            curr_node = next_node;
+          }
+          var new_data = {edges: old_edges, nodes: old_nodes, 
+            pc_edges: pc_edges, rn_edges: full_data.rn_edges, 
+            root_rank: full_data.root_rank, root: full_data.root}
+          //so we've updated our edges and nodes to include the ones above the root we queried, so 
+          //now we want to display the graph.
+
+          change_buttons(new_data, full_json, rootVal);
+          render(full_json, 'Concise', {given_data: new_data}, rootVal);
+          document.getElementById("Concise").style.background='green';
+          document.getElementById("Moderate").style.background='black';
+          document.getElementById("Full").style.background='black';
+
+    }
+
+
+    function change_to_root(){
+          var prevquery = document.getElementById("sparql");
+          prevquery.innerHTML = 
+
+              "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
+                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
+                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
+                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
+                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
+                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
+                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
+                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n \
+                WHERE \n \
+                {  \n \
+                  BIND ('Biota'@en AS ?root_name).  \n \
+                  ?root kgo:taxonName ?root_name .  \n \
+                  ?root kgo:taxonRank [rdfs:label ?root_rank] . \n \
+                  ?child kgo:subTaxonOf* ?root .  \n \
+                  ?child kgo:subTaxonOf ?parent .  \n \
+                  ?child kgo:taxonName ?child_name .  \n \
+                  ?child kgo:taxonRank ?rank .  \n \
+                  ?rank rdfs:label ?rank_name .  \n \
+                  ?parent kgo:taxonName ?parent_name . \n \
+                }"
+
+          document.getElementById("Full").onclick = 
+                function () {exec('Full')}
+
+          document.getElementById("Moderate").onclick = 
+                function () {exec('Moderate')}
+          document.getElementById("Concise").onclick = 
+                function () {exec('Concise')}
+
+          exec('Concise')
+          document.getElementById("Concise").style.background='green';
+          document.getElementById("Moderate").style.background='black';
+          document.getElementById("Full").style.background='black';
+
+          //removing the back to root button because we don't need it
+          //if we're already at the root
+
+          var btn = document.getElementById('changetoRoot_button')
+          btn.parentNode.removeChild(btn)
+          document.getElementById("hierarchySpecies").value = "";
+          var el2 = document.getElementById('error_message');
+          if (el2 != null){
+            el2.parentNode.removeChild(el2);
+          }
+
+    }
+
+      function gethierarchy(){
+        
+        //check if a "backtoroot" button exists and if it does get rid of it
+        var el = document.getElementById('changetoRoot_button');
+        if (el != null){
+           el.parentNode.removeChild(el);
+        }
+
+        var el2 = document.getElementById('error_message');
+        if (el2 != null){
+          el2.parentNode.removeChild(el2);
+        }
+
+        var place = document.getElementById("hierarchy-entry");
+        var backtoRoot_btn = document.createElement("button");
+        backtoRoot_btn.innerHTML = "Back to Root";
+        place.appendChild(backtoRoot_btn);
+        backtoRoot_btn.setAttribute('id',"changetoRoot_button")
+        backtoRoot_btn.style.backgroundColor = 'salmon';
+        backtoRoot_btn.style.width = '100px';
+        backtoRoot_btn.style.height = '30px';
+       /* backtoRoot_btn.setAttribute('style',"width: 100px")
+        backtoRoot_btn.setAttribute('style',"height: 30px")*/
+
+
+
+        backtoRoot_btn.className = "change-root-button"
+        backtoRoot_btn.type = "button"
+        backtoRoot_btn.addEventListener('click', function (){
+          change_to_root();
+        })
+
+
+        var hierarchyVal = document.getElementById("hierarchySpecies").value;
+        if (hierarchyVal.length >= 2){
+            hierarchyVal = hierarchyVal.charAt(0).toUpperCase()
+             + (hierarchyVal.toLowerCase()).slice(1);
+          }
+        var prevquery = document.getElementById("sparql");
+        var old_prevquery = prevquery.value;
+
+        //gets the old url
+        var endpoint2 = d3.select("#endpoint").property("value");
+        var sparql2 = d3.select("#sparql").property("value");
+        var url2 = endpoint2 + "?query=" + encodeURIComponent(sparql2); 
+        
+
+        prevquery.innerHTML = 
+               "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
+                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
+                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
+                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
+                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
+                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
+                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
+                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n \
+                WHERE \n \
+                {  \n \
+                  BIND ('".concat(hierarchyVal).concat("'@en AS ?root_name).  \n \
+                  ?root kgo:taxonName ?root_name .  \n \
+                  ?root kgo:taxonRank [rdfs:label ?root_rank] . \n \
+                  ?child kgo:subTaxonOf* ?root .  \n \
+                  ?child kgo:subTaxonOf ?parent .  \n \
+                  ?child kgo:taxonName ?child_name .  \n \
+                  ?child kgo:taxonRank ?rank .  \n \
+                  ?rank rdfs:label ?rank_name .  \n \
+                  ?parent kgo:taxonName ?parent_name . \n \
+                }")
+
+
+          //so now preform the new query on the new input node
+          var endpoint = d3.select("#endpoint").property("value");
+          var sparql = d3.select("#sparql").property("value");
+          var url = endpoint + "?query=" + encodeURIComponent(sparql); 
+ 
+          var short_data;
+          var full_data;
+
+          prevquery.innerHTML = old_prevquery;
+          document.getElementById("hierarchySpecies").value = "";
+
+          d3.json(url).then(function(json1){
+                d3.json(url2).then(function(json2){
+                  transform_data(json1, json2, hierarchyVal);
+                })
+          });
+
+        
+      }
+
+      
+
+    </script>
+  </head>
+
+
+  <body>
+
+
+    <div id="query" style="margin: 10px">
+      <h1 class = 'title'>Knowledge Graph Query and Display</h1>
+      <form class="form-inline">
+        <div class="input-append">
+          <input id="endpoint" class="span5" 
+          value="http://solid.boltz.cs.cmu.edu:3030/NoInference/sparql" type="text" style="display:none;">
+    
+          <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
+          <button id="Moderate" class="btn" type="button" onclick = "exec('Moderate')">Moderate</button>
+          <button id="Concise" class="btn2" type="button" onclick = "exec('Concise')">Concise</button>
+          <div id ="hierarchy-entry">
+            <input id="hierarchySpecies" class="input-species" placeholder="Enter Taxon Name">
+          </div>
+
+        </div>
+      </form>
+      
+      <textarea id="sparql" class="spans9" style="display:none;">
+        PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+        PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+        PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX qudt:  <http://qudt.org/schema/qudt/>
+        PREFIX unit:  <http://qudt.org/vocab/unit/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        PREFIX list: <http://jena.hpl.hp.com/ARQ/list#>
+
+        SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name
+        WHERE
+        {
+          BIND ("Biota"@en AS ?root_name).
+          ?root kgo:taxonName ?root_name .
+          ?root kgo:taxonRank [rdfs:label ?root_rank] .
+          ?child kgo:subTaxonOf* ?root .
+          ?child kgo:subTaxonOf ?parent .
+          ?child kgo:taxonName ?child_name .
+          ?child kgo:taxonRank ?rank .
+          ?rank rdfs:label ?rank_name .
+          ?parent kgo:taxonName ?parent_name .
+        }
+      </textarea>
+
+      <input id="endpoint2" class="span6" 
+      value="http://solid.boltz.cs.cmu.edu:3030/NoInference/sparql" type="text" style="display:none;">
+      <textarea id="sparql2" class="spans10" style="display:none;">
+                PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/>
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX qudt:  <http://qudt.org/schema/qudt/>
+                PREFIX unit:  <http://qudt.org/vocab/unit/>
+                PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/>
+                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#>
+
+                SELECT DISTINCT ?pred ?obj ?list ?pred2 ?obj2  
+                WHERE {
+                BIND ("Alligator sinensis"@en AS ?name).
+                      ?Q skos:prefLabel|kgo:taxonName ?name.
+                      ?Q ?pred ?obj.
+                      OPTIONAL {
+                      ?Q ?pred [ list:index (?pos ?list) ] }
+                      OPTIONAL {
+                      ?Q ?pred [ rdf:type qudt:Quantity ].
+                      ?Q ?pred [ ?pred2 ?obj2 ]. }
+                      OPTIONAL {
+                      ?Q ?pred [ rdf:type kgo:Location ].
+                      ?Q ?pred [ ?pred2 ?obj2 ]. }
+              } ORDER BY ?pred ?pos ?pred2
+      </textarea>
+
+    </div>
+    <div id="cy"></div>
+    <script>
+      window.onload = exec('Concise');
+      let fullButton = document.querySelector('#Full');
+      let moderateButton = document.querySelector('#Moderate');
+      let conciseButton = document.querySelector('#Concise');
+
+      fullButton.addEventListener('click', () => 
+      fullButton.style.backgroundColor = 'green')
+
+      fullButton.addEventListener('click', () => 
+      conciseButton.style.backgroundColor = '#000000')
+
+      fullButton.addEventListener('click', () => 
+      moderateButton.style.backgroundColor = '#000000')
+
+
+      moderateButton.addEventListener('click', () => 
+      moderateButton.style.backgroundColor = 'green')
+
+      moderateButton.addEventListener('click', () => 
+      fullButton.style.backgroundColor = '#000000')
+
+      moderateButton.addEventListener('click', () => 
+      conciseButton.style.backgroundColor = '#000000')
+
+
+      conciseButton.addEventListener('click', () => 
+      conciseButton.style.backgroundColor = 'green')
+
+      conciseButton.addEventListener('click', () => 
+      fullButton.style.backgroundColor = '#000000')
+
+      conciseButton.addEventListener('click', () => 
+      moderateButton.style.backgroundColor = '#000000')
+
+      var taxonSpecies = document.getElementById("hierarchySpecies");
+        taxonSpecies.addEventListener("keydown", function (e){
+          if (e.key == "Enter"){
+            gethierarchy();
+          }
+        });
+
+    </script> 
+
+      
+  </body>
+</html>
