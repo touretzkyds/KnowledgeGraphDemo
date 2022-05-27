@@ -246,29 +246,73 @@
           cy_graph.nodes(id_label).style("background-color", "#FF69B4");
           cy_graph.nodes(id_label).style("text-opacity", "1");
           cy_graph.nodes(id_label).style("opacity", "1");
-          /*cy_graph.zoom({
-            position: 
-          })*/
-
+      
           cy_graph.elements().edges().style( { 'line-opacity' : '.2' });
           cy_graph.elements().edges().style( { 'text-opacity' : '0' });
       }
 
+
+
+      /*need to create own algorithm to create a circle of the property
+      nodes around the original node*/
+      
+      /*
+      1) et the min radius:   
+          - circumference = num_property_nodes * 50
+          - min r = circumference/2pi (round up)
+      2) Use position of node we are getting properties are, 
+          - x_pos
+          - y_pos
+      3) find the positions of the added property node:
+          - could divide the circle up into chunks
+          - see how many degrees to move each time we get a new node 
+          = degree_movement
+          - new_degree = (old_degree + degree_movement) mod 360
+          - new_x = x_pos +/- rcos(theta) 
+          - new_y = y_pos +/- rsin(theta)
+      */
+
+      //radius = 47.746
+      //degree_movement = 1.047
+      //old_pos = {x: 175, y: -1525}
+      //degree = PI 
       
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
       function create_property_nodes(node_name, data, cy_graph, pos){
+            var x_pos = pos.x;
+            var y_pos = pos.y;
+            var added_els = [];
+
+            var bindings = data.results.bindings;
+            var num_property_nodes = bindings.length;
             var x_pos = pos.x
             var y_pos = pos.y
-            var added_els = []
-            console.log(data);
-            var bindings = data.results.bindings
-            var len = bindings.length
-            for (let x = 0; x < len; x ++){
-                var node_val = bindings[x].obj.value
+            var mult_constant = 50/num_property_nodes
+
+            console.log("num_property nodes", num_property_nodes)
+            console.log("og node is at", pos)
+
+            //calculate placement of first property node
+            var circumference = num_property_nodes * 50;
+            var radius = circumference / (2* Math.PI);
+            var curr_degree = 0;
+            var degree_movement = (2 * Math.PI) / num_property_nodes;
+
+            var next_x_pos = x_pos + (radius* (mult_constant));
+            var next_y_pos = y_pos;
+            var x_constant = 1;
+            var y_constant = 1;
+            var new_degree = 0;
+
+            for (let x = 0; x < num_property_nodes; x ++){
+                
+                var node_val = bindings[x].obj.value;
+
+
                 if (node_val != undefined && node_val != node_name){
-                    console.log("node_val", node_val);
-                    var new_property_node = 
+
+                  var new_property_node = 
                           {
                               group: 'nodes',
                               data: {
@@ -276,11 +320,11 @@
                                 color: '#FFA500',
                                 name: node_val,
                                 opacity: 1,
-                                width: 300,
-                                height: 300
+                                width: 50,
+                                height: 50
                               },
-                               position: {x: x_pos, y: y_pos + 100}
-                          }
+                               position: {x: next_x_pos, y: next_y_pos}
+                          };
                     var new_edge = 
                           {
                             group: 'edges',
@@ -291,36 +335,55 @@
                                     target: node_val,
                                     label: 'TaxonProperty'
                                 }
-                          }
+                          };
                     added_els.push(new_property_node);
                     added_els.push(new_edge);
+                    var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
+
+                    var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(new_degree));
+                    var next_y_pos = y_pos + (radius*mult_constant)*(Math.sin(new_degree));
+                      
+                    curr_degree = new_degree;
                 }
                 
             }
-            cy_graph.add(added_els)
-            console.log(cy_graph.elements('node[width = 300]'));
-            cy_graph.elements('node[width = 300]').makeLayout({
+
+            cy_graph.add(added_els);
+
+            var id_label = "[id = '".concat(node_name).concat("']");
+
+            //cy_graph.nodes(id_label).style("width", "50");
+            //cy_graph.nodes(id_label).style("height", "50");
+
+            /*var elements = cy_graph.elements('node[width = 50]')
+            var layout = elements.makeLayout({
               name: 'circle'
-            }).run();
-           // console.log(cy_graph.elements().nodes())
+            }).run();*/
+
+            cy_graph.animate({
+              fit: {
+                eles: id_label, 
+                padding: 210
+              }
+            });
+
+            /*cy_graph.elements('node[width = 50]').fit(
+              padding = 20
+            )*/
 
         }
 
       
       function show_property_nodes(node_name, data, cy_graph){
-
+          console.log("data", data)
           var id_label = "[id = '".concat(node_name).concat("']");
-          //console.log(cy_graph.nodes(id_label))
           var pos = cy_graph.nodes(id_label).position();
 
-
-          /*cy_graph.zoom({
-            level: .5,
-            position: pos
-          })*/
+          var id_name = "#".concat(node_name)
 
           shade_other_nodes(node_name, cy_graph);
           create_property_nodes(node_name, data, cy_graph, pos)
+        
 
       }
 
@@ -328,7 +391,6 @@
 
       function return_to_normal(node_name, cy_graph, given_taxon, ranks){
 
-            console.log(ranks)
 
             //changing the nodes back to their original styles
             cy_graph.elements().nodes().style( { 'opacity' : '1' });
@@ -358,8 +420,14 @@
             cy_graph.elements().edges().style( { 'line-opacity' : '1' });
             cy_graph.elements().edges().style( { 'text-opacity' : '1' });
 
-            cy_graph.remove("node[width = 300]");
+            cy_graph.remove("node[width = 50]");
+            cy_graph.animate({
+              fit: {
+                padding: 20
+              }
+            });
       }
+
 
       function get_properties(node_name, cy_graph){
         var prev_node_query = document.getElementById("sparql2");
@@ -395,6 +463,81 @@
           console.log('nodename', node_name)
           d3.json(url).then(function(json){
             show_property_nodes(node_name, json, cy_graph)
+          })
+      }
+
+      
+      function get_definition(node_name, data, cy_graph){
+          var id_label = "[id = '".concat(node_name).concat("']");
+          var pos = cy_graph.nodes(id_label).position();
+          var bindings = data.results.bindings;
+          var len = bindings.length;
+          var def = "";
+          var curr_val;
+          
+          for (let i = 0; i < len; i ++){
+              curr_val = bindings[i].pred.value;
+              if (! (curr_val == undefined)){
+                var url_len = curr_val.length;
+                if (url_len >= 10){ //10 = length of the word definition
+                    var curr_string = curr_val.slice(url_len - 10, url_len);
+                    if (curr_string == 'definition'){
+                        def = bindings[i].obj.value;
+                    }
+                }
+              }
+          }
+        
+          def_node = {
+                              group: 'nodes',
+                              data: {
+                                id: def,
+                                color: '#FFA500',
+                                name: def,
+                                opacity: 1,
+                                width: 400,
+                                height: 400
+                              },
+                               position: {x: pos.x + 200 , y: pos.y}
+                          };
+          cy_graph.add(def_node)
+      }
+
+      function get_description(node_name, cy_graph){
+
+          var prev_node_query = document.getElementById("sparql2");
+          prev_node_query.innerHTML = 
+              "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
+                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
+                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
+                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
+                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
+                PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/> \n \
+                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
+                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
+                SELECT DISTINCT ?pred ?obj ?list ?pred2 ?obj2  \n \
+                WHERE { \n \
+                BIND ('".concat(node_name).concat("'@en AS ?name). \n \
+                      ?Q skos:prefLabel|kgo:taxonName ?name. \n \
+                      ?Q ?pred ?obj. \n \
+                      OPTIONAL {  \n \
+                      ?Q ?pred [ list:index (?pos ?list) ] } \n \
+                      OPTIONAL { \n \
+                      ?Q ?pred [ rdf:type qudt:Quantity ]. \n \
+                      ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
+                      OPTIONAL { \n \
+                      ?Q ?pred [ rdf:type kgo:Location ]. \n \
+                      ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
+              } ORDER BY ?pred ?pos ?pred2 \n \
+          ")
+          var endpoint = d3.select("#endpoint2").property("value")
+          var sparql = d3.select("#sparql2").property("value")
+          var url = endpoint + "?query=" + encodeURIComponent(sparql)
+          console.log('nodename', node_name)
+          d3.json(url).then(function(json){
+            get_definition(node_name, json, cy_graph)
           })
       }
 
@@ -566,6 +709,7 @@
         //adding ranks to the graph along with edges
 
           var eles = cy.add(add_eles);
+          
           if (given_taxon == "root"){
             var id_label = "[id = '".concat(root).concat("']")
             given_taxon = root
@@ -578,18 +722,15 @@
                 get_properties(this.id(), cy)
           })
           .on('unselect', function(evt){
-
-                var id_label = "[id = '".concat(this.id()).concat("']");
-                var pos = cy.nodes(id_label).position();
-
-                cy.zoom({
-                  level: zoom_out_level,
-                  position: pos
-                })
                 return_to_normal(this.id(), cy, given_taxon, moderate_ranks)
             
           })
-         
+          .on("mouseover", function(evt){
+              get_description(this.id(), cy);
+          })
+          .on("mouseout", function(evt){
+            cy.remove("node[width = 400]")
+          })
 
     }
 
