@@ -65,13 +65,81 @@
       var parent;
       var data_obj;
 
-    /*function hierarchy_query(taxon_value){
-
+    function hierarchy_query(taxon_value, preform_query){
+        var prevquery = document.getElementById("sparql");
+        prevquery.innerHTML = 
+                "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
+                  PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
+                  PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
+                  PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
+                  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
+                  PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
+                  PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
+                  PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
+                  PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
+                  SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n \
+                  WHERE \n \
+                  {  \n \
+                    BIND ('".concat(taxon_value).concat("'@en AS ?root_name).  \n \
+                    ?root kgo:taxonName ?root_name .  \n \
+                    ?root kgo:taxonRank [rdfs:label ?root_rank] . \n \
+                    ?child kgo:subTaxonOf* ?root .  \n \
+                    ?child kgo:subTaxonOf ?parent .  \n \
+                    ?child kgo:taxonName ?child_name .  \n \
+                    ?child kgo:taxonRank ?rank .  \n \
+                    ?rank rdfs:label ?rank_name .  \n \
+                    ?parent kgo:taxonName ?parent_name . \n \
+                  }");
+        if (preform_query){
+          var endpoint = d3.select("#endpoint").property("value")
+          var sparql = d3.select("#sparql").property("value")
+          var url = endpoint + "?query=" + encodeURIComponent(sparql)
+          return url
+        }else{
+          return false
+        }
     }
 
-    function property_query(taxon_value){
+    function property_query(taxon_value, preform_query){
+      var prevquery = document.getElementById("sparql2");
+        prevquery.innerHTML = 
+          "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
+                  PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
+                  PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
+                  PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
+                  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
+                  PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
+                  PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
+                  PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/> \n \
+                  PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
+                  PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
+                  SELECT DISTINCT ?pred ?predLabel ?obj ?objLabel ?list ?pred2 ?obj2  \n \
+                  WHERE { \n \
+                  BIND ('".concat(taxon_value).concat("'@en AS ?name). \n \
+                        ?Q skos:prefLabel|kgo:taxonName ?name. \n \
+                        ?Q ?pred ?obj. \n \
+                        OPTIONAL {  \n \
+                        ?Q ?pred [ list:index (?pos ?list) ] } \n \
+                        OPTIONAL { \n \
+                        ?Q ?pred [ rdf:type qudt:Quantity ]. \n \
+                        ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
+                        OPTIONAL { \n \
+                        ?Q ?pred [ rdf:type kgo:Location ]. \n \
+                        ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
+            OPTIONAL { ?obj skos:prefLabel|rdfs:label ?objLabel. } \n \
+            OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } \n \
+                } ORDER BY ?pred ?pos ?pred2 \n \
+            ")
+        if (preform_query){
+          var endpoint = d3.select("#endpoint2").property("value")
+          var sparql = d3.select("#sparql2").property("value")
+          var url = endpoint + "?query=" + encodeURIComponent(sparql)
+          return url
+        }else{
+          return false
+        }
 
-    }*/
+    }
 
     /*convert_to_cytoscape will return an object
     that stores the nodes, the edges, the positions of all
@@ -424,39 +492,8 @@
 
 
       function get_properties(node_name, cy_graph){
-        var prev_node_query = document.getElementById("sparql2");
-          prev_node_query.innerHTML = 
-              "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
-                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
-                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
-                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
-                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
-                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
-                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
-                PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/> \n \
-                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
-                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
-                SELECT DISTINCT ?pred ?predLabel ?obj ?objLabel ?list ?pred2 ?obj2  \n \
-                WHERE { \n \
-                BIND ('".concat(node_name).concat("'@en AS ?name). \n \
-                      ?Q skos:prefLabel|kgo:taxonName ?name. \n \
-                      ?Q ?pred ?obj. \n \
-                      OPTIONAL {  \n \
-                      ?Q ?pred [ list:index (?pos ?list) ] } \n \
-                      OPTIONAL { \n \
-                      ?Q ?pred [ rdf:type qudt:Quantity ]. \n \
-                      ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
-                      OPTIONAL { \n \
-                      ?Q ?pred [ rdf:type kgo:Location ]. \n \
-                      ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
-		      OPTIONAL { ?obj skos:prefLabel|rdfs:label ?objLabel. } \n \
-		      OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } \n \
-              } ORDER BY ?pred ?pos ?pred2 \n \
-          ")
-          var endpoint = d3.select("#endpoint2").property("value")
-          var sparql = d3.select("#sparql2").property("value")
-          var url = endpoint + "?query=" + encodeURIComponent(sparql)
-          console.log('nodename', node_name)
+        var url = property_query(node_name, true);
+        
           d3.json(url).then(function(json){
             show_property_nodes(node_name, json, cy_graph)
           })
@@ -543,54 +580,19 @@
           if (moderate_ranks.includes(node_name) || node_name == "Clade"){
             return false;
           }
-          var prev_node_query = document.getElementById("sparql2");
-          prev_node_query.innerHTML = 
-              "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
-                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
-                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
-                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
-                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
-                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
-                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
-                PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/> \n \
-                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
-                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
-                SELECT DISTINCT ?pred ?obj ?list ?pred2 ?obj2  \n \
-                WHERE { \n \
-                BIND ('".concat(node_name).concat("'@en AS ?name). \n \
-                      ?Q skos:prefLabel|kgo:taxonName ?name. \n \
-                      ?Q ?pred ?obj. \n \
-                      OPTIONAL {  \n \
-                      ?Q ?pred [ list:index (?pos ?list) ] } \n \
-                      OPTIONAL { \n \
-                      ?Q ?pred [ rdf:type qudt:Quantity ]. \n \
-                      ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
-                      OPTIONAL { \n \
-                      ?Q ?pred [ rdf:type kgo:Location ]. \n \
-                      ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
-              } ORDER BY ?pred ?pos ?pred2 \n \
-          ");
-          var endpoint = d3.select("#endpoint2").property("value");
-          var sparql = d3.select("#sparql2").property("value");
-          var url = endpoint + "?query=" + encodeURIComponent(sparql);
+          var url = property_query(node_name, true);
 
           d3.json(url).then(function(json){
             get_definition(node_name, json, cy_graph);
           })
+
       }
 
-
-
-    function exec(graphType) {
-      var endpoint = d3.select("#endpoint").property("value");
-      var sparql = d3.select("#sparql").property("value");
-      query(endpoint, sparql, render, graphType);
-    }
-    function query(endpoint, sparql, callback, graphType){
-      var url = endpoint + "?query=" + encodeURIComponent(sparql);
+    function exec(graphType){
+      var url = hierarchy_query("Biota", true);
       d3.json(url).then(function(json_result){
-        callback(json_result, graphType, {given_data: 'null'}, "root");
-      })
+        render(json_result, graphType, {given_data: 'null'}, "root");
+      });
     }
 
 
@@ -848,31 +850,7 @@
 
 
     function change_to_root(){
-          var prevquery = document.getElementById("sparql");
-          prevquery.innerHTML = 
-
-              "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
-                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
-                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
-                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
-                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
-                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
-                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
-                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
-                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
-                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n \
-                WHERE \n \
-                {  \n \
-                  BIND ('Biota'@en AS ?root_name).  \n \
-                  ?root kgo:taxonName ?root_name .  \n \
-                  ?root kgo:taxonRank [rdfs:label ?root_rank] . \n \
-                  ?child kgo:subTaxonOf* ?root .  \n \
-                  ?child kgo:subTaxonOf ?parent .  \n \
-                  ?child kgo:taxonName ?child_name .  \n \
-                  ?child kgo:taxonRank ?rank .  \n \
-                  ?rank rdfs:label ?rank_name .  \n \
-                  ?parent kgo:taxonName ?parent_name . \n \
-                }";
+          hierarchy_query("Biota", false);
 
           document.getElementById("Full").onclick = 
                 function () {exec('Full')};
@@ -946,38 +924,8 @@
         var sparql2 = d3.select("#sparql").property("value");
         var url2 = endpoint2 + "?query=" + encodeURIComponent(sparql2); 
         
-
-        prevquery.innerHTML = 
-               "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
-                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
-                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
-                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
-                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
-                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
-                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
-                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
-                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
-                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n \
-                WHERE \n \
-                {  \n \
-                  BIND ('".concat(hierarchyVal).concat("'@en AS ?root_name).  \n \
-                  ?root kgo:taxonName ?root_name .  \n \
-                  ?root kgo:taxonRank [rdfs:label ?root_rank] . \n \
-                  ?child kgo:subTaxonOf* ?root .  \n \
-                  ?child kgo:subTaxonOf ?parent .  \n \
-                  ?child kgo:taxonName ?child_name .  \n \
-                  ?child kgo:taxonRank ?rank .  \n \
-                  ?rank rdfs:label ?rank_name .  \n \
-                  ?parent kgo:taxonName ?parent_name . \n \
-                }");
-
-          //so now preform the new query on the new input node
-          var endpoint = d3.select("#endpoint").property("value");
-          var sparql = d3.select("#sparql").property("value");
-          var url = endpoint + "?query=" + encodeURIComponent(sparql); 
- 
-          var short_data;
-          var full_data;
+        //new url
+        var url = hierarchy_query(hierarchyVal, true);
 
           prevquery.innerHTML = old_prevquery;
           document.getElementById("hierarchySpecies").value = "";
@@ -987,12 +935,7 @@
                   transform_data(json1, json2, hierarchyVal);
                 })
           });
-
-        
       }
-
-      
-
     </script>
   </head>
 
@@ -1004,8 +947,7 @@
       <h1 class = 'title'>Knowledge Graph Query and Display</h1>
       <form class="form-inline">
         <div class="input-append">
-          <input id="endpoint" class="span5" 
-          value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
+          
     
           <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
           <button id="Moderate" class="btn" type="button" onclick = "exec('Moderate')">Moderate</button>
@@ -1016,62 +958,11 @@
 
         </div>
       </form>
-      
-      <textarea id="sparql" class="spans9" style="display:none;">
-        PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-        PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
-        PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/>
-        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-        PREFIX qudt:  <http://qudt.org/schema/qudt/>
-        PREFIX unit:  <http://qudt.org/vocab/unit/>
-        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-        PREFIX list: <http://jena.hpl.hp.com/ARQ/list#>
+      <input id="endpoint" class="span5" value="http://solid.boltz.cs.cmu.edu:3030/NoInference/sparql" type="text" style="display:none;">
+      <textarea id="sparql" class="spans9" style="display:none;"></textarea>
 
-        SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name
-        WHERE
-        {
-          BIND ("Biota"@en AS ?root_name).
-          ?root kgo:taxonName ?root_name .
-          ?root kgo:taxonRank [rdfs:label ?root_rank] .
-          ?child kgo:subTaxonOf* ?root .
-          ?child kgo:subTaxonOf ?parent .
-          ?child kgo:taxonName ?child_name .
-          ?child kgo:taxonRank ?rank .
-          ?rank rdfs:label ?rank_name .
-          ?parent kgo:taxonName ?parent_name .
-        }
-      </textarea>
-
-      <input id="endpoint2" class="span6" 
-      value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
-      <textarea id="sparql2" class="spans10" style="display:none;">
-                PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
-                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/>
-                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                PREFIX qudt:  <http://qudt.org/schema/qudt/>
-                PREFIX unit:  <http://qudt.org/vocab/unit/>
-                PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/>
-                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#>
-
-                SELECT DISTINCT ?pred ?obj ?list ?pred2 ?obj2  
-                WHERE {
-                BIND ("Alligator sinensis"@en AS ?name).
-                      ?Q skos:prefLabel|kgo:taxonName ?name.
-                      ?Q ?pred ?obj.
-                      OPTIONAL {
-                      ?Q ?pred [ list:index (?pos ?list) ] }
-                      OPTIONAL {
-                      ?Q ?pred [ rdf:type qudt:Quantity ].
-                      ?Q ?pred [ ?pred2 ?obj2 ]. }
-                      OPTIONAL {
-                      ?Q ?pred [ rdf:type kgo:Location ].
-                      ?Q ?pred [ ?pred2 ?obj2 ]. }
-              } ORDER BY ?pred ?pos ?pred2
-      </textarea>
+      <input id="endpoint2" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/NoInference/sparql" type="text" style="display:none;">
+      <textarea id="sparql2" class="spans10" style="display:none;"></textarea>
 
     </div>
     <div id="cy"></div>
@@ -1118,7 +1009,6 @@
         });
 
     </script> 
-
       
   </body>
 </html>
