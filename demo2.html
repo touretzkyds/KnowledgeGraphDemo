@@ -68,28 +68,28 @@
     function hierarchy_query(taxon_value, preform_query){
         var prevquery = document.getElementById("sparql");
         prevquery.innerHTML = 
-                "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
-                  PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
-                  PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
-                  PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
-                  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
-                  PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
-                  PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
-                  PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
-                  PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
-                  SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n \
-                  WHERE \n \
-                  {  \n \
-                    BIND ('".concat(taxon_value).concat("'@en AS ?root_name).  \n \
-                    ?root kgo:taxonName ?root_name .  \n \
-                    ?root kgo:taxonRank [rdfs:label ?root_rank] . \n \
-                    ?child kgo:subTaxonOf* ?root .  \n \
-                    ?child kgo:subTaxonOf ?parent .  \n \
-                    ?child kgo:taxonName ?child_name .  \n \
-                    ?child kgo:taxonRank ?rank .  \n \
-                    ?rank rdfs:label ?rank_name .  \n \
-                    ?parent kgo:taxonName ?parent_name . \n \
-                  }");
+          "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
+                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
+                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
+                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
+                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
+                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
+                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
+                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n \
+                WHERE \n \
+                {  \n \
+                  BIND ('".concat(taxon_value).concat("'@en AS ?root_name).  \n \
+                  ?root kgo:taxonName ?root_name .  \n \
+                  ?root kgo:taxonRank [rdfs:label ?root_rank] . \n \
+                  ?child kgo:subTaxonOf* ?root .  \n \
+                  ?child kgo:subTaxonOf ?parent .  \n \
+                  ?child kgo:taxonName ?child_name .  \n \
+                  ?child kgo:taxonRank ?rank .  \n \
+                  ?rank rdfs:label ?rank_name .  \n \
+                  ?parent kgo:taxonName ?parent_name . \n \
+                }");
         if (preform_query){
           var endpoint = d3.select("#endpoint").property("value")
           var sparql = d3.select("#sparql").property("value")
@@ -355,7 +355,8 @@
 
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
-      function create_property_nodes(node_name, data, cy_graph, pos){
+      function create_property_nodes(node_name, data, cy_graph, pos, pc_edges){
+            var prop_node_diam = 200
             var x_pos = pos.x;
             var y_pos = pos.y;
             var added_els = [];
@@ -364,7 +365,8 @@
             var num_property_nodes = bindings.length;
             var x_pos = pos.x;
             var y_pos = pos.y;
-            var mult_constant = 50/num_property_nodes;
+            var mult_constant = 10;
+            //var mult_constant = prop_node_diam/num_property_nodes;
 
 
             //calculate placement of first property node
@@ -378,39 +380,49 @@
             var x_constant = 1;
             var y_constant = 1;
             var new_degree = 0;
+		
+	    console.log(num_property_nodes);
 
             for (let x = 0; x < num_property_nodes; x ++){
                 
-                var node_val = bindings[x].objLabel ? bindings[x].objLabel.value : bindings[x].obj.value
-                if (node_val != undefined && node_val != node_name){
+                var prop_node_val = bindings[x].objLabel ? bindings[x].objLabel.value : bindings[x].obj.value
+                var node_id = prop_node_val
+		
+		//check to see if it's not already a node on the graph
+		if (pc_edges[prop_node_val] != undefined || prop_node_val == "Biota"){
+			node_id = prop_node_val.concat(x.toString());
+		}
+		
+		
+		if (prop_node_val != undefined){  
                   var new_property_node = 
                           {
                               group: 'nodes',
                               data: {
-                                id: node_val,
+                                id: node_id,
                                 color: '#FFA500',
-                                name: node_val,
+                                name: prop_node_val,
                                 opacity: 1,
-                                width: 50,
-                                height: 50
+                                width: prop_node_diam,
+                                height: prop_node_diam
                               },
                                position: {x: next_x_pos, y: next_y_pos}
                           };
                   var pred_val = bindings[x].predLabel ? bindings[x].predLabel.value : bindings[x].pred.value
-                  //f (pred_val != "subClassOf"){
-                    var new_edge = 
+
+                  var new_edge = 
                           {
                             group: 'edges',
                             data: 
                                 {
-                                    id: node_val.concat(node_name),
+                                    id: node_id.concat(node_name),
                                     source: node_name, 
-                                    target: node_val,
+                                    target: node_id,
                                     label: pred_val
                                 }
                           };
                           added_els.push(new_edge);
-                 // }
+
                   
                     added_els.push(new_property_node);
                     var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
@@ -438,19 +450,21 @@
         }
 
       
-      function show_property_nodes(node_name, data, cy_graph){
-          console.log("data", data);
-          var id_label = "[id = '".concat(node_name).concat("']");
+      function show_property_nodes(node_name, data, cy_graph, pc_edges){
+          console.log("property data", data);
+      
+	  var id_label = "[id = '".concat(node_name).concat("']");
           var pos = cy_graph.nodes(id_label).position();
 
           shade_other_nodes(node_name, cy_graph);
-          create_property_nodes(node_name, data, cy_graph, pos);
+          create_property_nodes(node_name, data, cy_graph, pos, pc_edges);
         
 
       }
 
 
-
+      //returns the hierarchy back to it's original state
+      //after the user unselects a node
       function return_to_normal(node_name, cy_graph, given_taxon, ranks){
 
 
@@ -482,7 +496,7 @@
             cy_graph.elements().edges().style( { 'line-opacity' : '1' });
             cy_graph.elements().edges().style( { 'text-opacity' : '1' });
 
-            cy_graph.remove("node[width = 50]");
+            cy_graph.remove("node[width = 200]");
             cy_graph.animate({
               fit: {
                 padding: 20
@@ -491,11 +505,11 @@
       }
 
 
-      function get_properties(node_name, cy_graph){
+      function get_properties(node_name, cy_graph, pc_edges){
         var url = property_query(node_name, true);
         
           d3.json(url).then(function(json){
-            show_property_nodes(node_name, json, cy_graph)
+            show_property_nodes(node_name, json, cy_graph, pc_edges)
           })
       }
 
@@ -599,16 +613,19 @@
     //givenData is an object {given_data: 'null'} if we're not going to be given anything, otherwise
     //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
     function render(data, graphType, givenData, given_taxon) {
-
+	console.log("json data is", data);
         if (givenData.given_data != 'null'){ 
           //this implies we are already given what convert_to_cytoscape would produce
             var converted_data = givenData.given_data;
         }else{
             var converted_data = convert_to_cytoscape(data);
         }
-        root_rank = converted_data.root_rank;
-        root = converted_data.root;
-
+        var root_rank = converted_data.root_rank;
+        var root = converted_data.root;
+	var pc_edges = converted_data.pc_edges;
+	//this will mainly be used to pass into other fns to know what nodes
+	//already exist in our graph
+	
         var moderate_ranks = [ "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", 
             "Species", "noRank", "Subkingdom", "Superfamily", "Infraclass", "Suborder", 
             "Parvorder", "Subfamily", "Superorder", "Infraphylum", "Subtribe", "Tribe", 
@@ -761,7 +778,7 @@
           cy.nodes(id_label).style('background-color', 'red');
 
           cy.nodes().on('select', function(evt){
-                get_properties(this._private.data.name, cy, moderate_ranks);
+                get_properties(this._private.data.name, cy, moderate_ranks, pc_edges);
           })
           .on('unselect', function(evt){
                 return_to_normal(this.id(), cy, given_taxon, moderate_ranks);
@@ -948,7 +965,8 @@
       <form class="form-inline">
         <div class="input-append">
           
-    
+          <input id="endpoint" class="span5" value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
+
           <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
           <button id="Moderate" class="btn" type="button" onclick = "exec('Moderate')">Moderate</button>
           <button id="Concise" class="btn2" type="button" onclick = "exec('Concise')">Concise</button>
@@ -958,10 +976,9 @@
 
         </div>
       </form>
-      <input id="endpoint" class="span5" value="http://solid.boltz.cs.cmu.edu:3030/NoInference/sparql" type="text" style="display:none;">
       <textarea id="sparql" class="spans9" style="display:none;"></textarea>
 
-      <input id="endpoint2" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/NoInference/sparql" type="text" style="display:none;">
+      <input id="endpoint2" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
       <textarea id="sparql2" class="spans10" style="display:none;"></textarea>
 
     </div>
