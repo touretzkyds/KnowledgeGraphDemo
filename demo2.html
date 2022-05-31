@@ -77,7 +77,7 @@
                 PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
                 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
                 PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
-                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?rank_name \n \
+                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?def ?rank_name \n \
                 WHERE \n \
                 {  \n \
                   BIND ('".concat(taxon_value).concat("'@en AS ?root_name).  \n \
@@ -86,6 +86,9 @@
                   ?child kgo:subTaxonOf* ?root .  \n \
                   ?child kgo:subTaxonOf ?parent .  \n \
                   ?child kgo:taxonName ?child_name .  \n \
+                  OPTIONAL { \n \
+                    ?child skos:definition ?def . \n \
+                  } \n \
                   ?child kgo:taxonRank ?rank .  \n \
                   ?rank rdfs:label ?rank_name .  \n \
                   ?parent kgo:taxonName ?parent_name . \n \
@@ -152,31 +155,34 @@
         var edge_object = {};
         var root = 'noRoot';
         var root_rank = "noRank";
+        var def_for_taxons = {}
 
         bindings = data.results.bindings;
         len = bindings.length;
-
 
         if (len > 0){
             root = bindings [0].root_name.value;
             root_rank = bindings [0].root_rank.value;
         }
 
-        //adding nodes
+        //adding nodes and definitions
         for (let i = 0; i < len; i++){
             root = bindings [i].root_name.value;
             child = bindings [i].child_name.value;
             parent = bindings [i].parent_name.value;
             rank = bindings [i].rank_name.value;
+            def = bindings [i].def.value;
 
             child_obj = {data: {id: child, name: child,
-               color: '#ADD8E6', width: 150, height: 150}};
+               color: '#ADD8E6', width: 175, height: 175}};
             nodes_lst.push(child_obj);
+            def_for_taxons[child] = def;
 
             
             parent_obj = {data: {id: parent, name: parent, 
-              color: '#ADD8E6', width: 150, height: 150}};
+              color: '#ADD8E6', width: 175, height: 175}};
             nodes_lst.push(parent_obj);
+            def_for_taxons[parent] = def;
           
 
         }
@@ -200,17 +206,17 @@
         rank_node_edges[root] = root_rank;
         return {nodes: nodes_lst, edges: edges_lst, 
           rn_edges: rank_node_edges, pc_edges: edge_object, 
-          root_rank: root_rank, root: root};
+          root_rank: root_rank, root: root, definitions: def_for_taxons};
     }
     //graphType variable is used to keep track of if the Full, Concise, or Moderate button was pressed
 
-    function find_new_target(old_target, rn_edges, pc_edges, correct_ranks){
+    function find_new_target(old_target, rn_edges, pc_edges, correct_ranks, user_entered_taxon){
         //pc_edges is an object where the sources are keys and the values are the targets
         var curr_source = old_target;
         var curr_target = pc_edges[curr_source];
         var is_valid_rank = correct_ranks.includes(rn_edges[curr_target]);
-        
-        while (!is_valid_rank) {
+
+        while (!is_valid_rank && curr_target != user_entered_taxon) {
            curr_source = curr_target; //idea is to keep "climbing up" this tree
            //assumption is that curr_source is never going to be undefined
            curr_target = pc_edges[curr_source];
@@ -220,11 +226,11 @@
     }
     
     /*so we're given the original nodes and edges and we want to output new nodes/edges
-    such that there are only nodes with ranks: 
-    [Kingdom, Phylum, Class, Order, Family, Genus, Species] and 
+    such that there are only nodes with ranks: correct_ranks.
+    if a user enters a taxon in the textbox we automatically want to keep this value
     all missing edges are filled in, also will want to return the rn_edges */
-    function create_new(data, correct_ranks){
-        //data is of the form: {nodes: nodes_lst, edges: edges_lst, rn_edges: rank_node_edges}
+    function create_new(data, correct_ranks, user_entered_taxon){
+
         var nodes = data.nodes;
         var edges = data.edges;
         var rn_edges = data.rn_edges;
@@ -238,9 +244,15 @@
               curr_edge = edges[i];  //of the form: {id: __, source: '', target: '', ...}
               source_node = curr_edge.data.source;
               target_node = curr_edge.data.target;
-
               keep_source = correct_ranks.includes(rn_edges[source_node]);
               keep_target = correct_ranks.includes(rn_edges[target_node]);
+
+              if (source_node == user_entered_taxon){
+                keep_source = true;
+              }
+              else if (target_node == user_entered_taxon){
+                keep_target = true;
+              }
 
               if (keep_source){  //if the source node is connected to a rank we want to display
                   new_nodes.push({data: {id: source_node, 
@@ -299,7 +311,7 @@
                 curr_source = curr_data.old_edge.data.source;
                 //now we want to find a new target
                 new_target = find_new_target(old_target, 
-                rn_edges, pc_edges, correct_ranks);
+                rn_edges, pc_edges, correct_ranks, user_entered_taxon);
 
                 new_edge = {data: {id: curr_source.concat('-'.concat(new_target)), 
                 source: curr_source, target: new_target, label:'subTaxonOf'}};
@@ -315,16 +327,25 @@
       //when a specific node is clicked,i.e. node_name
       //all other nodes and edges become transparent
       function shade_other_nodes(node_name, cy_graph){
-          cy_graph.elements().nodes().style( { 'opacity' : '.2' });
-          cy_graph.elements().nodes().style( { 'text-opacity' : '0' });
+          cy_graph.elements().nodes().style( { 'opacity' : '.2', 'text-opacity':0 });
 
           var id_label = "[id = '".concat(node_name).concat("']");
-          cy_graph.nodes(id_label).style("background-color", "#FF69B4");
-          cy_graph.nodes(id_label).style("text-opacity", "1");
-          cy_graph.nodes(id_label).style("opacity", "1");
+    
+          cy_graph.nodes(id_label).style({
+                      'background-color': '#FFB6C1',
+                      'text-opacity': '1',
+                      'opacity': '1',
+                      'text-wrap': 'wrap',
+                      'text-max-width': 125,
+                      'border-width': 10,
+                      'border-color': '#FF007F',
+                      'border-style': 'solid',
+                      'font-size': 30,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+          });
       
-          cy_graph.elements().edges().style( { 'line-opacity' : '.2' });
-          cy_graph.elements().edges().style( { 'text-opacity' : '0' });
+          cy_graph.elements().edges().style( { 'line-opacity' : '.2', 'text-opacity':'0' });
       }
 
 
@@ -355,8 +376,7 @@
 
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
-      function create_property_nodes(node_name, data, cy_graph, pos, pc_edges){
-            var prop_node_diam = 200
+      function create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam){
             var x_pos = pos.x;
             var y_pos = pos.y;
             var added_els = [];
@@ -380,17 +400,14 @@
             var y_constant = 1;
             var new_degree = 0;
 		
-            console.log(num_property_nodes);
             for (let x = 0; x < num_property_nodes; x ++){
                         
                   var prop_node_val = bindings[x].objLabel ? bindings[x].objLabel.value : bindings[x].obj.value
                   var node_id = prop_node_val
-                  console.log("prop_node_val", prop_node_val);
                   //check to see if it's not already a node on the graph
                   if (pc_edges[prop_node_val] != undefined || 
                       prop_node_val == "Biota" || prop_node_val == node_name){
                       node_id = prop_node_val.concat(x.toString());
-                      console.log("node_id", node_id);
                   }
                   
                   if (prop_node_val != undefined){  
@@ -400,7 +417,7 @@
                                             group: 'nodes',
                                             data: {
                                               id: node_id,
-                                              color: '#FFA500',
+                                              color: '#FFD580',
                                               name: prop_node_val,
                                               opacity: 1,
                                               width: prop_node_diam,
@@ -408,7 +425,6 @@
                                             },
                                             position: {x: next_x_pos, y: next_y_pos}
                                         };
-                                console.log("new_prop_node", new_property_node);
                                 
                                 var pred_val = bindings[x].predLabel ? bindings[x].predLabel.value : bindings[x].pred.value
                                 added_els.push(new_property_node);
@@ -437,7 +453,6 @@
                     }
                         
               } 
-                    console.log("added_els", added_els);
 
                     cy_graph.add(added_els);
 
@@ -454,30 +469,47 @@
                         padding: padding_amount
                       }
                     });
+                    var id_selector = "node[width = ".concat(prop_node_diam.toString()).concat("]");
+                    cy_graph.nodes(id_selector).style({
+                      'shape': 'square',
+                      'text-wrap': 'wrap',
+                      'text-max-width': 125,
+                      'border-width': 10,
+                      'border-color': '#FF007F',
+                      'border-style': 'solid',
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+                    });
+      
+                    cy_graph.elements().edges().style({'font-size': '27'});
 
           }
 
               
-      function show_property_nodes(node_name, data, cy_graph, pc_edges){
+      function show_property_nodes(node_name, data, cy_graph, pc_edges, prop_node_diam){
+            
             console.log("property data", data);
               
             var id_label = "[id = '".concat(node_name).concat("']");
             var pos = cy_graph.nodes(id_label).position();
 
             shade_other_nodes(node_name, cy_graph);
-            create_property_nodes(node_name, data, cy_graph, pos, pc_edges);
+            create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam);
 
       }
 
 
       //returns the hierarchy back to it's original state
       //after the user unselects a node
-      function return_to_normal(node_name, cy_graph, given_taxon, ranks){
+      function return_to_normal(node_name, cy_graph, given_taxon, ranks, prop_node_diam){
 
 
             //changing the nodes back to their original styles
-            cy_graph.elements().nodes().style( { 'opacity' : '1' });
-            cy_graph.elements().nodes().style( { 'text-opacity' : '1' });
+            cy_graph.elements().nodes().style( 
+              { 'opacity' : '1',
+                'text-opacity': '1'
+              });
 
             var nodes = cy_graph.elements().nodes();
             for (let i = 0; i < nodes.length; i++){
@@ -500,10 +532,14 @@
             cy_graph.nodes(id_label).style("background-color", "red");
 
             //changing the edges back to their original styles
-            cy_graph.elements().edges().style( { 'line-opacity' : '1' });
-            cy_graph.elements().edges().style( { 'text-opacity' : '1' });
+            cy_graph.elements().edges().style( 
+              { 'line-opacity' : '1',
+                'text-opacity': '1'
+              });
+            cy_graph.elements().nodes().style({'border-width': '0'});
 
-            cy_graph.remove("node[width = 200]");
+            var node_id_removed = "node[width = ".concat(prop_node_diam.toString()).concat("]")
+            cy_graph.remove(node_id_removed);
             cy_graph.animate({
               fit: {
                 padding: 20
@@ -512,19 +548,19 @@
       }
 
       //only want this function to preform the query if we select a non-rank node
-      function get_properties(node_name, cy_graph, moderate_ranks, pc_edges){
+      function get_properties(node_name, cy_graph, moderate_ranks, pc_edges, prop_node_diam){
   
         if (moderate_ranks.includes(node_name) || node_name == "Clade"){
           return false;
         }
         var url = property_query(node_name, true);
           d3.json(url).then(function(json){
-            show_property_nodes(node_name, json, cy_graph, pc_edges)
+            show_property_nodes(node_name, json, cy_graph, pc_edges, prop_node_diam)
           })
       }
 
       //function creates the definition box in the cytoscape graph
-      function get_definition(node_name, data, cy_graph){
+     /* function get_definition(node_name, data, cy_graph){
           var id_label = "[id = '".concat(node_name).concat("']");
           var pos = cy_graph.nodes(id_label).position();
           var bindings = data.results.bindings;
@@ -592,33 +628,80 @@
             'width': 20
           });
        
-      }
+      }*/
 
-      function get_description(node_name, cy_graph, moderate_ranks){
+      function get_definition(node_name, cy_graph, moderate_ranks, definitions){
 
           if (moderate_ranks.includes(node_name) || node_name == "Clade"){
             return false;
           }
-          var url = property_query(node_name, true);
+        
+          var taxon_def = definitions[node_name];
+          if (taxon_def == undefined || taxon_def == ""){
+            taxon_def = "No definition available";
+          }
+          var id_label = "[id = '".concat(node_name).concat("']");
+          var pos = cy_graph.nodes(id_label).position();
+          def_node = {
+                              group: 'nodes',
+                              data: {
+                                id: taxon_def,
+                                color: '#FFB6C1',
+                                name: taxon_def,
+                                opacity: 1,
+                                width: 600,
+                                height: 500,
+                              },
+                               position: {x: pos.x + 450 , y: pos.y}
+                          };
+          def_edge = {
+                            group: 'edges',
+                            data: 
+                                {
+                                    id: def.concat(node_name),
+                                    source: node_name, 
+                                    target: taxon_def,
+                                    label: 'DEF',
+                                }
+                          };
+          cy_graph.add(def_node);
+          cy_graph.add(def_edge);
+          cy_graph.style().selector('node[width = 600]').style({
+            'shape': 'rectangle',
+            'text-wrap': 'wrap',
+            'text-max-width': 350,
+            'border-width': 20,
+            'border-color': '#FF007F',
+            'border-style': 'solid',
+            'font-size': 75,
+            'font-family': 'Garamond',
+            'line-height': 1.15
 
-          d3.json(url).then(function(json){
-            get_definition(node_name, json, cy_graph);
-          })
-
+          });
+          var edge_id_label = "[id = '".concat(def.concat(node_name)).concat("']");
+          cy_graph.style().selector(edge_id_label).style({
+            'line-color': '#FF007F',
+            'target-arrow-color': '#FF007F',
+            'color': 'white',
+            'width': 20
+          });
+          
       }
 
     function exec(graphType){
       var url = hierarchy_query("Biota", true);
       d3.json(url).then(function(json_result){
-        render(json_result, graphType, {given_data: 'null'}, "root");
+        display_hierarchy(json_result, graphType, {given_data: 'null', taxon_value: "null"}, "root");
       });
     }
 
 
     //givenData is an object {given_data: 'null'} if we're not going to be given anything, otherwise
     //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
-    function render(data, graphType, givenData, given_taxon) {
-	console.log("json data is", data);
+    function display_hierarchy(data, graphType, givenData, given_taxon) {
+	      console.log("json data is", data);
+
+        var user_entered_taxon = givenData.taxon_value;
         if (givenData.given_data != 'null'){ 
           //this implies we are already given what convert_to_cytoscape would produce
             var converted_data = givenData.given_data;
@@ -627,10 +710,12 @@
         }
         var root_rank = converted_data.root_rank;
         var root = converted_data.root;
-	var pc_edges = converted_data.pc_edges;
-	//this will mainly be used to pass into other fns to know what nodes
-	//already exist in our graph
-	
+	      var pc_edges = converted_data.pc_edges;
+        var definitions = converted_data.definitions;
+
+        //this will mainly be used to pass into other fns to know what nodes
+        //already exist in our graph
+        
         var moderate_ranks = [ "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", 
             "Species", "noRank", "Subkingdom", "Superfamily", "Infraclass", "Suborder", 
             "Parvorder", "Subfamily", "Superorder", "Infraphylum", "Subtribe", "Tribe", 
@@ -643,13 +728,13 @@
 
         if (graphType == ('Concise')){
 
-            new_data = create_new(converted_data, concise_ranks);
+            new_data = create_new(converted_data, concise_ranks, user_entered_taxon);
             nodes_lst = new_data.nodes;
             edge_lst = new_data.edges;
 
         } else if (graphType == 'Moderate') {
 
-            new_data = create_new(converted_data, moderate_ranks);
+            new_data = create_new(converted_data, moderate_ranks, user_entered_taxon);
 
             nodes_lst = new_data.nodes;
             edge_lst = new_data.edges;
@@ -749,7 +834,7 @@
                 width: 100,
                 height: 100
               },
-              position: {x: x_pos - 250, y: y_pos}
+              position: {x: x_pos - 350, y: y_pos}
             };
 
             add_eles.push(new_node);
@@ -770,10 +855,13 @@
         //adding ranks to the graph along with edges
 
           var eles = cy.add(add_eles);
-          /*cy.style().selector('node[width = 100]').style({
-            'shape': 'star'
-          })*/
-          
+          cy.elements().edges().style( { 'font-size' : '27' });
+          cy.elements().nodes().style({
+            'font-family': 'Garamond'
+          });
+
+          var prop_node_diam = 300
+
           if (given_taxon == "root"){
             var id_label = "[id = '".concat(root).concat("']");
             given_taxon = root;
@@ -783,15 +871,17 @@
           cy.nodes(id_label).style('background-color', 'red');
 
           cy.nodes().on('select', function(evt){
-                get_properties(this._private.data.name, cy, moderate_ranks, pc_edges);
+                get_properties(this._private.data.name, cy, moderate_ranks, pc_edges, prop_node_diam);
           })
           .on('unselect', function(evt){
-                return_to_normal(this.id(), cy, given_taxon, moderate_ranks);
+                return_to_normal(this.id(), cy, given_taxon, moderate_ranks, prop_node_diam);
             
           })
+          
           .on("mouseover", function(evt){
-              get_description(this._private.data.name, cy, moderate_ranks);
+              get_definition(this._private.data.name, cy, moderate_ranks, definitions);
           })
+          
           .on("mouseout", function(evt){
             cy.remove("node[width = 600]");
           })
@@ -802,13 +892,13 @@
       //changes the buttons for the new input node 
       function change_buttons(new_data, full_json, rootVal){
             document.getElementById("Full").onclick = 
-                  function () {render(full_json, 'Full', {given_data: new_data}, rootVal)};
+                  function () {display_hierarchy(full_json, 'Full', {given_data: new_data, taxon_value: rootVal}, rootVal)};
 
             document.getElementById("Moderate").onclick = 
-                  function () {render(full_json, 'Moderate', {given_data: new_data}, rootVal)};
+                  function () {display_hierarchy(full_json, 'Moderate', {given_data: new_data, taxon_value: rootVal}, rootVal)};
 
             document.getElementById("Concise").onclick = 
-                  function () {render(full_json, 'Concise', {given_data: new_data}, rootVal)};
+                  function () {display_hierarchy(full_json, 'Concise', {given_data: new_data, taxon_value: rootVal}, rootVal)};
 
       }
 
@@ -858,12 +948,12 @@
           }
           var new_data = {edges: old_edges, nodes: old_nodes, 
             pc_edges: pc_edges, rn_edges: full_data.rn_edges, 
-            root_rank: full_data.root_rank, root: full_data.root};
+            root_rank: full_data.root_rank, root: full_data.root, definitions: full_data.definitions};
           //so we've updated our edges and nodes to include the ones above the root we queried, so 
           //now we want to display the graph.
 
           change_buttons(new_data, full_json, rootVal);
-          render(full_json, 'Concise', {given_data: new_data}, rootVal);
+          display_hierarchy(full_json, 'Concise', {given_data: new_data, taxon_value: rootVal}, rootVal);
           document.getElementById("Concise").style.background='green';
           document.getElementById("Moderate").style.background='black';
           document.getElementById("Full").style.background='black';
