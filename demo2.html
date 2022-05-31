@@ -559,82 +559,12 @@
           })
       }
 
-      //function creates the definition box in the cytoscape graph
-     /* function get_definition(node_name, data, cy_graph){
-          var id_label = "[id = '".concat(node_name).concat("']");
-          var pos = cy_graph.nodes(id_label).position();
-          var bindings = data.results.bindings;
-          var len = bindings.length;
-          var def = "";
-          var curr_val;
-          
-          for (let i = 0; i < len; i ++){
-              curr_val = bindings[i].pred.value;
-              if (! (curr_val == undefined)){
-                var url_len = curr_val.length;
-                if (url_len >= 10){ //10 = length of the word definition
-                    var curr_string = curr_val.slice(url_len - 10, url_len);
-                    if (curr_string == 'definition'){
-                        def = bindings[i].obj.value;
-                    }
-                }
-              }
-          }
-        
-          def_node = {
-                              group: 'nodes',
-                              data: {
-                                id: def,
-                                color: '#FFB6C1',
-                                name: def,
-                                opacity: 1,
-                                width: 600,
-                                height: 500,
-                              },
-                               position: {x: pos.x + 450 , y: pos.y}
-                          };
-          def_edge = {
-                            group: 'edges',
-                            data: 
-                                {
-                                    id: def.concat(node_name),
-                                    source: node_name, 
-                                    target: def,
-                                    label: 'DEF',
-                                }
-                          };
-
-        
-          
-          cy_graph.add(def_node);
-          cy_graph.add(def_edge);
-          cy_graph.style().selector('node[width = 600]').style({
-            'shape': 'rectangle',
-            'text-wrap': 'wrap',
-            'text-max-width': 350,
-            'border-width': 20,
-            'border-color': '#FF007F',
-            'border-style': 'solid',
-            'font-size': 75,
-            'font-family': 'Garamond',
-            'line-height': 1.15
-
-          });
-          var edge_id_label = "[id = '".concat(def.concat(node_name)).concat("']");
-          cy_graph.style().selector(edge_id_label).style({
-            'line-color': '#FF007F',
-            'target-arrow-color': '#FF007F',
-            'color': 'white',
-            'width': 20
-          });
-       
-      }*/
-
-      function get_definition(node_name, cy_graph, moderate_ranks, definitions){
+      function get_definition(node_name, cy_graph, moderate_ranks, definitions, definition_node_size){
 
           if (moderate_ranks.includes(node_name) || node_name == "Clade"){
             return false;
           }
+          var def_node_height;
         
           var taxon_def = definitions[node_name];
           if (taxon_def == undefined || taxon_def == ""){
@@ -642,6 +572,13 @@
           }
           var id_label = "[id = '".concat(node_name).concat("']");
           var pos = cy_graph.nodes(id_label).position();
+
+          var def_length = taxon_def.length;
+          
+          var num_lines = Math.ceil(def_length/15);
+          var definition_node_height = num_lines*90
+          
+
           def_node = {
                               group: 'nodes',
                               data: {
@@ -649,8 +586,8 @@
                                 color: '#FFB6C1',
                                 name: taxon_def,
                                 opacity: 1,
-                                width: 600,
-                                height: 500,
+                                width: definition_node_size,
+                                height: definition_node_height,
                               },
                                position: {x: pos.x + 450 , y: pos.y}
                           };
@@ -666,10 +603,11 @@
                           };
           cy_graph.add(def_node);
           cy_graph.add(def_edge);
-          cy_graph.style().selector('node[width = 600]').style({
+          var id_selector = "node[width = ".concat(definition_node_size.toString()).concat("]")
+          cy_graph.style().selector(id_selector).style({
             'shape': 'rectangle',
             'text-wrap': 'wrap',
-            'text-max-width': 350,
+            'text-max-width': definition_node_size - 20,
             'border-width': 20,
             'border-color': '#FF007F',
             'border-style': 'solid',
@@ -861,6 +799,7 @@
           });
 
           var prop_node_diam = 300
+          var definition_node_size = 600
 
           if (given_taxon == "root"){
             var id_label = "[id = '".concat(root).concat("']");
@@ -879,11 +818,12 @@
           })
           
           .on("mouseover", function(evt){
-              get_definition(this._private.data.name, cy, moderate_ranks, definitions);
+              get_definition(this._private.data.name, cy, moderate_ranks, definitions, definition_node_size);
           })
           
           .on("mouseout", function(evt){
-            cy.remove("node[width = 600]");
+            var id_selector = "node[width = ".concat(definition_node_size.toString()).concat("]")
+            cy.remove(id_selector);
           })
 
     }
