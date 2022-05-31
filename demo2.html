@@ -360,7 +360,6 @@
             var x_pos = pos.x;
             var y_pos = pos.y;
             var added_els = [];
-
             var bindings = data.results.bindings;
             var num_property_nodes = bindings.length;
             var x_pos = pos.x;
@@ -381,84 +380,92 @@
             var y_constant = 1;
             var new_degree = 0;
 		
-	    console.log(num_property_nodes);
-
+            console.log(num_property_nodes);
             for (let x = 0; x < num_property_nodes; x ++){
-                
-                var prop_node_val = bindings[x].objLabel ? bindings[x].objLabel.value : bindings[x].obj.value
-                var node_id = prop_node_val
-		
-		//check to see if it's not already a node on the graph
-		if (pc_edges[prop_node_val] != undefined || prop_node_val == "Biota"){
-			node_id = prop_node_val.concat(x.toString());
-		}
-		
-		
-		if (prop_node_val != undefined){  
-                  var new_property_node = 
-                          {
-                              group: 'nodes',
-                              data: {
-                                id: node_id,
-                                color: '#FFA500',
-                                name: prop_node_val,
-                                opacity: 1,
-                                width: prop_node_diam,
-                                height: prop_node_diam
-                              },
-                               position: {x: next_x_pos, y: next_y_pos}
-                          };
-                  var pred_val = bindings[x].predLabel ? bindings[x].predLabel.value : bindings[x].pred.value
-
-                  var new_edge = 
-                          {
-                            group: 'edges',
-                            data: 
-                                {
-                                    id: node_id.concat(node_name),
-                                    source: node_name, 
-                                    target: node_id,
-                                    label: pred_val
-                                }
-                          };
-                          added_els.push(new_edge);
-
+                        
+                  var prop_node_val = bindings[x].objLabel ? bindings[x].objLabel.value : bindings[x].obj.value
+                  var node_id = prop_node_val
+                  console.log("prop_node_val", prop_node_val);
+                  //check to see if it's not already a node on the graph
+                  if (pc_edges[prop_node_val] != undefined || 
+                      prop_node_val == "Biota" || prop_node_val == node_name){
+                      node_id = prop_node_val.concat(x.toString());
+                      console.log("node_id", node_id);
+                  }
                   
-                    added_els.push(new_property_node);
-                    var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
+                  if (prop_node_val != undefined){  
+          
+                              var new_property_node = 
+                                        {
+                                            group: 'nodes',
+                                            data: {
+                                              id: node_id,
+                                              color: '#FFA500',
+                                              name: prop_node_val,
+                                              opacity: 1,
+                                              width: prop_node_diam,
+                                              height: prop_node_diam
+                                            },
+                                            position: {x: next_x_pos, y: next_y_pos}
+                                        };
+                                console.log("new_prop_node", new_property_node);
+                                
+                                var pred_val = bindings[x].predLabel ? bindings[x].predLabel.value : bindings[x].pred.value
+                                added_els.push(new_property_node);
 
-                    var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(new_degree));
-                    var next_y_pos = y_pos + (radius*mult_constant)*(Math.sin(new_degree));
-                      
-                    curr_degree = new_degree;
-                }
-                
-            }
+                                var new_edge = 
+                                        {
+                                          group: 'edges',
+                                          data: 
+                                              {
+                                                  id: node_id.concat(node_name),
+                                                  source: node_name, 
+                                                  target: node_id,
+                                                  label: pred_val
+                                              }
+                                        };
 
-            cy_graph.add(added_els);
+                                  added_els.push(new_edge);
 
-            var id_label = "[id = '".concat(node_name).concat("']");
+                                
+                                  var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
 
+                                  var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(new_degree));
+                                  var next_y_pos = y_pos + (radius*mult_constant)*(Math.sin(new_degree));
+                                    
+                                  curr_degree = new_degree;
+                    }
+                        
+              } 
+                    console.log("added_els", added_els);
 
-            cy_graph.animate({
-              fit: {
-                eles: id_label, 
-                padding: 210
-              }
-            });
+                    cy_graph.add(added_els);
 
-        }
+                    var id_label = "[id = '".concat(node_name).concat("']");
 
-      
+                    var padding_amount = 220;
+                    if (num_property_nodes > 20){
+                      padding_amount = 240;
+                    }
+
+                    cy_graph.animate({
+                      fit: {
+                        eles: id_label, 
+                        padding: padding_amount
+                      }
+                    });
+
+          }
+
+              
       function show_property_nodes(node_name, data, cy_graph, pc_edges){
-          console.log("property data", data);
-      
-	  var id_label = "[id = '".concat(node_name).concat("']");
-          var pos = cy_graph.nodes(id_label).position();
+            console.log("property data", data);
+              
+            var id_label = "[id = '".concat(node_name).concat("']");
+            var pos = cy_graph.nodes(id_label).position();
 
-          shade_other_nodes(node_name, cy_graph);
-          create_property_nodes(node_name, data, cy_graph, pos, pc_edges);
-        
+            shade_other_nodes(node_name, cy_graph);
+            create_property_nodes(node_name, data, cy_graph, pos, pc_edges);
 
       }
 
@@ -504,16 +511,19 @@
             });
       }
 
-
-      function get_properties(node_name, cy_graph, pc_edges){
+      //only want this function to preform the query if we select a non-rank node
+      function get_properties(node_name, cy_graph, moderate_ranks, pc_edges){
+  
+        if (moderate_ranks.includes(node_name) || node_name == "Clade"){
+          return false;
+        }
         var url = property_query(node_name, true);
-        
           d3.json(url).then(function(json){
             show_property_nodes(node_name, json, cy_graph, pc_edges)
           })
       }
 
-      
+      //function creates the definition box in the cytoscape graph
       function get_definition(node_name, data, cy_graph){
           var id_label = "[id = '".concat(node_name).concat("']");
           var pos = cy_graph.nodes(id_label).position();
@@ -581,12 +591,7 @@
             'color': 'white',
             'width': 20
           });
-          /*cy_graph.animate({
-              fit: {
-                eles: id_label, 
-                padding: 200
-              }
-            });*/
+       
       }
 
       function get_description(node_name, cy_graph, moderate_ranks){
