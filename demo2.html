@@ -9,9 +9,12 @@
     <script src="external/cytoscape-dagre.js"></script>
 
     <style type="text/css">
+      html,body{
+        height: 100%
+      }
       #cy {
         display: none;
-        height: 70vh;
+        height: 70%;
         width: 100%;
         border-style: solid;
       }
@@ -103,10 +106,39 @@
         }
     }
 
+   /* prevquery.innerHTML = 
+                "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
+                  PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
+                  PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
+                  PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
+                  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
+                  PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
+                  PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
+                  PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/> \n \
+                  PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
+                  PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
+                  SELECT DISTINCT ?pred ?obj ?objLabel ?list ?pred2 ?obj2 \n \
+                  WHERE { \n \
+                  BIND ('".concat(taxon_value).concat("'@en AS ?name). \n \
+                        ?Q skos:prefLabel|kgo:taxonName ?name. \n \
+                        ?Q ?pred ?obj. \n \
+                        OPTIONAL {  \n \
+                        ?Q ?pred [ list:index (?pos ?list) ] } \n \
+                        OPTIONAL { \n \
+                        ?Q ?pred [ rdf:type qudt:Quantity ]. \n \
+                        ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
+                        OPTIONAL { \n \
+                        ?Q ?pred [ rdf:type kgo:Location ]. \n \
+                        ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
+            OPTIONAL { ?obj skos:prefLabel|rdfs:label ?objLabel. } \n \
+            OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } \n \
+                } ORDER BY ?pred ?pos ?pred2 \n \
+            ")*/
+
     function property_query(taxon_value, preform_query){
       var prevquery = document.getElementById("sparql2");
-        prevquery.innerHTML = 
-          "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
+      prevquery.innerHTML = 
+                "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
                   PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
                   PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
                   PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
@@ -132,7 +164,8 @@
             OPTIONAL { ?obj skos:prefLabel|rdfs:label ?objLabel. } \n \
             OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } \n \
                 } ORDER BY ?pred ?pos ?pred2 \n \
-            ")
+            ");
+        
         if (preform_query){
           var endpoint = d3.select("#endpoint2").property("value")
           var sparql = d3.select("#sparql2").property("value")
@@ -377,6 +410,7 @@
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
       function create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam){
+            var prop_node_height = prop_node_diam;
             var x_pos = pos.x;
             var y_pos = pos.y;
             var added_els = [];
@@ -401,9 +435,15 @@
             var new_degree = 0;
 		
             for (let x = 0; x < num_property_nodes; x ++){
+
                         
-                  var prop_node_val = bindings[x].objLabel ? bindings[x].objLabel.value : bindings[x].obj.value
-                  var node_id = prop_node_val
+                  var prop_node_val = bindings[x].objLabel ? bindings[x].objLabel.value : bindings[x].obj.value;
+                  var pred_val = bindings[x].predLabel ? bindings[x].predLabel.value : bindings[x].pred.value;
+
+                  var num_lines = Math.ceil((prop_node_val.length)/15);
+                  prop_node_height = num_lines * 50 + 50;
+
+                  var node_id = prop_node_val;
                   //check to see if it's not already a node on the graph
                   if (pc_edges[prop_node_val] != undefined || 
                       prop_node_val == "Biota" || prop_node_val == node_name){
@@ -421,12 +461,12 @@
                                               name: prop_node_val,
                                               opacity: 1,
                                               width: prop_node_diam,
-                                              height: prop_node_diam
+                                              height: prop_node_height
                                             },
                                             position: {x: next_x_pos, y: next_y_pos}
                                         };
                                 
-                                var pred_val = bindings[x].predLabel ? bindings[x].predLabel.value : bindings[x].pred.value
+                                
                                 added_els.push(new_property_node);
 
                                 var new_edge = 
@@ -458,22 +498,29 @@
 
                     var id_label = "[id = '".concat(node_name).concat("']");
 
-                    var padding_amount = 220;
-                    if (num_property_nodes > 20){
-                      padding_amount = 240;
-                    }
 
+                    var clientWidth = document.getElementById('cy').clientWidth;
+                    var clientHeight = document.getElementById('cy').clientHeight;
+                    var smaller_space = Math.min(clientWidth, clientHeight);
+
+                    var padding_amount = Math.floor(clientHeight / 2.2);
+                    console.log("padding_amount", padding_amount);
+                    console.log("width is", clientWidth);
+                    console.log("height is", clientHeight);
+
+                    //zoom on the selected node enough to display all of the properties
                     cy_graph.animate({
                       fit: {
                         eles: id_label, 
                         padding: padding_amount
                       }
                     });
+
                     var id_selector = "node[width = ".concat(prop_node_diam.toString()).concat("]");
                     cy_graph.nodes(id_selector).style({
                       'shape': 'square',
                       'text-wrap': 'wrap',
-                      'text-max-width': 125,
+                      'text-max-width': prop_node_diam - 20,
                       'border-width': 10,
                       'border-color': '#FF007F',
                       'border-style': 'solid',
@@ -482,7 +529,8 @@
                       'line-height': 1.15
                     });
       
-                    cy_graph.elements().edges().style({'font-size': '27'});
+                    cy_graph.elements().edges().style({'font-size': '30'});
+                    
 
           }
 
@@ -576,7 +624,7 @@
           var def_length = taxon_def.length;
           
           var num_lines = Math.ceil(def_length/15);
-          var definition_node_height = num_lines*90
+          var definition_node_height = num_lines*90 + 50;
           
 
           def_node = {
@@ -589,7 +637,7 @@
                                 width: definition_node_size,
                                 height: definition_node_height,
                               },
-                               position: {x: pos.x + 450 , y: pos.y}
+                               position: {x: pos.x + 500 , y: pos.y}
                           };
           def_edge = {
                             group: 'edges',
@@ -617,7 +665,7 @@
 
           });
           var edge_id_label = "[id = '".concat(def.concat(node_name)).concat("']");
-          cy_graph.style().selector(edge_id_label).style({
+          cy_graph.edges(edge_id_label).style({
             'line-color': '#FF007F',
             'target-arrow-color': '#FF007F',
             'color': 'white',
