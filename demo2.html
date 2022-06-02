@@ -71,7 +71,7 @@
     function hierarchy_query(taxon_value, preform_query){
         var prevquery = document.getElementById("sparql");
         prevquery.innerHTML = 
-              `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+             `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
               PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
               PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
               PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -118,6 +118,16 @@
       var prevquery = document.getElementById("sparql2");
       prevquery.innerHTML = 
        `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+        PREFIX dc: <http://purl.org/dc/elements/1.1/> 
+        PREFIX dcterms: <http://purl.org/dc/terms/>
+        PREFIX owl: <http://www.w3.org/2002/07/owl#>
+        PREFIX prefix: <http://qudt.org/vocab/prefix/>
+        PREFIX prov: <http://www.w3.org/ns/prov#> 
+        PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/> 
+        PREFIX quantitykind: <http://qudt.org/vocab/quantitykind/> 
+        PREFIX sou: <http://qudt.org/vocab/sou/> 
+        PREFIX vaem: <http://www.linkedmodel.org/schema/vaem#> 
+        PREFIX voag: <http://voag.linkedmodel.org/schema/voag#>
         PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
         PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -142,7 +152,7 @@
           OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } 
           OPTIONAL { ?obj skos:prefLabel|rdfs:label ?objLabel. }
           OPTIONAL { ?Q ?pred [?pred2 ?obj2].
-                     ?pred2 rdfs:label|qudt:unit|qudt:value ?pred2Label. }
+                     ?pred2 rdfs:label|qudt:label ?pred2Label. }
         } ORDER BY ?pred ?pos ?pred2
             `; 
 
@@ -431,6 +441,7 @@
             }
 
         }
+        console.log("new_prop_array", new_property_array);
         return {prop_array: new_property_array, bnodes_obj: bnodes};
         
 
@@ -438,7 +449,6 @@
 
       function add_values_to_bnodes(bnodes, bnode_objects, cy_graph){
           var diam = 50;
-          console.log("bnode objects", bnode_objects);
           for (let x = 0; x < bnodes.length; x ++){
 
               var bnode_pos = bnodes[x].position;
@@ -511,7 +521,6 @@
 
               }
               
-              console.log("num_bnode_vals", num_bnode_values);
               cy_graph.add(added_els);
 
           }
@@ -569,7 +578,10 @@
                       prop_node_val == "Biota" || prop_node_val == node_name){
                       node_id = prop_node_val.concat(x.toString());
                   }
-                  
+                  if (prop_node_type == 'literal'){
+                      prop_node_val = `"${prop_node_val}"`
+                  }
+
                   if (prop_node_val != undefined){  
 
                               if (prop_node_type == "bnode"){
@@ -622,7 +634,6 @@
                     }
                         
               }     
-                    console.log("bnodes", bnodes)
 
                     cy_graph.add(added_els);
                     add_values_to_bnodes(bnodes, bnode_objects, cy_graph);
