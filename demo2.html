@@ -71,31 +71,31 @@
     function hierarchy_query(taxon_value, preform_query){
         var prevquery = document.getElementById("sparql");
         prevquery.innerHTML = 
-          "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
-                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
-                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
-                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
-                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
-                PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
-                PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
-                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
-                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
-                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?def ?rank_name \n \
-                WHERE \n \
-                {  \n \
-                  BIND ('".concat(taxon_value).concat("'@en AS ?root_name).  \n \
-                  ?root kgo:taxonName ?root_name .  \n \
-                  ?root kgo:taxonRank [rdfs:label ?root_rank] . \n \
-                  ?child kgo:subTaxonOf* ?root .  \n \
-                  ?child kgo:subTaxonOf ?parent .  \n \
-                  ?child kgo:taxonName ?child_name .  \n \
-                  OPTIONAL { \n \
-                    ?child skos:definition ?def . \n \
-                  } \n \
-                  ?child kgo:taxonRank ?rank .  \n \
-                  ?rank rdfs:label ?rank_name .  \n \
-                  ?parent kgo:taxonName ?parent_name . \n \
-                }");
+              `PREFIX skos: <http://www.w3.org/2004/02/skos/core#> 
+                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> 
+                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+                PREFIX qudt:  <http://qudt.org/schema/qudt/> 
+                PREFIX unit:  <http://qudt.org/vocab/unit/>
+                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
+                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?def ?rank_name 
+                WHERE 
+                { 
+                  BIND ('${taxon_value}'@en AS ?root_name). 
+                  ?root kgo:taxonName ?root_name .  
+                  ?root kgo:taxonRank [rdfs:label ?root_rank] .
+                  ?child kgo:subTaxonOf* ?root . 
+                  ?child kgo:subTaxonOf ?parent . 
+                  ?child kgo:taxonName ?child_name .  
+                  OPTIONAL {
+                    ?child skos:definition ?def .
+                  }
+                  ?child kgo:taxonRank ?rank .
+                  ?rank rdfs:label ?rank_name . 
+                  ?parent kgo:taxonName ?parent_name .
+                }`
         if (preform_query){
           var endpoint = d3.select("#endpoint").property("value")
           var sparql = d3.select("#sparql").property("value")
@@ -106,65 +106,38 @@
         }
     }
 
-   /* prevquery.innerHTML = 
-                "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
-                  PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
-                  PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
-                  PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
-                  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
-                  PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
-                  PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
-                  PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/> \n \
-                  PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
-                  PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
-                  SELECT DISTINCT ?pred ?obj ?objLabel ?list ?pred2 ?obj2 \n \
-                  WHERE { \n \
-                  BIND ('".concat(taxon_value).concat("'@en AS ?name). \n \
-                        ?Q skos:prefLabel|kgo:taxonName ?name. \n \
-                        ?Q ?pred ?obj. \n \
-                        OPTIONAL {  \n \
-                        ?Q ?pred [ list:index (?pos ?list) ] } \n \
-                        OPTIONAL { \n \
-                        ?Q ?pred [ rdf:type qudt:Quantity ]. \n \
-                        ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
-                        OPTIONAL { \n \
-                        ?Q ?pred [ rdf:type kgo:Location ]. \n \
-                        ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
-            OPTIONAL { ?obj skos:prefLabel|rdfs:label ?objLabel. } \n \
-            OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } \n \
-                } ORDER BY ?pred ?pos ?pred2 \n \
-            ")*/
-
     function property_query(taxon_value, preform_query){
       var prevquery = document.getElementById("sparql2");
       prevquery.innerHTML = 
-                "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> \n \
-                  PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> \n \
-                  PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> \n \
-                  PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \n \
-                  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \n \
-                  PREFIX qudt:  <http://qudt.org/schema/qudt/> \n \
-                  PREFIX unit:  <http://qudt.org/vocab/unit/> \n \
-                  PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/> \n \
-                  PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \n \
-                  PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> \n \
-                  SELECT DISTINCT ?pred ?predLabel ?obj ?objLabel ?list ?pred2 ?obj2  \n \
-                  WHERE { \n \
-                  BIND ('".concat(taxon_value).concat("'@en AS ?name). \n \
-                        ?Q skos:prefLabel|kgo:taxonName ?name. \n \
-                        ?Q ?pred ?obj. \n \
-                        OPTIONAL {  \n \
-                        ?Q ?pred [ list:index (?pos ?list) ] } \n \
-                        OPTIONAL { \n \
-                        ?Q ?pred [ rdf:type qudt:Quantity ]. \n \
-                        ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
-                        OPTIONAL { \n \
-                        ?Q ?pred [ rdf:type kgo:Location ]. \n \
-                        ?Q ?pred [ ?pred2 ?obj2 ]. } \n \
-            OPTIONAL { ?obj skos:prefLabel|rdfs:label ?objLabel. } \n \
-            OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } \n \
-                } ORDER BY ?pred ?pos ?pred2 \n \
-            ");
+       `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+        PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+        PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+        PREFIX qudt:  <http://qudt.org/schema/qudt/>
+        PREFIX unit:  <http://qudt.org/vocab/unit/> 
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+        PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
+        PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
+        PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
+        PREFIX la: <https://linked.art/ns/terms/>
+        PREFIX un: <http://www.w3.org/2007/ont/unit#> 
+        PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
+		SELECT DISTINCT ?pred ?predLabel ?obj ?objLabel ?pred2 ?list ?obj2 ?pred2Label
+        WHERE {
+          BIND ( '${taxon_value}' @en AS ?name).
+          ?Q skos:prefLabel|kgo:taxonName ?name.
+          ?Q ?pred ?obj. 
+          OPTIONAL {?Q ?pred [ list:index (?pos ?list) ] }
+          OPTIONAL {?Q ?pred ?obj.
+                    ?obj ?pred2 ?obj2.}
+          OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } 
+          OPTIONAL { ?obj skos:prefLabel|rdfs:label ?objLabel. }
+          OPTIONAL { ?Q ?pred [?pred2 ?obj2].
+                     ?pred2 rdfs:label ?pred2Label. }
+        } ORDER BY ?pred ?pos ?pred2
+            `; 
+
         
         if (preform_query){
           var endpoint = d3.select("#endpoint2").property("value")
@@ -383,29 +356,145 @@
 
 
 
-      /*need to create own algorithm to create a circle of the property
-      nodes around the original node*/
-      
-      /*
-      1) et the min radius:   
-          - circumference = num_property_nodes * 50
-          - min r = circumference/2pi (round up)
-      2) Use position of node we are getting properties are, 
-          - x_pos
-          - y_pos
-      3) find the positions of the added property node:
-          - could divide the circle up into chunks
-          - see how many degrees to move each time we get a new node 
-          = degree_movement
-          - new_degree = (old_degree + degree_movement) mod 360
-          - new_x = x_pos +/- rcos(theta) 
-          - new_y = y_pos +/- rsin(theta)
-      */
 
-      //radius = 47.746
-      //degree_movement = 1.047
-      //old_pos = {x: 175, y: -1525}
-      //degree = PI 
+      /*takes in an array of objects from a property query
+      and outputs a new array that eliminates redundancy*/
+      function trim_prop_query(property_array){
+        //we are going to be looking for a repeat of objLabel and predLabel
+        var obj_labels = [];
+        var new_property_array = [];
+
+        //also don't want to count a bnode as multiple nodes
+        var bnodes = {};
+        var bnode_values = [];
+        
+        for (let i = 0; i < property_array.length; i ++){
+            var curr_data_val = property_array[i];
+            //first check if we have a bnode, if we do automatically add it to our array
+            if (curr_data_val.obj != undefined &&
+                curr_data_val.obj.type == 'bnode'){
+                    
+                    var bnode = curr_data_val.obj.value;
+                    var bnode_obj = {};
+
+                    if (curr_data_val.pred2 != undefined 
+                      && curr_data_val.obj2 != undefined){
+
+                            var bnode_obj = {pred2: curr_data_val.pred2.value,
+                            obj2: curr_data_val.obj2.value};
+
+                    }
+                    
+                    if (bnodes[bnode] == undefined){
+                      bnodes[bnode] = [bnode_obj];
+                      new_property_array.push(curr_data_val);
+                    }else{
+                      bnodes[bnode].push(bnode_obj);
+                    }
+
+            }
+            //next check for redundant object labels
+            //assumption is that we can have redundant
+            //predLabels (i.e. two defintions could be possible)
+            else if (curr_data_val.objLabel != undefined){
+              var obj_label = curr_data_val.objLabel.value;
+              if (!(obj_labels.includes(obj_label))){
+                  obj_labels.push(obj_label);
+                  new_property_array.push(curr_data_val);
+              }
+            }else{
+              new_property_array.push(curr_data_val);
+            }
+
+        }
+        return {prop_array: new_property_array, bnodes_obj: bnodes};
+        
+
+      }
+
+      function add_values_to_bnodes(bnodes, bnode_objects, cy_graph){
+          var diam = 50;
+          console.log("bnode objects", bnode_objects);
+          for (let x = 0; x < bnodes.length; x ++){
+
+              var bnode_pos = bnodes[x].position;
+              var bnode_val = bnodes[x].data.id;
+              var x_pos = bnode_pos.x;
+              var y_pos = bnode_pos.y;
+              var added_els = [];
+              var num_bnode_values = bnode_objects[bnode_val].length;
+              var mult_constant = 5;
+
+              var circumference = num_bnode_values * 50;
+              var radius = circumference / (2* Math.PI);
+              var curr_degree = 0;
+              var degree_movement = (2 * Math.PI) / num_bnode_values;
+
+              var next_x_pos = x_pos + (radius* (mult_constant));
+              var next_y_pos = y_pos;
+              var x_constant = 1;
+              var y_constant = 1;
+              var new_degree = 0;
+              var bnode_vals = [];
+
+              var curr_bnode_vals = bnode_objects[bnode_val];
+              for (let i = 0; i < num_bnode_values; i++){
+                    var curr_bnode_val = curr_bnode_vals[i].obj2;
+                    var curr_edge_label = curr_bnode_vals[i].pred2;
+                    var node_id = curr_bnode_val;
+                    node_id = curr_bnode_val.concat("-").concat(bnode_val);
+                    
+                    if (curr_bnode_val != undefined){  
+          
+                                  var new_property_node = 
+                                            {
+                                                group: 'nodes',
+                                                data: {
+                                                  id: node_id,
+                                                  color: '#FFD580',
+                                                  name: curr_bnode_val,
+                                                  opacity: 1,
+                                                  width: diam,
+                                                  height: diam
+                                                },
+                                                position: {x: next_x_pos, y: next_y_pos}
+                                            };
+                                    
+                                    
+                                    added_els.push(new_property_node);
+
+                                   var new_edge = 
+                                            {
+                                              group: 'edges',
+                                              data: 
+                                                  {
+                                                      id: node_id.concat(bnode_val),
+                                                      source: bnode_val, 
+                                                      target: node_id,
+                                                      label: curr_edge_label
+                                                  }
+                                            };
+
+                                      added_els.push(new_edge);
+
+                                    
+                                      var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
+
+                                      var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(new_degree));
+                                      var next_y_pos = y_pos + (radius*mult_constant)*(Math.sin(new_degree));
+                                        
+                                      curr_degree = new_degree;
+                        }
+
+              }
+              
+              console.log("num_bnode_vals", num_bnode_values);
+              cy_graph.add(added_els);
+
+          }
+
+
+      }
 
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
@@ -414,10 +503,15 @@
             var x_pos = pos.x;
             var y_pos = pos.y;
             var added_els = [];
-            var bindings = data.results.bindings;
-            var num_property_nodes = bindings.length;
-            var x_pos = pos.x;
-            var y_pos = pos.y;
+
+            
+            //first want to trim down our redundancy in our query
+            var new_prop_data = trim_prop_query(data.results.bindings);
+
+            var bnode_objects = new_prop_data.bnodes_obj;
+            var new_property_array = new_prop_data.prop_array;
+            var num_property_nodes = new_property_array.length;
+
             var mult_constant = 10;
             //var mult_constant = prop_node_diam/num_property_nodes;
 
@@ -433,13 +527,16 @@
             var x_constant = 1;
             var y_constant = 1;
             var new_degree = 0;
+            var bnodes = [];
+
+            /*temporarily first get the number of property nodes we want until query issue is fixed*/
 		
             for (let x = 0; x < num_property_nodes; x ++){
 
-                        
-                  var prop_node_val = bindings[x].objLabel ? bindings[x].objLabel.value : bindings[x].obj.value;
-                  var pred_val = bindings[x].predLabel ? bindings[x].predLabel.value : bindings[x].pred.value;
-
+                  //we want the object label and the predlabel  
+                  var prop_node_val = new_property_array[x].objLabel ? new_property_array[x].objLabel.value : new_property_array[x].obj.value;
+                  var pred_val = new_property_array[x].predLabel ? new_property_array[x].predLabel.value : new_property_array[x].pred.value;
+                  var prop_node_type = new_property_array[x].obj.type;
                   var num_lines = Math.ceil((prop_node_val.length)/15);
                   prop_node_height = num_lines * 50 + 50;
 
@@ -451,6 +548,11 @@
                   }
                   
                   if (prop_node_val != undefined){  
+
+                              if (prop_node_type == "bnode"){
+                                  var next_x_pos = x_pos + (radius*1.5*mult_constant)*(Math.cos(curr_degree));
+                                  var next_y_pos = y_pos + (radius*1.5*mult_constant)*(Math.sin(curr_degree));
+                              }
           
                               var new_property_node = 
                                         {
@@ -466,8 +568,12 @@
                                             position: {x: next_x_pos, y: next_y_pos}
                                         };
                                 
-                                
+                                if (prop_node_type == 'bnode'){
+                                  bnodes.push(new_property_node);
+                                  
+                                }
                                 added_els.push(new_property_node);
+                                
 
                                 var new_edge = 
                                         {
@@ -492,9 +598,12 @@
                                   curr_degree = new_degree;
                     }
                         
-              } 
+              }     
+                    console.log("bnodes", bnodes)
 
                     cy_graph.add(added_els);
+                    add_values_to_bnodes(bnodes, bnode_objects, cy_graph);
+
 
                     var id_label = "[id = '".concat(node_name).concat("']");
 
@@ -504,9 +613,6 @@
                     var smaller_space = Math.min(clientWidth, clientHeight);
 
                     var padding_amount = Math.floor(clientHeight / 2.2);
-                    console.log("padding_amount", padding_amount);
-                    console.log("width is", clientWidth);
-                    console.log("height is", clientHeight);
 
                     //zoom on the selected node enough to display all of the properties
                     cy_graph.animate({
@@ -588,6 +694,7 @@
 
             var node_id_removed = "node[width = ".concat(prop_node_diam.toString()).concat("]")
             cy_graph.remove(node_id_removed);
+            cy_graph.remove("node[width = 50]");
             cy_graph.animate({
               fit: {
                 padding: 20
@@ -1048,7 +1155,7 @@
       <form class="form-inline">
         <div class="input-append">
           
-          <input id="endpoint" class="span5" value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
+          <input id="endpoint" class="span5" value="http://solid.boltz.cs.cmu.edu:3030/Devel/sparql" type="text" style="display:none;">
 
           <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
           <button id="Moderate" class="btn" type="button" onclick = "exec('Moderate')">Moderate</button>
@@ -1061,7 +1168,7 @@
       </form>
       <textarea id="sparql" class="spans9" style="display:none;"></textarea>
 
-      <input id="endpoint2" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
+      <input id="endpoint2" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/Devel/sparql" type="text" style="display:none;">
       <textarea id="sparql2" class="spans10" style="display:none;"></textarea>
 
     </div>
