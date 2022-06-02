@@ -134,7 +134,7 @@
           OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } 
           OPTIONAL { ?obj skos:prefLabel|rdfs:label ?objLabel. }
           OPTIONAL { ?Q ?pred [?pred2 ?obj2].
-                     ?pred2 rdfs:label ?pred2Label. }
+                     ?pred2 rdfs:label|qudt:unit|qudt:value ?pred2Label. }
         } ORDER BY ?pred ?pos ?pred2
             `; 
 
@@ -423,17 +423,16 @@
               var y_pos = bnode_pos.y;
               var added_els = [];
               var num_bnode_values = bnode_objects[bnode_val].length;
-              var mult_constant = 5;
+              var mult_constant = 7.5;
 
               var circumference = num_bnode_values * 50;
               var radius = circumference / (2* Math.PI);
-              var curr_degree = 0;
+              var curr_degree = .52;
               var degree_movement = (2 * Math.PI) / num_bnode_values;
 
-              var next_x_pos = x_pos + (radius* (mult_constant));
-              var next_y_pos = y_pos;
-              var x_constant = 1;
-              var y_constant = 1;
+              var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(curr_degree));
+              var next_y_pos = y_pos + (radius*mult_constant)*(Math.sin(curr_degree));
+
               var new_degree = 0;
               var bnode_vals = [];
 
@@ -1155,7 +1154,7 @@
       <form class="form-inline">
         <div class="input-append">
           
-          <input id="endpoint" class="span5" value="http://solid.boltz.cs.cmu.edu:3030/Devel/sparql" type="text" style="display:none;">
+          <input id="endpoint" class="span5" value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
 
           <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
           <button id="Moderate" class="btn" type="button" onclick = "exec('Moderate')">Moderate</button>
@@ -1168,7 +1167,7 @@
       </form>
       <textarea id="sparql" class="spans9" style="display:none;"></textarea>
 
-      <input id="endpoint2" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/Devel/sparql" type="text" style="display:none;">
+      <input id="endpoint2" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
       <textarea id="sparql2" class="spans10" style="display:none;"></textarea>
 
     </div>
