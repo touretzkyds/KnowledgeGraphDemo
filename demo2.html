@@ -71,30 +71,38 @@
     function hierarchy_query(taxon_value, preform_query){
         var prevquery = document.getElementById("sparql");
         prevquery.innerHTML = 
-              `PREFIX skos: <http://www.w3.org/2004/02/skos/core#> 
-                PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/> 
-                PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
-                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
-                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
-                PREFIX qudt:  <http://qudt.org/schema/qudt/> 
-                PREFIX unit:  <http://qudt.org/vocab/unit/>
-                PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-                PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
-                SELECT DISTINCT ?root_name ?root_rank ?parent_name ?child_name ?def ?rank_name 
-                WHERE 
+              `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+              PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+              PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
+              PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+              PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+              PREFIX qudt:  <http://qudt.org/schema/qudt/>
+              PREFIX unit:  <http://qudt.org/vocab/unit/> 
+              PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+              PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
+              PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
+              PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
+              PREFIX la: <https://linked.art/ns/terms/>
+              PREFIX un: <http://www.w3.org/2007/ont/unit#> 
+              PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
+              SELECT DISTINCT ?root_name ?root_rank ?parent_name ?parent_qval ?parent_identifier ?child_name ?child_qval ?child_identifier ?def ?rank_name                 WHERE 
                 { 
                   BIND ('${taxon_value}'@en AS ?root_name). 
                   ?root kgo:taxonName ?root_name .  
                   ?root kgo:taxonRank [rdfs:label ?root_rank] .
                   ?child kgo:subTaxonOf* ?root . 
                   ?child kgo:subTaxonOf ?parent . 
-                  ?child kgo:taxonName ?child_name .  
+                  ?child kgo:taxonName ?child_name .
                   OPTIONAL {
                     ?child skos:definition ?def .
                   }
                   ?child kgo:taxonRank ?rank .
                   ?rank rdfs:label ?rank_name . 
                   ?parent kgo:taxonName ?parent_name .
+  	              ?child skos:prefLabel ?child_identifier .
+                  ?child_qval skos:prefLabel ?child_identifier .
+                  ?parent skos:prefLabel ?parent_identifier .
+                  ?parent_qval skos:prefLabel ?parent_identifier .
                 }`
         if (preform_query){
           var endpoint = d3.select("#endpoint").property("value")
@@ -162,6 +170,7 @@
         var root = 'noRoot';
         var root_rank = "noRank";
         var def_for_taxons = {}
+        var qvals = {}
 
         bindings = data.results.bindings;
         len = bindings.length;
@@ -178,17 +187,27 @@
             parent = bindings [i].parent_name.value;
             rank = bindings [i].rank_name.value;
             def = bindings [i].def.value;
+            child_qval = bindings [i].child_qval.value;
+            parent_qval = bindings [i].parent_qval.value;
 
-            child_obj = {data: {id: child, name: child,
-               color: '#ADD8E6', width: 175, height: 175}};
+            if (child_qval.length >= 40){
+              child_qval = child_qval.slice(40, child_qval.length);
+            }
+            if (parent_qval.length >= 40){
+              parent_qval = parent_qval.slice(40, parent_qval.length);
+            }
+
+            child_obj = {data: {id: child, name: child.concat(' boltz:').concat(child_qval.toString()),
+               color: '#ADD8E6', width: 250, height: 250}};
             nodes_lst.push(child_obj);
             def_for_taxons[child] = def;
-
+            qvals[child] = child_qval;
             
-            parent_obj = {data: {id: parent, name: parent, 
-              color: '#ADD8E6', width: 175, height: 175}};
+            parent_obj = {data: {id: parent, name: parent.concat(' boltz:').concat(parent_qval.toString()), 
+              color: '#ADD8E6', width: 250, height: 250}};
             nodes_lst.push(parent_obj);
             def_for_taxons[parent] = def;
+            qvals[parent] = parent_qval;
           
 
         }
@@ -210,9 +229,11 @@
 
         edge_object[root] = 'root';
         rank_node_edges[root] = root_rank;
+        console.log("qvals", qvals);
         return {nodes: nodes_lst, edges: edges_lst, 
           rn_edges: rank_node_edges, pc_edges: edge_object, 
-          root_rank: root_rank, root: root, definitions: def_for_taxons};
+          root_rank: root_rank, root: root, definitions: def_for_taxons, 
+          taxon_qvals: qvals};
     }
     //graphType variable is used to keep track of if the Full, Concise, or Moderate button was pressed
 
@@ -244,6 +265,7 @@
         var new_edges = [];
         var new_nodes = [];
         var edges_missing = {}; //keeps track of the nodes that now no longer have edges because of the removed ranks
+        var taxon_qvals = data.taxon_qvals;
 
         //iterating through all the edges and figuring out which ones are going to be removed 
         for (let i = 0; i < edges.length; i++){
@@ -252,6 +274,8 @@
               target_node = curr_edge.data.target;
               keep_source = correct_ranks.includes(rn_edges[source_node]);
               keep_target = correct_ranks.includes(rn_edges[target_node]);
+              source_node_name = source_node.concat(' boltz:').concat(taxon_qvals[source_node].toString());
+              target_node_name = target_node.concat(' boltz:').concat(taxon_qvals[target_node].toString());
 
               if (source_node == user_entered_taxon){
                 keep_source = true;
@@ -262,11 +286,11 @@
 
               if (keep_source){  //if the source node is connected to a rank we want to display
                   new_nodes.push({data: {id: source_node, 
-                    name: source_node, color: '#ADD8E6', width: 150, height: 150}});
+                    name: source_node_name, color: '#ADD8E6', width: 250, height: 250}});
               }
               if (keep_target){  //if the target node is connected to a rank we want to display
                   new_nodes.push({data: {id: target_node, 
-                    name: target_node, color: '#ADD8E6', width: 150, height: 150}});
+                    name: target_node_name, color: '#ADD8E6', width: 250, height: 250}});
               }
 
 
@@ -672,7 +696,14 @@
                 var id_label = "[id = '".concat(curr_node_id).concat("']");
 
                 if (ranks.includes(curr_node_name)){
-                    cy_graph.nodes(id_label).style("background-color", "#90EE90");
+                    cy_graph.nodes(id_label).style({
+                      "background-color": "#90EE90",
+                      'text-wrap': 'wrap',
+                      'text-max-width': 150,
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+                    });
                 }else{
                     cy_graph.nodes(id_label).style("background-color", "#ADD8E6");
                 }
@@ -804,6 +835,7 @@
         var root = converted_data.root;
 	      var pc_edges = converted_data.pc_edges;
         var definitions = converted_data.definitions;
+        var taxon_qvals = converted_data.taxon_qvals;
 
         //this will mainly be used to pass into other fns to know what nodes
         //already exist in our graph
@@ -963,8 +995,22 @@
           }
           cy.nodes(id_label).style('background-color', 'red');
 
+          var id_selector = "node[width = 250]";
+                    cy.nodes(id_selector).style({
+                      'text-wrap': 'wrap',
+                      'text-max-width': 150,
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+                    });
+      
+          
+
           cy.nodes().on('select', function(evt){
-                get_properties(this._private.data.name, cy, moderate_ranks, pc_edges, prop_node_diam);
+                var name = this._private.data.name;
+                if (!(moderate_ranks.includes(name) || name == "Clade")){
+                    get_properties(this.id(), cy, moderate_ranks, pc_edges, prop_node_diam);
+                }
           })
           .on('unselect', function(evt){
                 return_to_normal(this.id(), cy, given_taxon, moderate_ranks, prop_node_diam);
@@ -972,7 +1018,11 @@
           })
           
           .on("mouseover", function(evt){
-              get_definition(this._private.data.name, cy, moderate_ranks, definitions, definition_node_size);
+                var name = this._private.data.name;
+                if (!(moderate_ranks.includes(name) || name == "Clade")){
+                  get_definition(this.id(), cy, moderate_ranks, definitions, definition_node_size);
+                }
+              
           })
           
           .on("mouseout", function(evt){
@@ -1042,7 +1092,8 @@
           }
           var new_data = {edges: old_edges, nodes: old_nodes, 
             pc_edges: pc_edges, rn_edges: full_data.rn_edges, 
-            root_rank: full_data.root_rank, root: full_data.root, definitions: full_data.definitions};
+            root_rank: full_data.root_rank, root: full_data.root, 
+            definitions: full_data.definitions, taxon_qvals: full_data.taxon_qvals};
           //so we've updated our edges and nodes to include the ones above the root we queried, so 
           //now we want to display the graph.
 
