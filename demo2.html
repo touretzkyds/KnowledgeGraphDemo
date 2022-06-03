@@ -68,6 +68,11 @@
       var parent;
       var data_obj;
 
+    //takes a string and capitalizes all first letters of the word;
+    function capitalize(str){
+        return str.charAt(0).toUpperCase() + (str.toLowerCase()).slice(1);;
+    }
+
     function hierarchy_query(taxon_value, preform_query){
         var prevquery = document.getElementById("sparql");
         prevquery.innerHTML = 
@@ -85,7 +90,8 @@
               PREFIX la: <https://linked.art/ns/terms/>
               PREFIX un: <http://www.w3.org/2007/ont/unit#> 
               PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
-              SELECT DISTINCT ?root_name ?root_rank ?parent_name ?parent_qval ?parent_identifier ?child_name ?child_qval ?child_identifier ?def ?root_def ?rank_name                
+              SELECT DISTINCT ?root_name ?root_rank ?parent_name ?parent_qval ?parent_prefLabel
+              ?child_name ?child_qval ?child_prefLabel ?def ?root_def ?rank_name
               WHERE 
                 { 
                   BIND ('${taxon_value}'@en AS ?root_name). 
@@ -103,10 +109,10 @@
                   ?child kgo:taxonRank ?rank .
                   ?rank rdfs:label ?rank_name . 
                   ?parent kgo:taxonName ?parent_name .
-  	              ?child skos:prefLabel ?child_identifier .
-                  ?child_qval skos:prefLabel ?child_identifier .
-                  ?parent skos:prefLabel ?parent_identifier .
-                  ?parent_qval skos:prefLabel ?parent_identifier .
+  	              ?child skos:prefLabel ?child_prefLabel .
+                  ?child_qval skos:prefLabel ?child_prefLabel .
+                  ?parent skos:prefLabel ?parent_prefLabel .
+                  ?parent_qval skos:prefLabel ?parent_prefLabel .
                 }`
         if (preform_query){
           var endpoint = d3.select("#endpoint").property("value")
@@ -184,9 +190,10 @@
         var edge_object = {};
         var root = 'noRoot';
         var root_rank = "noRank";
-        var def_for_taxons = {}
-        var qvals = {}
-        var root_def = "No def"
+        var def_for_taxons = {};
+        var qvals = {};
+        var root_def = "No def";
+        var pref_labels = {}; //key is preflable and value is taxon_name
 
         bindings = data.results.bindings;
         len = bindings.length;
@@ -211,6 +218,24 @@
             def = bindings [i].def.value;
             child_qval = bindings [i].child_qval.value;
             parent_qval = bindings [i].parent_qval.value;
+            child_prefLabel = bindings [i].child_prefLabel.value;
+            parent_prefLabel = bindings [i].parent_prefLabel.value;
+
+
+            if (child_prefLabel != undefined){
+              child_prefLabel = capitalize(child_prefLabel);
+              if (pref_labels[child_prefLabel] == undefined){
+                pref_labels[child_prefLabel] = child;
+              }
+            }
+            
+            if (parent_prefLabel != undefined){
+              parent_prefLabel = capitalize(parent_prefLabel);
+              if (pref_labels[parent_prefLabel] == undefined){
+                pref_labels[parent_prefLabel] = parent;
+              }
+            }
+            
 
             if (child_qval.length >= 40){
               child_qval = child_qval.slice(40, child_qval.length);
@@ -227,7 +252,8 @@
             if (def_for_taxons[child] == undefined){
               def_for_taxons[child] = def;
             }
-            
+
+
             qvals[child] = child_qval;
             
             parent_obj = {data: {id: parent, 
@@ -258,11 +284,11 @@
         edge_object[root] = 'root';
         rank_node_edges[root] = root_rank;
         def_for_taxons[root] = root_def;
-
+        console.log("prefLabels", pref_labels);
         return {nodes: nodes_lst, edges: edges_lst, 
           rn_edges: rank_node_edges, pc_edges: edge_object, 
           root_rank: root_rank, root: root, definitions: def_for_taxons, 
-          taxon_qvals: qvals};
+          taxon_qvals: qvals, pref_labels: pref_labels};
     }
 
 
@@ -1137,12 +1163,19 @@
           
           var short_data = convert_to_cytoscape(short_json);
           var full_data = convert_to_cytoscape(full_json);
+
           var old_pc_edges = short_data.pc_edges;
+          var pref_labels = full_data.pref_labels;
           var pc_edges = full_data.pc_edges; //grabs the source-target edges so that we can form new edges and add new nodes
           var root = full_data.root;
           var old_nodes = short_data.nodes;
 
-          if (pc_edges[rootVal]== undefined){
+          var pref_label_of_root_val = pref_labels[rootVal];
+          if (pref_label_of_root_val == undefined){
+            pref_label_of_root_val = "null"
+          }
+
+          if (pc_edges[rootVal]== undefined && (pc_edges[pref_label_of_root_val]) == undefined){
             console.log('error');
             //now we want to tell the user they have input something invalid
             var place = document.getElementById("hierarchy-entry");
@@ -1153,7 +1186,12 @@
             error_message.style.color = 'red';
             return false;
           }
-
+          
+          if (pc_edges[rootVal] == undefined){
+            //means we are looking at a pref_label of something
+            rootVal = pref_label_of_root_val;
+          }
+      
           var old_edges = short_data.edges;
           var curr_node = rootVal;
           var next_node;
@@ -1169,7 +1207,7 @@
             if (old_pc_edges[curr_node] == undefined){
               var new_edge = {data: {id: curr_node.concat(next_node), 
                 source: curr_node, target: next_node, label: 'subTaxonOf'}};
-              old_edges.push(new_edge);
+                old_edges.push(new_edge);
             }
 
             curr_node = next_node;
@@ -1177,7 +1215,8 @@
           var new_data = {edges: old_edges, nodes: old_nodes, 
             pc_edges: pc_edges, rn_edges: full_data.rn_edges, 
             root_rank: full_data.root_rank, root: full_data.root, 
-            definitions: full_data.definitions, taxon_qvals: full_data.taxon_qvals};
+            definitions: full_data.definitions, taxon_qvals: full_data.taxon_qvals,
+            pref_lables: full_data.pref_labels};
           //so we've updated our edges and nodes to include the ones above the root we queried, so 
           //now we want to display the graph.
 
@@ -1219,6 +1258,8 @@
 
     }
 
+      
+
       function gethierarchy(){
         
         //check if a "backtoroot" button exists and if it does get rid of it
@@ -1252,10 +1293,10 @@
         })
 
 
+
         var hierarchyVal = document.getElementById("hierarchySpecies").value;
         if (hierarchyVal.length >= 2){
-            hierarchyVal = hierarchyVal.charAt(0).toUpperCase()
-             + (hierarchyVal.toLowerCase()).slice(1);
+            hierarchyVal = capitalize(hierarchyVal);
           }
         var prevquery = document.getElementById("sparql");
         var old_prevquery = prevquery.value;
