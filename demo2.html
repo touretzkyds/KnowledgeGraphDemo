@@ -145,18 +145,19 @@
         PREFIX la: <https://linked.art/ns/terms/>
         PREFIX un: <http://www.w3.org/2007/ont/unit#> 
         PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
-		SELECT DISTINCT ?pred ?predLabel ?obj ?objLabel ?pred2 ?pred2Label ?list ?obj2 
+		SELECT DISTINCT ?pred ?predLabel ?obj ?objLabel ?pred2 ?pred2Label ?list ?obj2 ?obj2Label
         WHERE {
           BIND ( '${taxon_value}' @en AS ?name).
           ?Q skos:prefLabel|kgo:taxonName ?name.
           ?Q ?pred ?obj. 
           OPTIONAL {?Q ?pred [ list:index (?pos ?list) ] }
           OPTIONAL {?Q ?pred ?obj.
-                    ?obj ?pred2 ?obj2.}
+                    ?obj ?pred2 ?obj2.
+                    OPTIONAL {?pred2 rdfs:label ?pred2Label.}
+                    OPTIONAL {?obj2 rdfs:label ?obj2Label.}
+                  }
           OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } 
           OPTIONAL { ?obj skos:prefLabel|rdfs:label ?objLabel. }
-          OPTIONAL { ?Q ?pred [?pred2 ?obj2].
-                    ?pred2 rdfs:label|qudt:Unit ?pred2Label. }
         } ORDER BY ?pred ?pos ?pred2
             `; 
 
@@ -450,7 +451,8 @@
                             if (!(bnode_obj_values.includes(obj2_value))){
                                   var bnode_obj = {pred2: curr_data_val.pred2.value,
                                   obj2: obj2_value,
-                                  pred2Label: curr_data_val.pred2Label};
+                                  pred2Label: curr_data_val.pred2Label,
+                                  obj2Label: curr_data_val.obj2Label};
 
                                   if (bnodes[bnode_num] == undefined){
                                     bnodes[bnode_num] = [bnode_obj];
@@ -490,7 +492,7 @@
       }
 
       function add_values_to_bnodes(bnodes, bnode_objects, cy_graph){
-          var diam = 110;
+          var diam = 120;
           for (let x = 0; x < bnodes.length; x ++){
 
               var bnode_pos = bnodes[x].position;
@@ -499,7 +501,6 @@
               var y_pos = bnode_pos.y;
               var added_els = [];
               var num_bnode_values = bnode_objects[bnode_number].length;
-              console.log("num", num_bnode_values);
               var mult_constant = 5;
 
               var circumference = num_bnode_values * diam;
@@ -514,17 +515,19 @@
               var bnode_vals = [];
 
               var curr_bnode_vals = bnode_objects[bnode_number];
-              console.log("bnode num", bnode_number);
               for (let i = 0; i < num_bnode_values; i++){
                     var curr_bnode_val = curr_bnode_vals[i].obj2;
                     var curr_edge_label = curr_bnode_vals[i].pred2;
+
                     if (curr_bnode_vals[i].pred2Label != undefined){
                       curr_edge_label = curr_bnode_vals[i].pred2Label.value;
                     }
-                    var node_id = curr_bnode_val;
-                    node_id = `${curr_bnode_val} - ${bnode_number}`;
+                    if (curr_bnode_vals[i].obj2Label != undefined){
+                      curr_bnode_val = curr_bnode_vals[i].obj2Label.value;
+                    }
+
+                    var node_id = `${curr_bnode_val} - ${bnode_number}`;
                   
-                    console.log("curr_bnode_val", curr_bnode_val);
                     if (curr_bnode_val != undefined){  
           
                                   var new_property_node = 
@@ -805,7 +808,7 @@
             var node_id_removed = `node[width = ${prop_node_diam.toString()}]`;
             
             cy_graph.remove(node_id_removed);
-            cy_graph.remove("node[width = 110]");
+            cy_graph.remove("node[width = 120]");
             cy_graph.animate({
               fit: {
                 padding: 20
