@@ -85,11 +85,15 @@
               PREFIX la: <https://linked.art/ns/terms/>
               PREFIX un: <http://www.w3.org/2007/ont/unit#> 
               PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
-              SELECT DISTINCT ?root_name ?root_rank ?parent_name ?parent_qval ?parent_identifier ?child_name ?child_qval ?child_identifier ?def ?rank_name                 WHERE 
+              SELECT DISTINCT ?root_name ?root_rank ?parent_name ?parent_qval ?parent_identifier ?child_name ?child_qval ?child_identifier ?def ?root_def ?rank_name                
+              WHERE 
                 { 
                   BIND ('${taxon_value}'@en AS ?root_name). 
                   ?root kgo:taxonName ?root_name .  
                   ?root kgo:taxonRank [rdfs:label ?root_rank] .
+                  OPTIONAL {
+                    ?root skos:definition ?root_def .
+                  }
                   ?child kgo:subTaxonOf* ?root . 
                   ?child kgo:subTaxonOf ?parent . 
                   ?child kgo:taxonName ?child_name .
@@ -181,13 +185,20 @@
         var root_rank = "noRank";
         var def_for_taxons = {}
         var qvals = {}
+        var root_def = "No def"
 
         bindings = data.results.bindings;
         len = bindings.length;
 
         if (len > 0){
-            root = bindings [0].root_name.value;
-            root_rank = bindings [0].root_rank.value;
+            if (bindings [0].root_name != undefined &&
+                bindings [0].root_rank != undefined &&
+                bindings [0].root_def != undefined){
+                  root = bindings [0].root_name.value;
+                  root_rank = bindings [0].root_rank.value;
+                  root_def = bindings [0].root_def.value;
+                }
+            
         }
 
         //adding nodes and definitions
@@ -206,17 +217,23 @@
             if (parent_qval.length >= 40){
               parent_qval = parent_qval.slice(40, parent_qval.length);
             }
-
-            child_obj = {data: {id: child, name: child.concat(' boltz:').concat(child_qval.toString()),
+            `${child} boltz: ${child_qval.toString()}`
+            child_obj = {data: {id: child, 
+              name:`${child} boltz: ${child_qval.toString()}`,
                color: '#ADD8E6', width: 250, height: 250}};
             nodes_lst.push(child_obj);
-            def_for_taxons[child] = def;
+
+            if (def_for_taxons[child] == undefined){
+              def_for_taxons[child] = def;
+            }
+            
             qvals[child] = child_qval;
             
-            parent_obj = {data: {id: parent, name: parent.concat(' boltz:').concat(parent_qval.toString()), 
+            parent_obj = {data: {id: parent, 
+              name:`${parent} boltz: ${parent_qval.toString()}`, 
               color: '#ADD8E6', width: 250, height: 250}};
             nodes_lst.push(parent_obj);
-            def_for_taxons[parent] = def;
+           
             qvals[parent] = parent_qval;
           
 
@@ -228,7 +245,7 @@
             rank = bindings [i].rank_name.value;
             
             //adding an edge between the parent and child
-            pc_edge = {data: {id: child.concat('-'.concat(parent)), 
+            pc_edge = {data: {id: `${child} - ${parent}`, 
             source: child, target: parent, label:'subTaxonOf'}};
             edges_lst.push(pc_edge);
 
@@ -239,12 +256,16 @@
 
         edge_object[root] = 'root';
         rank_node_edges[root] = root_rank;
-        console.log("qvals", qvals);
+        def_for_taxons[root] = root_def;
+
         return {nodes: nodes_lst, edges: edges_lst, 
           rn_edges: rank_node_edges, pc_edges: edge_object, 
           root_rank: root_rank, root: root, definitions: def_for_taxons, 
           taxon_qvals: qvals};
     }
+
+
+
     //graphType variable is used to keep track of if the Full, Concise, or Moderate button was pressed
 
     function find_new_target(old_target, rn_edges, pc_edges, correct_ranks, user_entered_taxon){
@@ -284,8 +305,8 @@
               target_node = curr_edge.data.target;
               keep_source = correct_ranks.includes(rn_edges[source_node]);
               keep_target = correct_ranks.includes(rn_edges[target_node]);
-              source_node_name = source_node.concat(' boltz:').concat(taxon_qvals[source_node].toString());
-              target_node_name = target_node.concat(' boltz:').concat(taxon_qvals[target_node].toString());
+              source_node_name = `${source_node} boltz:${taxon_qvals[source_node].toString()}`;
+              target_node_name = `${target_node} boltz:${taxon_qvals[target_node].toString()}`;
 
               if (source_node == user_entered_taxon){
                 keep_source = true;
@@ -353,7 +374,7 @@
                 new_target = find_new_target(old_target, 
                 rn_edges, pc_edges, correct_ranks, user_entered_taxon);
 
-                new_edge = {data: {id: curr_source.concat('-'.concat(new_target)), 
+                new_edge = {data: {id: `${curr_source} - ${new_target}`, 
                 source: curr_source, target: new_target, label:'subTaxonOf'}};
                 new_edges.push(new_edge);
 
@@ -369,7 +390,8 @@
       function shade_other_nodes(node_name, cy_graph){
           cy_graph.elements().nodes().style( { 'opacity' : '.2', 'text-opacity':0 });
 
-          var id_label = "[id = '".concat(node_name).concat("']");
+
+          var id_label = `[id = '${node_name}']`;
     
           cy_graph.nodes(id_label).style({
                       'background-color': '#FFB6C1',
@@ -500,7 +522,7 @@
                       curr_edge_label = curr_bnode_vals[i].pred2Label.value;
                     }
                     var node_id = curr_bnode_val;
-                    node_id = curr_bnode_val.concat("-").concat(bnode_number);
+                    node_id = `${curr_bnode_val} - ${bnode_number}`;
                   
                     console.log("curr_bnode_val", curr_bnode_val);
                     if (curr_bnode_val != undefined){  
@@ -605,6 +627,7 @@
                   //we want the object label and the predlabel  
                   var prop_node_val = new_property_array[x].objLabel ? new_property_array[x].objLabel.value : new_property_array[x].obj.value;
                   var pred_val = new_property_array[x].predLabel ? new_property_array[x].predLabel.value : new_property_array[x].pred.value;
+
                   var prop_node_type = new_property_array[x].obj.type;
                   var num_lines = Math.ceil((prop_node_val.length)/15);
                   prop_node_height = num_lines * 50 + 50;
@@ -616,7 +639,11 @@
                       node_id = prop_node_val.concat(x.toString());
                   }
                   if (prop_node_type == 'literal'){
-                      prop_node_val = `"${prop_node_val}"`
+                      prop_node_val = `"${prop_node_val}"`;
+                  }
+
+                  if (pred_val == 'definition'){
+                    node_id = `${prop_node_val} - def`;
                   }
 
                   if (prop_node_val != undefined){  
@@ -675,8 +702,7 @@
                     cy_graph.add(added_els);
                     add_values_to_bnodes(bnodes, bnode_objects, cy_graph);
 
-
-                    var id_label = "[id = '".concat(node_name).concat("']");
+                    var id_label = `[id = '${node_name}']`
 
 
                     var clientWidth = document.getElementById('cy').clientWidth;
@@ -697,8 +723,9 @@
                         padding: padding_amount
                       }
                     });
+                    
+                    var id_selector = `node[width = ${prop_node_diam.toString()}]`;
 
-                    var id_selector = "node[width = ".concat(prop_node_diam.toString()).concat("]");
                     cy_graph.nodes(id_selector).style({
                       'shape': 'square',
                       'text-wrap': 'wrap',
@@ -720,8 +747,8 @@
       function show_property_nodes(node_name, data, cy_graph, pc_edges, prop_node_diam){
             
             console.log("property data", data);
-              
-            var id_label = "[id = '".concat(node_name).concat("']");
+            
+            var id_label = `[id= '${node_name}']`;
             var pos = cy_graph.nodes(id_label).position();
 
             shade_other_nodes(node_name, cy_graph);
@@ -746,7 +773,7 @@
                 var curr_node_name = nodes[i]._private.data.name;
                 var curr_node_id = nodes[i]._private.id;
 
-                var id_label = "[id = '".concat(curr_node_id).concat("']");
+                var id_label = `[id = '${curr_node_id}']`;
 
                 if (ranks.includes(curr_node_name)){
                     cy_graph.nodes(id_label).style({
@@ -762,10 +789,10 @@
                 }
             }
 
-            var id_label = "[id = '".concat(node_name).concat("']");
+            var id_label = `[id = '${node_name}']`;
             cy_graph.nodes(id_label).style("background-color", "#ADD8E6");
             
-            var id_label = "[id = '".concat(given_taxon).concat("']");
+            var id_label = `[id = '${given_taxon}']`;
             cy_graph.nodes(id_label).style("background-color", "red");
 
             //changing the edges back to their original styles
@@ -774,8 +801,9 @@
                 'text-opacity': '1'
               });
             cy_graph.elements().nodes().style({'border-width': '0'});
-
-            var node_id_removed = "node[width = ".concat(prop_node_diam.toString()).concat("]")
+            
+            var node_id_removed = `node[width = ${prop_node_diam.toString()}]`;
+            
             cy_graph.remove(node_id_removed);
             cy_graph.remove("node[width = 110]");
             cy_graph.animate({
@@ -808,7 +836,7 @@
           if (taxon_def == undefined || taxon_def == ""){
             taxon_def = "No definition available";
           }
-          var id_label = "[id = '".concat(node_name).concat("']");
+          var id_label = `[id = '${node_name}']`;
           var pos = cy_graph.nodes(id_label).position();
 
           var def_length = taxon_def.length;
@@ -841,7 +869,8 @@
                           };
           cy_graph.add(def_node);
           cy_graph.add(def_edge);
-          var id_selector = "node[width = ".concat(definition_node_size.toString()).concat("]")
+
+          var id_selector = `node[width = ${definition_node_size.toString()}]`;
           cy_graph.style().selector(id_selector).style({
             'shape': 'rectangle',
             'text-wrap': 'wrap',
@@ -854,7 +883,7 @@
             'line-height': 1.15
 
           });
-          var edge_id_label = "[id = '".concat(def.concat(node_name)).concat("']");
+          var edge_id_label = `[id = '${def.concat(node_name)}']`;
           cy_graph.edges(edge_id_label).style({
             'line-color': '#FF007F',
             'target-arrow-color': '#FF007F',
@@ -994,7 +1023,7 @@
             var rank_node = rank_edges[node_id];
             var rank_node_id = rank.node;
             if (rank_node_id == undefined){
-              rank_node_id = "noRank".concat(x.toString());
+              rank_node_id = `noRank ${x.toString()}`;
             }else{
               rank_node_id = rank.node.concat(x.toString());
             }
@@ -1041,10 +1070,10 @@
           var definition_node_size = 600
 
           if (given_taxon == "root"){
-            var id_label = "[id = '".concat(root).concat("']");
+            var id_label = `[id = '${root}']`;
             given_taxon = root;
           } else {
-            var id_label = "[id = '".concat(given_taxon).concat("']");
+            var id_label = `[id = '${given_taxon}']`;
           }
           cy.nodes(id_label).style('background-color', 'red');
 
@@ -1079,7 +1108,7 @@
           })
           
           .on("mouseout", function(evt){
-            var id_selector = "node[width = ".concat(definition_node_size.toString()).concat("]")
+            var id_selector = `node[width = ${definition_node_size.toString()}]`;
             cy.remove(id_selector);
           })
 
@@ -1115,8 +1144,7 @@
             //now we want to tell the user they have input something invalid
             var place = document.getElementById("hierarchy-entry");
             var error_message = document.createElement("p");
-            error_message.innerHTML = "Concept '".concat(rootVal)
-            .concat("' is not found. Please try again.");
+            error_message.innerHTML = `Concept '${rootVal}' is not found. Please try again.`;
             error_message.id = "error_message";
             place.appendChild(error_message);
             error_message.style.color = 'red';
