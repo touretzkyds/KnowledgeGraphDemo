@@ -244,9 +244,14 @@
               parent_qval = parent_qval.slice(40, parent_qval.length);
             }
             `${child} boltz: ${child_qval.toString()}`
-            child_obj = {data: {id: child, 
+            child_obj = {
+              data: {id: child, 
               name:`${child} boltz: ${child_qval.toString()}`,
-               color: '#ADD8E6', width: 250, height: 250}};
+              color: '#ADD8E6', 
+              width: 250, 
+              height: 250,
+              type: 'taxon'
+            }};
             nodes_lst.push(child_obj);
 
             if (def_for_taxons[child] == undefined){
@@ -256,9 +261,15 @@
 
             qvals[child] = child_qval;
             
-            parent_obj = {data: {id: parent, 
-              name:`${parent} boltz: ${parent_qval.toString()}`, 
-              color: '#ADD8E6', width: 250, height: 250}};
+            parent_obj = {
+              data: {
+                id: parent, 
+                name:`${parent} boltz: ${parent_qval.toString()}`, 
+                color: '#ADD8E6', 
+                width: 250, 
+                height: 250,
+                type: 'taxon'
+              }};
             nodes_lst.push(parent_obj);
            
             qvals[parent] = parent_qval;
@@ -343,12 +354,26 @@
               }
 
               if (keep_source){  //if the source node is connected to a rank we want to display
-                  new_nodes.push({data: {id: source_node, 
-                    name: source_node_name, color: '#ADD8E6', width: 250, height: 250}});
+                  new_nodes.push({
+                    data: {
+                      id: source_node, 
+                      name: source_node_name, 
+                      color: '#ADD8E6', 
+                      width: 250, 
+                      height: 250,
+                      type: 'taxon'
+                    }});
               }
               if (keep_target){  //if the target node is connected to a rank we want to display
-                  new_nodes.push({data: {id: target_node, 
-                    name: target_node_name, color: '#ADD8E6', width: 250, height: 250}});
+                  new_nodes.push({
+                    data: {
+                      id: target_node, 
+                      name: target_node_name, 
+                      color: '#ADD8E6', 
+                      width: 250, 
+                      height: 250,
+                      type: 'taxon'
+                    }});
               }
 
 
@@ -510,29 +535,34 @@
             }
 
         }
-        console.log("new_prop_array", new_property_array);
-        console.log("bnode_objects", bnodes);
+      
         return {prop_array: new_property_array, bnodes_obj: bnodes};
         
 
       }
+      
 
-      function add_values_to_bnodes(bnodes, bnode_objects, cy_graph){
-          var diam = 120;
-          for (let x = 0; x < bnodes.length; x ++){
 
-              var bnode_pos = bnodes[x].position;
-              var bnode_number = bnodes[x].data.id;
+      //box_nodes is just the data of the node
+      //bnode_properties is thee object with a list of property nodes
+      //bnode_name is going to be the name of the bnode
+      function add_values_to_bnode(bnode_name, box_nodes, bnode_properties, cy_graph, padding_amt){
+              var diam = 120;
+              var bnode_data = box_nodes[bnode_name];
+             
+
+              var bnode_pos = bnode_data.position;
               var x_pos = bnode_pos.x;
               var y_pos = bnode_pos.y;
               var added_els = [];
-              var num_bnode_values = bnode_objects[bnode_number].length;
+
+              var num_bnode_props = bnode_properties[bnode_name].length;
               var mult_constant = 5;
 
-              var circumference = num_bnode_values * diam;
+              var circumference = num_bnode_props * diam;
               var radius = circumference / (2* Math.PI);
               var curr_degree = .52;
-              var degree_movement = (2 * Math.PI) / num_bnode_values;
+              var degree_movement = (2 * Math.PI) / num_bnode_props;
 
               var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(curr_degree));
               var next_y_pos = y_pos + (radius*mult_constant)*(Math.sin(curr_degree));
@@ -540,21 +570,23 @@
               var new_degree = 0;
               var bnode_vals = [];
 
-              var curr_bnode_vals = bnode_objects[bnode_number];
-              for (let i = 0; i < num_bnode_values; i++){
-                    var curr_bnode_val = curr_bnode_vals[i].obj2;
-                    var curr_edge_label = curr_bnode_vals[i].pred2;
+              var curr_bnode_props = bnode_properties[bnode_name];
 
-                    if (curr_bnode_vals[i].pred2Label != undefined){
-                      curr_edge_label = curr_bnode_vals[i].pred2Label.value;
+              for (let i = 0; i < num_bnode_props; i++){
+
+                    var curr_bnode_prop = curr_bnode_props[i].obj2;
+                    var curr_edge_label = curr_bnode_props[i].pred2;
+
+                    if (curr_bnode_props[i].pred2Label != undefined){
+                      curr_edge_label = curr_bnode_props[i].pred2Label.value;
                     }
-                    if (curr_bnode_vals[i].obj2Label != undefined){
-                      curr_bnode_val = curr_bnode_vals[i].obj2Label.value;
+                    if (curr_bnode_props[i].obj2Label != undefined){
+                      curr_bnode_prop = curr_bnode_props[i].obj2Label.value;
                     }
 
-                    var node_id = `${curr_bnode_val} - ${bnode_number}`;
+                    var node_id = `${curr_bnode_prop} - ${bnode_name}`;
                   
-                    if (curr_bnode_val != undefined){  
+                    if (curr_bnode_prop != undefined){  
           
                                   var new_property_node = 
                                             {
@@ -562,10 +594,11 @@
                                                 data: {
                                                   id: node_id,
                                                   color: '#FFD580',
-                                                  name: curr_bnode_val,
+                                                  name: curr_bnode_prop,
                                                   opacity: 1,
                                                   width: diam,
-                                                  height: diam
+                                                  height: diam,
+                                                  type: 'property'
                                                 },
                                                 position: {x: next_x_pos, y: next_y_pos}
                                             };
@@ -578,8 +611,8 @@
                                               group: 'edges',
                                               data: 
                                                   {
-                                                      id: node_id.concat(bnode_number),
-                                                      source: bnode_number, 
+                                                      id: node_id.concat(bnode_name),
+                                                      source: bnode_name, 
                                                       target: node_id,
                                                       label: curr_edge_label
                                                   }
@@ -597,10 +630,10 @@
                         }
 
               }
-              
+
               cy_graph.add(added_els);
               var id_selector = `node[width = ${diam}]`;
-                    cy_graph.nodes(id_selector).style({
+              cy_graph.nodes(id_selector).style({
                       'background-color': '#CBC3E3',
                       'text-wrap': 'wrap',
                       'text-max-width': diam - 10,
@@ -609,12 +642,13 @@
                       'font-size': 35,
                       'font-family': 'Garamond',
                       'line-height': 1.15
-                    });
+              });
 
-          }
-
+              var id_label = `[id = ${bnode_name}]`;
 
       }
+
+
 
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
@@ -628,7 +662,9 @@
             //first want to trim down our redundancy in our query
             var new_prop_data = trim_prop_query(data.results.bindings);
 
-            var bnode_objects = new_prop_data.bnodes_obj;
+            var bnode_properties = new_prop_data.bnodes_obj;
+            console.log('bnode_props', bnode_properties);
+
             var new_property_array = new_prop_data.prop_array;
             var num_property_nodes = new_property_array.length;
 
@@ -647,7 +683,7 @@
             var x_constant = 1;
             var y_constant = 1;
             var new_degree = 0;
-            var bnodes = [];
+            var box_nodes = {};
 
             /*temporarily first get the number of property nodes we want until query issue is fixed*/
 		
@@ -678,9 +714,28 @@
                   if (prop_node_val != undefined){  
 
                               if (prop_node_type == "bnode"){
-                                  var next_x_pos = x_pos + (radius*1.5*mult_constant)*(Math.cos(curr_degree));
-                                  var next_y_pos = y_pos + (radius*1.5*mult_constant)*(Math.sin(curr_degree));
+                                    var next_x_pos = x_pos + (radius*1.5*mult_constant)*(Math.cos(curr_degree));
+                                    var next_y_pos = y_pos + (radius*1.5*mult_constant)*(Math.sin(curr_degree));
+                                    
+                                    var bnode_props = bnode_properties[prop_node_val];
+
+                                    if (bnode_props.length  >= 2){
+                                        var pred2Label = bnode_props[0].pred2Label;
+                                        if (pred2Label != undefined){
+                                          if (pred2Label.value == 'unit'){
+
+                                              var number = bnode_props[1].obj2;
+                                              var units = bnode_props[0].obj2Label.value;
+
+                                              prop_node_val = `${prop_node_val}: ${number} ${units}`;
+                                          } else {
+                                            var prefcomparison = bnode_props[0].obj2Label.value;
+                                            prop_node_val = `${prop_node_val}: prefComparison is ${prefcomparison}`;
+                                          }
+                                        }
+                                    }
                               }
+
           
                               var new_property_node = 
                                         {
@@ -691,13 +746,14 @@
                                               name: prop_node_val,
                                               opacity: 1,
                                               width: prop_node_diam,
-                                              height: prop_node_height
+                                              height: prop_node_height,
+                                              type: 'property'
                                             },
                                             position: {x: next_x_pos, y: next_y_pos}
                                         };
                                 
                                 if (prop_node_type == 'bnode'){
-                                  bnodes.push(new_property_node);
+                                  box_nodes[node_id] = (new_property_node);
                                   
                                 }
                                 added_els.push(new_property_node);
@@ -729,7 +785,6 @@
               }     
 
                     cy_graph.add(added_els);
-                    add_values_to_bnodes(bnodes, bnode_objects, cy_graph);
 
                     var id_label = `[id = '${node_name}']`
 
@@ -768,6 +823,27 @@
                     });
       
                     cy_graph.elements().edges().style({'font-size': '30'});
+                    var parity_of_tap = 'even'; //starts at 0
+                    //if theres an even num of taps, dispaly bnode_vals, odd means remove them
+
+                    cy_graph.elements('node[type = "property"]').on('tap', function (evt){
+
+                        var data = evt.target._private.data;
+                        if (data.name.charAt(0) == 'b'){
+                              if (parity_of_tap == 'even'){
+                                //bnode_name, box_nodes, bnode_properties, cy_graph
+                                console.log('bnode_id', data.id);
+
+                                add_values_to_bnode(data.id, box_nodes, bnode_properties, cy_graph, padding_amount);
+                                parity_of_tap = 'odd';
+
+                              }else{
+                                  cy_graph.remove(`node[width = 120]`);
+                                  parity_of_tap = 'even';
+                              }
+                        }
+                    });
+                    
                     
 
           }
@@ -804,7 +880,7 @@
 
                 var id_label = `[id = '${curr_node_id}']`;
 
-                if (ranks.includes(curr_node_name)){
+                if (ranks.includes(curr_node_name) || curr_node_name == "Clade"){
                     cy_graph.nodes(id_label).style({
                       "background-color": "#90EE90",
                       'text-wrap': 'wrap',
@@ -844,7 +920,8 @@
 
       //only want this function to preform the query if we select a non-rank node
       function get_properties(node_name, cy_graph, moderate_ranks, pc_edges, prop_node_diam){
-  
+        
+
         if (moderate_ranks.includes(node_name) || node_name == "Clade"){
           return false;
         }
@@ -883,6 +960,7 @@
                                 opacity: 1,
                                 width: definition_node_size,
                                 height: definition_node_height,
+                                type: 'property'
                               },
                                position: {x: pos.x + 500 , y: pos.y}
                           };
@@ -1067,7 +1145,8 @@
                 color: '#90EE90',
                 name: rank_node,
                 width: 100,
-                height: 100
+                height: 100,
+                type: 'rank'
               },
               position: {x: x_pos - 350, y: y_pos}
             };
@@ -1116,19 +1195,42 @@
                     });
       
           
+          //console.log("taxon nodes", cy.elements(node_selector));
+          var zoomedInOnNode = false;
+          var id_lastclicked_node = "";
+          cy.on('tap', function(evt){
+                          
+                var evtTarget = evt.target;
+                var data = evtTarget._private.data;
 
-          cy.nodes().on('select', function(evt){
-                var name = this._private.data.name;
-                if (!(moderate_ranks.includes(name) || name == "Clade")){
-                    get_properties(this.id(), cy, moderate_ranks, pc_edges, prop_node_diam);
+                if (Object.keys(data).length == 0){
+                  console.log('clicked background');
+                  if (zoomedInOnNode){
+
+                    console.log('data', data);
+
+                    return_to_normal(id_lastclicked_node, cy, given_taxon, moderate_ranks, prop_node_diam);
+                    id_lastclicked_node = "";
+                    zoomedInOnNode = false;
+                  }
+                } else {
+
+                    if (data.type == 'taxon' && data.id != id_lastclicked_node){
+                      var name = data.name;
+                      if (!(moderate_ranks.includes(name) || name == "Clade")) {
+                          get_properties(data.id, cy, moderate_ranks, pc_edges, prop_node_diam);
+                          zoomedInOnNode = true;
+                          id_lastclicked_node = data.id;
+                      }
+                    }
+
                 }
+
           })
-          .on('unselect', function(evt){
-                return_to_normal(this.id(), cy, given_taxon, moderate_ranks, prop_node_diam);
-            
-          })
+        
           
-          .on("mouseover", function(evt){
+          
+          cy.nodes().on("mouseover",function(evt){
                 var name = this._private.data.name;
                 if (!(moderate_ranks.includes(name) || name == "Clade")){
                   get_definition(this.id(), cy, moderate_ranks, definitions, definition_node_size);
@@ -1199,8 +1301,15 @@
           while (curr_node != root){
             next_node = pc_edges[curr_node];
             //add this node and a new edge
-            var new_node = {data: {id: next_node, name: next_node, 
-              color: '#ADD8E6', width: 150, height: 150}};
+            var new_node = {
+              data: {
+                  id: next_node, 
+                  name: next_node, 
+                  color: '#ADD8E6', 
+                  width: 150, 
+                  height: 150,
+                  type: 'taxon'
+                }};
             old_nodes.push(new_node);
             
             //only add a new edge if it hasn't already been added
