@@ -585,7 +585,6 @@
                     }
 
                     var node_id = `${curr_bnode_prop} - ${bnode_name}`;
-                  
                     if (curr_bnode_prop != undefined){  
           
                                   var new_property_node = 
@@ -598,7 +597,7 @@
                                                   opacity: 1,
                                                   width: diam,
                                                   height: diam,
-                                                  type: 'property'
+                                                  type: `${bnode_name} property`
                                                 },
                                                 position: {x: next_x_pos, y: next_y_pos}
                                             };
@@ -823,29 +822,30 @@
                     });
       
                     cy_graph.elements().edges().style({'font-size': '30'});
-                    var parity_of_tap = 'even'; //starts at 0
-                    //if theres an even num of taps, dispaly bnode_vals, odd means remove them
+                    
+                    var parity_dictionary = {}
+                    for (const[key, value] of Object.entries(box_nodes)){
 
-                    cy_graph.elements('node[type = "property"]').on('tap', function (evt){
+                      var id_label = `node[id = "${key}"]`;
+                      parity_dictionary[`parity_of_tap_${key}`] = 'even';  //a way of creating a "new" var for each bnode
 
-                        var data = evt.target._private.data;
-                        if (data.name.charAt(0) == 'b'){
-                              if (parity_of_tap == 'even'){
+                      cy_graph.nodes(id_label).on('tap', function(evt){
+                            var data = evt.target._private.data;
+                            if (parity_dictionary[`parity_of_tap_${data.id}`] == 'even'){
                                 //bnode_name, box_nodes, bnode_properties, cy_graph
-                                console.log('bnode_id', data.id);
-
                                 add_values_to_bnode(data.id, box_nodes, bnode_properties, cy_graph, padding_amount);
-                                parity_of_tap = 'odd';
+                                parity_dictionary[`parity_of_tap_${data.id}`] = 'odd';
 
-                              }else{
-                                  cy_graph.remove(`node[width = 120]`);
-                                  parity_of_tap = 'even';
-                              }
-                        }
+                            }else {
+                              parity_dictionary[`parity_of_tap_${data.id}`] = 'even';
+                                cy_graph.remove(`node[type = "${data.id} property"]`);
+                            }
+                            
                     });
-                    
-                    
 
+                       
+
+                    }
           }
 
               
