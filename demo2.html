@@ -335,6 +335,7 @@
         var new_nodes = [];
         var edges_missing = {}; //keeps track of the nodes that now no longer have edges because of the removed ranks
         var taxon_qvals = data.taxon_qvals;
+        var new_pc_edges = pc_edges;
 
         //iterating through all the edges and figuring out which ones are going to be removed 
         for (let i = 0; i < edges.length; i++){
@@ -428,12 +429,16 @@
 
                 new_edge = {data: {id: `${curr_source} - ${new_target}`, 
                 source: curr_source, target: new_target, label:'subTaxonOf'}};
+                new_pc_edges[curr_source] = new_target;
                 new_edges.push(new_edge);
 
             }
         }
-        
-        return {nodes: new_nodes, edges: new_edges, em: edges_missing};
+        console.log('new_pc_edges', new_pc_edges);
+        return {nodes: new_nodes, 
+                edges: new_edges, 
+                em: edges_missing,
+                newPC_edges: new_pc_edges};
 
 
     }
@@ -476,6 +481,7 @@
         var bnodes = {};
         var bnode_obj_values = [];
         var curr_bnode_num = 'b0';
+        var subtax_rank = {};
         
         for (let i = 0; i < property_array.length; i ++){
             var curr_data_val = property_array[i];
@@ -516,9 +522,7 @@
 
                             }
                             
-                    }
-                    
-                    
+                    }      
 
             }
             //next check for redundant object labels
@@ -526,17 +530,29 @@
             //predLabels (i.e. two defintions could be possible)
             else if (curr_data_val.objLabel != undefined){
               var obj_label = curr_data_val.objLabel.value;
+              
               if (!(obj_labels.includes(obj_label))){
-                  obj_labels.push(obj_label);
-                  new_property_array.push(curr_data_val);
+
+                  if (curr_data_val.predLabel != undefined){
+                    if (curr_data_val.predLabel.value == 'subTaxonOf'){
+                      subtax_rank['subTaxonOf'] = obj_label;
+                    }
+                    else if (curr_data_val.predLabel.value == 'taxonRank'){
+                      subtax_rank['taxonRank'] = obj_label;
+                    } else {
+                      obj_labels.push(obj_label);
+                      new_property_array.push(curr_data_val);
+                    }
+                    
+                  }
               }
             }else{
               new_property_array.push(curr_data_val);
             }
 
         }
-      
-        return {prop_array: new_property_array, bnodes_obj: bnodes};
+        
+        return {prop_array: new_property_array, bnodes_obj: bnodes, subtax_rank: subtax_rank};
         
 
       }
@@ -547,6 +563,7 @@
       //bnode_properties is thee object with a list of property nodes
       //bnode_name is going to be the name of the bnode
       function add_values_to_bnode(bnode_name, box_nodes, bnode_properties, cy_graph, padding_amt){
+              
               var diam = 120;
               var bnode_data = box_nodes[bnode_name];
              
@@ -644,25 +661,144 @@
               });
 
               var id_label = `[id = ${bnode_name}]`;
+              
 
       }
 
+      function add_subtax_rank_nodes(subtax_node_name, rank_node_name, 
+            cy_graph, node_name, radius, mult_constant, prop_node_diam, pos, graphType_pc_edges){
+            var subTaxonOf_degree = 0;
+            var taxon_x_pos = pos.x;
+            var taxon_y_pos = pos.y;
+        
 
+            console.log('rank_name', rank_node_name);
+            if (subtax_node_name != undefined){
+                    
+                    
+                    var parent_node = graphType_pc_edges[node_name];
+                    //first adding the subTaxonOf property node
+                    var parent_pos= cy_graph.nodes(`node[id = "${parent_node}"]`).position();
+                    console.log('parent_pos', parent_pos)
+                    //getting the original radius of the subTaxonOf node
+                    var old_radius = Math.sqrt(Math.pow(taxon_x_pos - parent_pos.x, 2) 
+                                          + Math.pow(taxon_y_pos - parent_pos.y, 2));
+                  
+                    var x_dist = parent_pos.x - taxon_x_pos;  //need to do this to pretend that taxon is at an origin
+                    
+                    var subTaxonOf_degree = Math.acos(x_dist/old_radius);
+                    
+                    var new_parent_pos = {x: taxon_x_pos + radius * mult_constant * (Math.cos(subTaxonOf_degree)), 
+                                          y: taxon_y_pos - radius * (mult_constant * Math.sin(subTaxonOf_degree))
+                                        };
+                    
+                    var node_id = `prop ${subtax_node_name}`;
+                    var new_subtax_node = 
+                            {
+                                group: 'nodes',
+                                data: {
+                                  id: node_id,
+                                  color: '#ADD8E6',
+                                  name: subtax_node_name,
+                                  opacity: 1,
+                                  width: 250,
+                                  height: 250,
+                                  type: 'subTaxProp'
+                                },
+                                position: new_parent_pos
+                            };
+                    var new_subtax_edge = 
+                            {
+                              group: 'edges',
+                              data: 
+                                  {
+                                      id: node_id.concat(node_name),
+                                      source: node_name, 
+                                      target: node_id,
+                                      label: 'subTaxonOf'
+                                  }
+                            };
+
+                    cy_graph.add([new_subtax_node]);
+                    cy_graph.add([new_subtax_edge]);
+
+            }
+
+            
+            //now need to add the rank node
+            if (rank_node_name == undefined){
+                return subTaxonOf_degree;
+            }
+            
+            var rank_pos = {x: taxon_x_pos - radius * mult_constant, y: taxon_y_pos};
+            var node_id = `prop ${rank_node_name}`;
+            var new_rank_node = 
+                    {
+                        group: 'nodes',
+                        data: {
+                          id: node_id,
+                          color: '#90EE90',
+                          name: rank_node_name,
+                          opacity: 1,
+                          width: 150,
+                          height: 150,
+                          type: 'rankProp'
+                        },
+                        position: rank_pos
+                    };
+             cy_graph.add([new_rank_node]);
+             console.log('added new rank node');
+             var new_rank_edge = 
+                    {
+                      group: 'edges',
+                      data: 
+                          {
+                              id: node_id.concat(rank_node_name),
+                              source: node_name, 
+                              target: node_id,
+                              label: 'taxonRank'
+                          }
+                    };
+
+            cy_graph.add([new_rank_edge]);
+            cy_graph.nodes(`node[type = "subTaxProp"]`).style({
+                      'text-wrap': 'wrap',
+                      'text-max-width': 230,
+                      'border-width': 5,
+                      'border-color': '#00008B',
+                      'border-style': 'solid',
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+                    });
+            cy_graph.nodes(`node[type = "rankProp"]`).style({
+              'text-wrap': 'wrap',
+              'text-max-width': 150,
+              'border-width': 5,
+              'border-color': '#228B22',
+              'border-style': 'solid',
+              'font-size': 35,
+              'font-family': 'Garamond',
+              'line-height': 1.15
+            });
+            return subTaxonOf_degree;
+      
+      
+      }
 
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
-      function create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam){
+      function create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam, graphType_pc_edges){
             var prop_node_height = prop_node_diam;
-            var x_pos = pos.x;
-            var y_pos = pos.y;
+            var taxon_x_pos = pos.x;
+            var taxon_y_pos = pos.y;
             var added_els = [];
-
+            var new_diam = prop_node_diam;
             
             //first want to trim down our redundancy in our query
             var new_prop_data = trim_prop_query(data.results.bindings);
 
             var bnode_properties = new_prop_data.bnodes_obj;
-            console.log('bnode_props', bnode_properties);
 
             var new_property_array = new_prop_data.prop_array;
             var num_property_nodes = new_property_array.length;
@@ -672,22 +808,28 @@
 
 
             //calculate placement of first property node
-            var circumference = num_property_nodes * 50;
+            //+2 because need to account for adding the subtaxonOf node
+            //and the rank node which aren't present in new_property_array.length;
+            var circumference = (num_property_nodes + 2) * 50;
             var radius = circumference / (2* Math.PI);
             var curr_degree = 0;
-            var degree_movement = (2 * Math.PI) / num_property_nodes;
+            var degree_movement = (2 * Math.PI) / (num_property_nodes + 2);
 
-            var next_x_pos = x_pos + (radius* (mult_constant));
-            var next_y_pos = y_pos;
-            var x_constant = 1;
-            var y_constant = 1;
             var new_degree = 0;
             var box_nodes = {};
 
-            /*temporarily first get the number of property nodes we want until query issue is fixed*/
-		
-            for (let x = 0; x < num_property_nodes; x ++){
+            var subtax_node_name = new_prop_data.subtax_rank['subTaxonOf'];
+            var rank_node_name = new_prop_data.subtax_rank['taxonRank'];
+            var assigned_node_type = 'concept'
 
+            //going to apply the over_lay property to the subtax and rank nodes
+            var start_degree = add_subtax_rank_nodes(subtax_node_name, rank_node_name, 
+                      cy_graph, node_name, radius, mult_constant, prop_node_diam, pos, graphType_pc_edges);
+            curr_degree = start_degree;
+
+            for (let x = 0; x < num_property_nodes; x ++){
+                  var new_diam = prop_node_diam;
+                  var prop_node_type = 'concept';
                   //we want the object label and the predlabel  
                   var prop_node_val = new_property_array[x].objLabel ? new_property_array[x].objLabel.value : new_property_array[x].obj.value;
                   var pred_val = new_property_array[x].predLabel ? new_property_array[x].predLabel.value : new_property_array[x].pred.value;
@@ -696,6 +838,7 @@
                   var num_lines = Math.ceil((prop_node_val.length)/15);
                   prop_node_height = num_lines * 50 + 50;
 
+                  console.log('prop node val', prop_node_val)
                   var node_id = prop_node_val;
                   //check to see if it's not already a node on the graph
                   if (pc_edges[prop_node_val] != undefined || 
@@ -704,6 +847,13 @@
                   }
                   if (prop_node_type == 'literal'){
                       prop_node_val = `"${prop_node_val}"`;
+                      assigned_node_type = 'literal';
+                      
+
+                  }else{
+                    assigned_node_type = 'concept';
+                    prop_node_height = 250;
+                    new_diam = 250;
                   }
 
                   if (pred_val == 'definition'){
@@ -712,9 +862,18 @@
 
                   if (prop_node_val != undefined){  
 
+                              var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
+                              console.log('new_degree', new_degree*(180/Math.PI));
+
                               if (prop_node_type == "bnode"){
-                                    var next_x_pos = x_pos + (radius*1.5*mult_constant)*(Math.cos(curr_degree));
-                                    var next_y_pos = y_pos + (radius*1.5*mult_constant)*(Math.sin(curr_degree));
+                                    if (new_degree >= ((7/8)*Math.PI) && new_degree <= Math.PI
+                                    || new_degree >= Math.PI && new_degree <= (9/8)*Math.PI){
+
+                                        new_degree = (new_degree + degree_movement) % (2 * Math.PI);
+
+                                    }
+                                    var next_x_pos = taxon_x_pos + (radius*1.5*mult_constant)*(Math.cos(new_degree));
+                                    var next_y_pos = taxon_y_pos - (radius*1.5*mult_constant)*(Math.sin(new_degree));
                                     
                                     var bnode_props = bnode_properties[prop_node_val];
 
@@ -733,8 +892,18 @@
                                           }
                                         }
                                     }
+                              }else{
+                                
+                                
+                                if (new_degree <= Math.PI && new_degree >= ((5/6)*Math.PI)
+                                || new_degree >= Math.PI && new_degree <= ((7/6)*Math.PI)){
+                                    new_degree = (new_degree + degree_movement) % (2 * Math.PI);
+                                } 
+                                var next_x_pos = taxon_x_pos + (radius*mult_constant)*(Math.cos(new_degree));
+                                var next_y_pos = taxon_y_pos - (radius*mult_constant)*(Math.sin(new_degree));
+                                
                               }
-
+                              curr_degree = new_degree;
           
                               var new_property_node = 
                                         {
@@ -744,9 +913,9 @@
                                               color: '#FFD580',
                                               name: prop_node_val,
                                               opacity: 1,
-                                              width: prop_node_diam,
+                                              width: new_diam,
                                               height: prop_node_height,
-                                              type: 'property'
+                                              type: assigned_node_type
                                             },
                                             position: {x: next_x_pos, y: next_y_pos}
                                         };
@@ -771,14 +940,7 @@
                                         };
 
                                   added_els.push(new_edge);
-
-                                
-                                  var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
-
-                                  var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(new_degree));
-                                  var next_y_pos = y_pos + (radius*mult_constant)*(Math.sin(new_degree));
-                                    
-                                  curr_degree = new_degree;
+                                  
                     }
                         
               }     
@@ -807,14 +969,29 @@
                       }
                     });
                     
-                    var id_selector = `node[width = ${prop_node_diam.toString()}]`;
+                    var literal_id_selector = `node[type = "literal"]`;
 
-                    cy_graph.nodes(id_selector).style({
+                    cy_graph.nodes(literal_id_selector).style({
                       'shape': 'square',
+                      'background-color': '#FFD580',
                       'text-wrap': 'wrap',
                       'text-max-width': prop_node_diam - 20,
                       'border-width': 5,
                       'border-color': '#FFA500',
+                      'border-style': 'solid',
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+                    });
+
+                    var concept_id_selector = `node[type = "concept"]`;
+
+                    cy_graph.nodes(concept_id_selector).style({
+                      'background-color': '	#fdfa72',
+                      'text-wrap': 'wrap',
+                      'text-max-width': prop_node_diam - 20,
+                      'border-width': 5,
+                      'border-color': '#F6BE00',
                       'border-style': 'solid',
                       'font-size': 35,
                       'font-family': 'Garamond',
@@ -849,7 +1026,7 @@
           }
 
               
-      function show_property_nodes(node_name, data, cy_graph, pc_edges, prop_node_diam){
+      function show_property_nodes(node_name, data, cy_graph, pc_edges, prop_node_diam, graphType_pc_edges){
             
             console.log("property data", data);
             
@@ -857,7 +1034,7 @@
             var pos = cy_graph.nodes(id_label).position();
 
             shade_other_nodes(node_name, cy_graph);
-            create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam);
+            create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam, graphType_pc_edges);
 
       }
 
@@ -909,8 +1086,12 @@
             
             var node_id_removed = `node[width = ${prop_node_diam.toString()}]`;
             
-            cy_graph.remove(node_id_removed);
-            cy_graph.remove("node[width = 120]");
+            cy_graph.remove(`node[type = "subTaxProp"]`);
+            cy_graph.remove(`node[type = "rankProp"]`);
+            cy_graph.remove(`node[type = "property"]`);
+            cy_graph.remove(`node[type = "concept"]`);
+            cy_graph.remove(`node[type = "literal"]`);
+            cy_graph.remove("node[width = 120]"); //removing box nodes
             cy_graph.animate({
               fit: {
                 padding: 20
@@ -919,7 +1100,7 @@
       }
 
       //only want this function to preform the query if we select a non-rank node
-      function get_properties(node_name, cy_graph, moderate_ranks, pc_edges, prop_node_diam){
+      function get_properties(node_name, cy_graph, moderate_ranks, pc_edges, prop_node_diam, graphType_pc_edges){
         
 
         if (moderate_ranks.includes(node_name) || node_name == "Clade"){
@@ -927,7 +1108,7 @@
         }
         var url = property_query(node_name, true);
           d3.json(url).then(function(json){
-            show_property_nodes(node_name, json, cy_graph, pc_edges, prop_node_diam)
+            show_property_nodes(node_name, json, cy_graph, pc_edges, prop_node_diam, graphType_pc_edges)
           })
       }
 
@@ -1025,6 +1206,7 @@
 	      var pc_edges = converted_data.pc_edges;
         var definitions = converted_data.definitions;
         var taxon_qvals = converted_data.taxon_qvals;
+        var graphType_pc_edges = pc_edges;
 
         //this will mainly be used to pass into other fns to know what nodes
         //already exist in our graph
@@ -1044,6 +1226,7 @@
             new_data = create_new(converted_data, concise_ranks, user_entered_taxon);
             nodes_lst = new_data.nodes;
             edge_lst = new_data.edges;
+            graphType_pc_edges = new_data.newPC_edges;
 
         } else if (graphType == 'Moderate') {
 
@@ -1051,6 +1234,7 @@
 
             nodes_lst = new_data.nodes;
             edge_lst = new_data.edges;
+            graphType_pc_edges = new_data.newPC_edges;
         }
         else {
           nodes_lst = converted_data.nodes;
@@ -1218,7 +1402,8 @@
                     if (data.type == 'taxon' && data.id != id_lastclicked_node){
                       var name = data.name;
                       if (!(moderate_ranks.includes(name) || name == "Clade")) {
-                          get_properties(data.id, cy, moderate_ranks, pc_edges, prop_node_diam);
+                          get_properties(data.id, cy, moderate_ranks, 
+                                  pc_edges, prop_node_diam, graphType_pc_edges);
                           zoomedInOnNode = true;
                           id_lastclicked_node = data.id;
                       }
