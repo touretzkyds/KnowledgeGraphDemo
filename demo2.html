@@ -482,6 +482,7 @@
         var bnode_obj_values = [];
         var curr_bnode_num = 'b0';
         var subtax_rank = {};
+        subtax_rank['subtax_identifier'] = "";
         
         for (let i = 0; i < property_array.length; i ++){
             var curr_data_val = property_array[i];
@@ -529,13 +530,24 @@
             //assumption is that we can have redundant
             //predLabels (i.e. two defintions could be possible)
             else if (curr_data_val.objLabel != undefined){
+              
+
               var obj_label = curr_data_val.objLabel.value;
               
               if (!(obj_labels.includes(obj_label))){
 
                   if (curr_data_val.predLabel != undefined){
                     if (curr_data_val.predLabel.value == 'subTaxonOf'){
+
                       subtax_rank['subTaxonOf'] = obj_label;
+
+                      var qval_url = curr_data_val.obj.value;
+
+                          if (qval_url.length >= 40
+                              && (qval_url.slice(0, 40)) == 'http://solid.boltz.cs.cmu.edu:3030/data/'){
+                              subtax_name = `${obj_label}    boltz: ${qval_url.slice(40, qval_url.length)}`;
+                              subtax_rank['subtax_identifier'] = subtax_name;
+                          }
                     }
                     else if (curr_data_val.predLabel.value == 'taxonRank'){
                       subtax_rank['taxonRank'] = obj_label;
@@ -665,14 +677,19 @@
 
       }
 
-      function add_subtax_rank_nodes(subtax_node_name, rank_node_name, 
-            cy_graph, node_name, radius, mult_constant, prop_node_diam, pos, graphType_pc_edges){
+      function add_subtax_rank_nodes(subtax_rank, cy_graph, node_name, radius, 
+            mult_constant, prop_node_diam, pos, graphType_pc_edges){
+            var subtax_node_id= subtax_rank['subTaxonOf'];
+            var rank_node_name = subtax_rank['taxonRank'];
+            var subtax_node_name = subtax_rank['subtax_identifier'];
+            console.log('subtax_node name', subtax_node_name);
+
             var subTaxonOf_degree = 0;
             var taxon_x_pos = pos.x;
             var taxon_y_pos = pos.y;
         
 
-            if (subtax_node_name != undefined){
+            if (subtax_node_id != undefined){
                     
                     
                     var parent_node = graphType_pc_edges[node_name];
@@ -690,7 +707,7 @@
                                           y: taxon_y_pos - radius * (mult_constant * Math.sin(subTaxonOf_degree))
                                         };
                     
-                    var node_id = `prop ${subtax_node_name}`;
+                    var node_id = `prop ${subtax_node_id}`;
                     var new_subtax_node = 
                             {
                                 group: 'nodes',
@@ -815,12 +832,10 @@
             var new_degree = 0;
             var box_nodes = {};
 
-            var subtax_node_name = new_prop_data.subtax_rank['subTaxonOf'];
-            var rank_node_name = new_prop_data.subtax_rank['taxonRank'];
             var assigned_node_type = 'concept'
 
             //going to apply the over_lay property to the subtax and rank nodes
-            var start_degree = add_subtax_rank_nodes(subtax_node_name, rank_node_name, 
+            var start_degree = add_subtax_rank_nodes(new_prop_data.subtax_rank, 
                       cy_graph, node_name, radius, mult_constant, prop_node_diam, pos, graphType_pc_edges);
             curr_degree = start_degree;
 
@@ -847,6 +862,7 @@
                       
 
                   }else{
+                    //prop_node_type is a concept so we want to ideally get q identifier
                     assigned_node_type = 'concept';
                     prop_node_height = 250;
                     new_diam = 250;
