@@ -672,14 +672,12 @@
             var taxon_y_pos = pos.y;
         
 
-            console.log('rank_name', rank_node_name);
             if (subtax_node_name != undefined){
                     
                     
                     var parent_node = graphType_pc_edges[node_name];
                     //first adding the subTaxonOf property node
                     var parent_pos= cy_graph.nodes(`node[id = "${parent_node}"]`).position();
-                    console.log('parent_pos', parent_pos)
                     //getting the original radius of the subTaxonOf node
                     var old_radius = Math.sqrt(Math.pow(taxon_x_pos - parent_pos.x, 2) 
                                           + Math.pow(taxon_y_pos - parent_pos.y, 2));
@@ -747,7 +745,6 @@
                         position: rank_pos
                     };
              cy_graph.add([new_rank_node]);
-             console.log('added new rank node');
              var new_rank_edge = 
                     {
                       group: 'edges',
@@ -838,7 +835,6 @@
                   var num_lines = Math.ceil((prop_node_val.length)/15);
                   prop_node_height = num_lines * 50 + 50;
 
-                  console.log('prop node val', prop_node_val)
                   var node_id = prop_node_val;
                   //check to see if it's not already a node on the graph
                   if (pc_edges[prop_node_val] != undefined || 
@@ -863,7 +859,6 @@
                   if (prop_node_val != undefined){  
 
                               var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
-                              console.log('new_degree', new_degree*(180/Math.PI));
 
                               if (prop_node_type == "bnode"){
                                     if (new_degree >= ((7/8)*Math.PI) && new_degree <= Math.PI
@@ -1100,8 +1095,29 @@
       }
 
       //only want this function to preform the query if we select a non-rank node
-      function get_properties(node_name, cy_graph, moderate_ranks, pc_edges, prop_node_diam, graphType_pc_edges){
-        
+      function get_properties(given_taxon, node_name, cy_graph, moderate_ranks,
+       pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node){
+
+            if (id_lastclicked_node != ""){
+              var id_label = `[id = '${id_lastclicked_node}']`;
+              cy_graph.nodes(id_label).style({
+                "background-color": "#ADD8E6",
+                'border-width': 0
+              });
+            }
+
+            var id_label =`[id = '${given_taxon}']`;
+              cy_graph.nodes(id_label).style({
+                "background-color": "red",
+                'border-width': 0
+              });
+
+            cy_graph.remove(`node[type = "subTaxProp"]`);
+            cy_graph.remove(`node[type = "rankProp"]`);
+            cy_graph.remove(`node[type = "property"]`);
+            cy_graph.remove(`node[type = "concept"]`);
+            cy_graph.remove(`node[type = "literal"]`);
+            cy_graph.remove("node[width = 120]"); //removing box nodes
 
         if (moderate_ranks.includes(node_name) || node_name == "Clade"){
           return false;
@@ -1141,7 +1157,7 @@
                                 opacity: 1,
                                 width: definition_node_size,
                                 height: definition_node_height,
-                                type: 'property'
+                                type: 'definition'
                               },
                                position: {x: pos.x + 500 , y: pos.y}
                           };
@@ -1402,8 +1418,9 @@
                     if (data.type == 'taxon' && data.id != id_lastclicked_node){
                       var name = data.name;
                       if (!(moderate_ranks.includes(name) || name == "Clade")) {
-                          get_properties(data.id, cy, moderate_ranks, 
-                                  pc_edges, prop_node_diam, graphType_pc_edges);
+                          console.log('last clicked node', id_lastclicked_node)
+                          get_properties(given_taxon, data.id, cy, moderate_ranks, 
+                                  pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node);
                           zoomedInOnNode = true;
                           id_lastclicked_node = data.id;
                       }
@@ -1417,14 +1434,18 @@
           
           cy.nodes().on("mouseover",function(evt){
                 var name = this._private.data.name;
-                if (!(moderate_ranks.includes(name) || name == "Clade")){
-                  get_definition(this.id(), cy, moderate_ranks, definitions, definition_node_size);
-                }
-              
-          })
+                var style = evt.target._private.style
+                if (style != undefined){
+                    if (style.opacity == undefined || style.opacity.value == 1){
+                      if (!(moderate_ranks.includes(name) || name == "Clade")){
+                          get_definition(this.id(), cy, moderate_ranks, definitions, definition_node_size);
+                        }
+                    }
+                }                  
+            })
           
           .on("mouseout", function(evt){
-            var id_selector = `node[width = ${definition_node_size.toString()}]`;
+            var id_selector = `node[type = "definition"]`;
             cy.remove(id_selector);
           })
 
