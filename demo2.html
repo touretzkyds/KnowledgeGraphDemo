@@ -584,34 +584,56 @@
       //box_nodes is just the data of the node
       //bnode_properties is thee object with a list of property nodes
       //bnode_name is going to be the name of the bnode
-      function add_values_to_bnode(bnode_name, box_nodes, bnode_properties, cy_graph, padding_amt){
+      function add_values_to_bnode(bnode_name, box_nodes, bnode_properties, cy_graph, 
+            padding_amt, taxon_x_pos, taxon_y_pos){
               
               var diam = 120;
               var bnode_data = box_nodes[bnode_name];
-             
-
               var bnode_pos = bnode_data.position;
               var x_pos = bnode_pos.x;
               var y_pos = bnode_pos.y;
+              console.log('bnode x', x_pos, 'bnode y', y_pos);
+              console.log('taxon x ', taxon_x_pos, 'taxon y pos', taxon_y_pos)
+              
+
+              var old_radius = Math.sqrt(Math.pow(taxon_x_pos - x_pos, 2) 
+                                          + Math.pow(taxon_y_pos - y_pos, 2));
+              console.log('old radius', old_radius)
+              var x_dist = taxon_x_pos - x_pos;  //need to do this to pretend that taxon is at an origin
+              console.log('x_dist', x_dist);
+
+              var bnode_degree = Math.acos(x_dist/old_radius);
+              if (taxon_y_pos > y_pos && bnode_degree <= (.5 * Math.PI)) {
+                bnode_degree = (-1 * bnode_degree) + 2* Math.PI;
+              }
+              //bnode_degree is the degree that the bnode forms with the taxon_value
+              console.log('bnode_degree', bnode_degree * (180/Math.PI))
+              
               var added_els = [];
 
               var num_bnode_props = bnode_properties[bnode_name].length;
-              var mult_constant = 5;
+              var mult_constant =5;
 
-              var circumference = num_bnode_props * diam;
+              var circumference = (num_bnode_props) * diam;
               var radius = circumference / (2* Math.PI);
-              var curr_degree = .52;
-              var degree_movement = (2 * Math.PI) / num_bnode_props;
+              var curr_degree = bnode_degree;
+              var degree_movement = (2 * Math.PI) / (num_bnode_props);
+              //+1 because we want to count the edge as another 'piece'
 
-              var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(curr_degree));
-              var next_y_pos = y_pos + (radius*mult_constant)*(Math.sin(curr_degree));
-
-              var new_degree = 0;
               var bnode_vals = [];
 
               var curr_bnode_props = bnode_properties[bnode_name];
-
+              console.log('degree movement', degree_movement)
               for (let i = 0; i < num_bnode_props; i++){
+
+                    if (i == 0){
+                      new_degree = (curr_degree + (degree_movement/2))% (Math.PI *2);
+                    }else{
+                      new_degree = (curr_degree + (degree_movement))% (Math.PI *2);
+                    }
+                    var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(new_degree));
+                    var next_y_pos = y_pos - (radius*mult_constant)*(Math.sin(new_degree));
+                    var curr_degree = new_degree;
 
                     var curr_bnode_prop = curr_bnode_props[i].obj2;
                     var curr_edge_label = curr_bnode_props[i].pred2;
@@ -622,7 +644,7 @@
                     if (curr_bnode_props[i].obj2Label != undefined){
                       curr_bnode_prop = curr_bnode_props[i].obj2Label.value;
                     }
-
+                    console.log('curr_node_prop', curr_bnode_prop, 'degree at', curr_degree * (180/Math.PI))
                     var node_id = `${curr_bnode_prop} - ${bnode_name}`;
                     if (curr_bnode_prop != undefined){  
           
@@ -658,13 +680,6 @@
 
                                       added_els.push(new_edge);
 
-                                    
-                                      var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
-
-                                      var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(new_degree));
-                                      var next_y_pos = y_pos + (radius*mult_constant)*(Math.sin(new_degree));
-                                        
-                                      curr_degree = new_degree;
                         }
 
               }
@@ -967,8 +982,8 @@
                                         new_degree = (new_degree + degree_movement) % (2 * Math.PI);
 
                                     }
-                                    var next_x_pos = taxon_x_pos + (radius*1.5*mult_constant)*(Math.cos(new_degree));
-                                    var next_y_pos = taxon_y_pos - (radius*1.5*mult_constant)*(Math.sin(new_degree));
+                                    var next_x_pos = taxon_x_pos + (radius*1.6*mult_constant)*(Math.cos(new_degree));
+                                    var next_y_pos = taxon_y_pos - (radius*1.6*mult_constant)*(Math.sin(new_degree));
                                     
                                     var bnode_props = bnode_properties[prop_node_val];
 
@@ -1114,7 +1129,7 @@
 
       
                     cy_graph.elements().edges().style({'font-size': '30'});
-                    
+                    console.log('box_nodes', box_nodes);
                     var parity_dictionary = {}
                     for (const[key, value] of Object.entries(box_nodes)){
 
@@ -1125,7 +1140,8 @@
                                   var data = evt.target._private.data;
                                   if (parity_dictionary[`parity_of_tap_${data.id}`] == 'even'){
                                       //bnode_name, box_nodes, bnode_properties, cy_graph
-                                      add_values_to_bnode(data.id, box_nodes, bnode_properties, cy_graph, padding_amount);
+                                      add_values_to_bnode(data.id, box_nodes, bnode_properties, 
+                                      cy_graph, padding_amount, taxon_x_pos, taxon_y_pos);
                                       parity_dictionary[`parity_of_tap_${data.id}`] = 'odd';
 
                                   }else {
@@ -1358,6 +1374,8 @@
         var definitions = converted_data.definitions;
         var taxon_qvals = converted_data.taxon_qvals;
         var graphType_pc_edges = pc_edges;
+
+        console.log('converted_Data', converted_data);
 
         //this will mainly be used to pass into other fns to know what nodes
         //already exist in our graph
