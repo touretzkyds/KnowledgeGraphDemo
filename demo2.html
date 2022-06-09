@@ -444,9 +444,11 @@
     }
       //when a specific node is clicked,i.e. node_name
       //all other nodes and edges become transparent
-      function shade_other_nodes(node_name, cy_graph){
+      function shade_other_nodes(node_name, cy_graph, id_lastclicked_node){
           cy_graph.elements().nodes().style( { 'opacity' : '.2', 'text-opacity':0 });
-
+          
+          
+      
 
           var id_label = `[id = '${node_name}']`;
     
@@ -463,7 +465,15 @@
                       'font-family': 'Garamond',
                       'line-height': 1.15
           });
-      
+          
+          if (id_lastclicked_node != ""){
+              var id_label = `[id = '${id_lastclicked_node}']`;
+              cy_graph.nodes(id_label).style({
+                "background-color": "#ADD8E6",
+                'border-width': 0
+              });
+            }
+          
           cy_graph.elements().edges().style( { 'line-opacity' : '.2', 'text-opacity':'0' });
       }
 
@@ -563,7 +573,7 @@
             }
 
         }
-        
+        console.log('new prop array', new_property_array)
         return {prop_array: new_property_array, bnodes_obj: bnodes, subtax_rank: subtax_rank};
         
 
@@ -800,6 +810,60 @@
       
       }
 
+      function create_collapsable_def_box(full_def, cy_graph, num_lines, node_id, prop_node_diam, prop_node_height, old_def){
+          var id_label = `node[id = "${node_id}"]`;
+          var new_width = 1000
+          
+          var new_num_lines = full_def.length/20;
+          var def_height = new_num_lines*15 + 50;
+          if (full_def.length <= 50){
+            new_width = 500;
+          }
+          
+          var parity_of_tap = 'even';
+          var collapsed_node_id = '';
+
+              cy_graph.elements(id_label).on('tap', function(evt){
+                    
+                    if (parity_of_tap == 'even'){
+                      cy_graph.elements(id_label).style({
+                        'background-color': '#ee7600',
+                        'width': new_width,
+                        'height': def_height,
+                        'label': full_def,
+                        'text-wrap': 'wrap',
+                        'text-max-width': new_width - 20,
+                        'border-width': 5,
+                        'border-color': '	#ff4d01',
+                        'border-style': 'solid',
+                        'font-size': 35,
+                        'font-family': 'Garamond',
+                        'line-height': 1.15
+
+                      });
+                      parity_of_tap = 'odd'
+                    }else{
+                      cy_graph.elements(id_label).style({
+                        'background-color': '#FFD580',
+                        'width': prop_node_diam,
+                        'height': prop_node_height,
+                        'label': old_def,
+                        'text-wrap': 'wrap',
+                        'text-max-width': prop_node_diam - 20,
+                        'border-width': 5,
+                        'border-color': '#F6BE00',
+                        'border-style': 'solid',
+                        'font-size': 35,
+                        'font-family': 'Garamond',
+                        'line-height': 1.15
+
+                        });
+                      parity_of_tap = 'even'
+                    }
+              });
+      }
+
+
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
       function create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam, graphType_pc_edges){
@@ -808,7 +872,7 @@
             var taxon_y_pos = pos.y;
             var added_els = [];
             var new_diam = prop_node_diam;
-            
+                  
             //first want to trim down our redundancy in our query
             var new_prop_data = trim_prop_query(data.results.bindings);
 
@@ -832,7 +896,11 @@
             var new_degree = 0;
             var box_nodes = {};
 
-            var assigned_node_type = 'concept'
+            var assigned_node_type = 'concept';
+            var collapse_full_def = 'null';      
+            var collapse_node_id = 'null';
+            var collapse_num_lines = 0;
+    
 
             //going to apply the over_lay property to the subtax and rank nodes
             var start_degree = add_subtax_rank_nodes(new_prop_data.subtax_rank, 
@@ -847,6 +915,8 @@
                   var pred_val = new_property_array[x].predLabel ? new_property_array[x].predLabel.value : new_property_array[x].pred.value;
 
                   var prop_node_type = new_property_array[x].obj.type;
+
+                  //I define a line to have <= 15 characters 
                   var num_lines = Math.ceil((prop_node_val.length)/15);
                   prop_node_height = num_lines * 50 + 50;
 
@@ -869,7 +939,21 @@
                   }
 
                   if (pred_val == 'definition'){
-                    node_id = `${prop_node_val} - def`;
+                    node_id = `${node_id}:def`;
+                   // assigned_node_type = 'literall';
+                    //If a definition has >=3 lines then we want to implement the collapsable
+                    //box feature and change the propnodeval to be something shorter.
+                        if (num_lines > 3){
+                          collapse_full_def = prop_node_val;
+                          collapse_node_id = node_id;
+                          collapse_num_lines = num_lines;
+                          
+                          //want to slice it at 45 because that's 3 lines
+                          prop_node_val = `${prop_node_val.slice(0, 45)} ... \n \ more ▼`;
+                          collapse_prop_node_val = prop_node_val;
+                        }
+                    prop_node_height = 3*50 + 50;
+                    assigned_node_type = 'property definition';
                   }
 
                   if (prop_node_val != undefined){  
@@ -930,6 +1014,10 @@
                                             },
                                             position: {x: next_x_pos, y: next_y_pos}
                                         };
+                                if(assigned_node_type == 'property definition'){
+                                  var collapse_diam = prop_node_diam;
+                                  var collapse_height = prop_node_height
+                                }
                                 
                                 if (prop_node_type == 'bnode'){
                                   box_nodes[node_id] = (new_property_node);
@@ -937,7 +1025,7 @@
                                 }
                                 added_els.push(new_property_node);
                                 
-
+                                
                                 var new_edge = 
                                         {
                                           group: 'edges',
@@ -995,6 +1083,21 @@
                       'line-height': 1.15
                     });
 
+                    var def_id_selector = `node[type = "property definition"]`;
+
+                    cy_graph.nodes(def_id_selector).style({
+                      'shape': 'square',
+                      'background-color': '#FFD580',
+                      'text-wrap': 'wrap',
+                      'text-max-width': prop_node_diam - 20,
+                      'border-width': 5,
+                      'border-color': '#FFA500',
+                      'border-style': 'solid',
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+                    });
+
                     var concept_id_selector = `node[type = "concept"]`;
 
                     cy_graph.nodes(concept_id_selector).style({
@@ -1008,43 +1111,49 @@
                       'font-family': 'Garamond',
                       'line-height': 1.15
                     });
+
       
                     cy_graph.elements().edges().style({'font-size': '30'});
                     
                     var parity_dictionary = {}
                     for (const[key, value] of Object.entries(box_nodes)){
 
-                      var id_label = `node[id = "${key}"]`;
-                      parity_dictionary[`parity_of_tap_${key}`] = 'even';  //a way of creating a "new" var for each bnode
+                            var id_label = `node[id = "${key}"]`;
+                            parity_dictionary[`parity_of_tap_${key}`] = 'even';  //a way of creating a "new" var for each bnode
 
-                      cy_graph.nodes(id_label).on('tap', function(evt){
-                            var data = evt.target._private.data;
-                            if (parity_dictionary[`parity_of_tap_${data.id}`] == 'even'){
-                                //bnode_name, box_nodes, bnode_properties, cy_graph
-                                add_values_to_bnode(data.id, box_nodes, bnode_properties, cy_graph, padding_amount);
-                                parity_dictionary[`parity_of_tap_${data.id}`] = 'odd';
+                            cy_graph.nodes(id_label).on('tap', function(evt){
+                                  var data = evt.target._private.data;
+                                  if (parity_dictionary[`parity_of_tap_${data.id}`] == 'even'){
+                                      //bnode_name, box_nodes, bnode_properties, cy_graph
+                                      add_values_to_bnode(data.id, box_nodes, bnode_properties, cy_graph, padding_amount);
+                                      parity_dictionary[`parity_of_tap_${data.id}`] = 'odd';
 
-                            }else {
-                              parity_dictionary[`parity_of_tap_${data.id}`] = 'even';
-                                cy_graph.remove(`node[type = "${data.id} property"]`);
-                            }
-                            
-                    });
-
-                       
+                                  }else {
+                                      parity_dictionary[`parity_of_tap_${data.id}`] = 'even';
+                                      cy_graph.remove(`node[type = "${data.id} property"]`);
+                                  }
+                                  
+                            }); 
 
                     }
+                    //should only do this if full_def is redefined.
+                    if (collapse_full_def != 'null'){
+                   
+                        create_collapsable_def_box(collapse_full_def, cy_graph, 
+                        collapse_num_lines, collapse_node_id, collapse_diam, collapse_height, collapse_prop_node_val);
+                    }
+
           }
 
               
-      function show_property_nodes(node_name, data, cy_graph, pc_edges, prop_node_diam, graphType_pc_edges){
+      function show_property_nodes(node_name, data, cy_graph, pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node){
             
             console.log("property data", data);
             
             var id_label = `[id= '${node_name}']`;
             var pos = cy_graph.nodes(id_label).position();
 
-            shade_other_nodes(node_name, cy_graph);
+            shade_other_nodes(node_name, cy_graph, id_lastclicked_node);
             create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam, graphType_pc_edges);
 
       }
@@ -1102,6 +1211,7 @@
             cy_graph.remove(`node[type = "property"]`);
             cy_graph.remove(`node[type = "concept"]`);
             cy_graph.remove(`node[type = "literal"]`);
+            cy_graph.remove(`node[type = "property definition"]`);
             cy_graph.remove("node[width = 120]"); //removing box nodes
             cy_graph.animate({
               fit: {
@@ -1114,14 +1224,6 @@
       function get_properties(given_taxon, node_name, cy_graph, moderate_ranks,
        pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node){
 
-            if (id_lastclicked_node != ""){
-              var id_label = `[id = '${id_lastclicked_node}']`;
-              cy_graph.nodes(id_label).style({
-                "background-color": "#ADD8E6",
-                'border-width': 0
-              });
-            }
-
             var id_label =`[id = '${given_taxon}']`;
               cy_graph.nodes(id_label).style({
                 "background-color": "red",
@@ -1133,6 +1235,7 @@
             cy_graph.remove(`node[type = "property"]`);
             cy_graph.remove(`node[type = "concept"]`);
             cy_graph.remove(`node[type = "literal"]`);
+            cy_graph.remove(`node[type = "property definition"]`);
             cy_graph.remove("node[width = 120]"); //removing box nodes
 
         if (moderate_ranks.includes(node_name) || node_name == "Clade"){
@@ -1140,7 +1243,8 @@
         }
         var url = property_query(node_name, true);
           d3.json(url).then(function(json){
-            show_property_nodes(node_name, json, cy_graph, pc_edges, prop_node_diam, graphType_pc_edges)
+            show_property_nodes(node_name, json, cy_graph, pc_edges,
+             prop_node_diam, graphType_pc_edges, id_lastclicked_node);
           })
       }
 
@@ -1162,6 +1266,21 @@
           
           var num_lines = Math.ceil(def_length/15);
           var definition_node_height = num_lines*90 + 50;
+
+          var right_shift = 500
+          if (num_lines > 3){
+              definition_node_size = 1900
+          
+              var new_num_lines = def_length/20;
+              var definition_node_height = new_num_lines*40 + 50;
+              right_shift = 1200
+              if (def_length <= 50){
+                definition_node_height = new_num_lines*100 + 100;
+                definition_node_size = 500;
+                right_shift = 500;
+              }
+              
+          }
           
 
           def_node = {
@@ -1175,7 +1294,7 @@
                                 height: definition_node_height,
                                 type: 'definition'
                               },
-                               position: {x: pos.x + 500 , y: pos.y}
+                               position: {x: pos.x + right_shift , y: pos.y}
                           };
           def_edge = {
                             group: 'edges',
@@ -1194,8 +1313,8 @@
           cy_graph.style().selector(id_selector).style({
             'shape': 'rectangle',
             'text-wrap': 'wrap',
-            'text-max-width': definition_node_size - 20,
-            'border-width': 20,
+            'text-max-width': definition_node_size - 10,
+            'border-width': 5,
             'border-color': '#FF007F',
             'border-style': 'solid',
             'font-size': 75,
