@@ -1283,13 +1283,13 @@
           var num_lines = Math.ceil(def_length/15);
           var definition_node_height = num_lines*90 + 50;
 
-          var right_shift = 500
+          var right_shift = 600
           if (num_lines > 3){
               definition_node_size = 1900
           
               var new_num_lines = def_length/20;
               var definition_node_height = new_num_lines*40 + 50;
-              right_shift = 1200
+              right_shift = 1300
               if (def_length <= 50){
                 definition_node_height = new_num_lines*100 + 100;
                 definition_node_size = 500;
@@ -1571,11 +1571,19 @@
                     if (data.type == 'taxon' && data.id != id_lastclicked_node){
                       var name = data.name;
                       if (!(moderate_ranks.includes(name) || name == "Clade")) {
-                          console.log('last clicked node', id_lastclicked_node)
+                          cy.nodes(`node[id = "${data.id}"]`).style({
+                                      'width': 250,
+                                      'height': 250
+                          });
                           get_properties(given_taxon, data.id, cy, moderate_ranks, 
                                   pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node);
                           zoomedInOnNode = true;
                           id_lastclicked_node = data.id;
+                      }else {
+                          cy.nodes(`node[id = "${data.id}"]`).style({
+                                      'width': 100,
+                                      'height': 100
+                          });
                       }
                     }
 
@@ -1587,20 +1595,57 @@
           
           cy.nodes().on("mouseover",function(evt){
                 var name = this._private.data.name;
-                var style = evt.target._private.style
+                var style = evt.target._private.style;
+                var enlarged_node_size = 400;
+                if ((moderate_ranks.includes(name) || name == "Clade")){
+                  enlarged_node_size = 200;
+                }
+
                 if (style != undefined){
                     if (style.opacity == undefined || style.opacity.value == 1){
                       if (!(moderate_ranks.includes(name) || name == "Clade")){
                           get_definition(this.id(), cy, moderate_ranks, definitions, definition_node_size);
-                        }
+                      }
                     }
-                }                  
+                }   
+                cy.nodes(`node[id = "${this.id()}"]`).style({
+                        'width': enlarged_node_size,
+                        'height': enlarged_node_size
+                });               
             })
           
           .on("mouseout", function(evt){
             var id_selector = `node[type = "definition"]`;
             cy.remove(id_selector);
+
+            var reg_node_size = 250;
+            var name = this._private.data.name;
+            if ((moderate_ranks.includes(name) || name == "Clade")){
+                reg_node_size = 100
+            }
+            cy.nodes(`node[id = "${this.id()}"]`).style({
+                        'width': reg_node_size,
+                        'height': reg_node_size
+            });
+
+          });
+
+          cy.edges().on('mouseover', function(evt){
+            var evtTarget = evt.target;
+            var data = evtTarget._private.data;
+            cy.edges(`edge[id = "${data.id}"]`).style({
+              'arrow-scale': 5
+            })
+            
           })
+          .on('mouseout', function(evt){
+            var evtTarget = evt.target;
+            var data = evtTarget._private.data;
+            cy.edges(`edge[id = "${data.id}"]`).style({
+              'arrow-scale': 1
+            })
+          })
+           
 
     }
 
