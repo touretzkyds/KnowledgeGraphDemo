@@ -1275,6 +1275,10 @@
           if (taxon_def == undefined || taxon_def == ""){
             taxon_def = "No definition available";
           }
+
+          console.log('old taxon def', taxon_def);
+          taxon_def = taxon_def.replace(/[\r\n]/gm, '');
+          console.log('new taxon def', taxon_def);
           var id_label = `[id = '${node_name}']`;
           var pos = cy_graph.nodes(id_label).position();
 
@@ -1329,7 +1333,9 @@
           cy_graph.style().selector(id_selector).style({
             'shape': 'rectangle',
             'text-wrap': 'wrap',
-            'text-max-width': definition_node_size - 10,
+            'text-justification': 'left',
+            'text-valign': 'center',
+            'text-max-width': definition_node_size - 20,
             'border-width': 5,
             'border-color': '#FF007F',
             'border-style': 'solid',
