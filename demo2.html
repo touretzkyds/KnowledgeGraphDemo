@@ -1270,12 +1270,14 @@
             return false;
           }
           var def_node_height;
+          var text_just = 'center';
         
           var taxon_def = definitions[node_name];
           if (taxon_def == undefined || taxon_def == ""){
             taxon_def = "No definition available";
           }
 
+         
           console.log('old taxon def', taxon_def);
           taxon_def = taxon_def.replace(/[\r\n]/gm, '');
           console.log('new taxon def', taxon_def);
@@ -1302,6 +1304,9 @@
               
           }
           
+          if (num_lines > 1){
+            text_just = 'left'
+          }
 
           def_node = {
                               group: 'nodes',
@@ -1333,7 +1338,7 @@
           cy_graph.style().selector(id_selector).style({
             'shape': 'rectangle',
             'text-wrap': 'wrap',
-            'text-justification': 'left',
+            'text-justification': text_just,
             'text-valign': 'center',
             'text-max-width': definition_node_size - 20,
             'border-width': 5,
@@ -1848,7 +1853,7 @@
       <h1 class = 'title'>Knowledge Graph Query and Display</h1>
       <form class="form-inline">
         <div class="input-append">
-          
+        
           <input id="endpoint" class="span5" value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
 
           <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
