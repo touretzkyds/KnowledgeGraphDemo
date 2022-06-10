@@ -1607,9 +1607,11 @@
           cy.nodes().on("mouseover",function(evt){
                 var name = this._private.data.name;
                 var style = evt.target._private.style;
-                var enlarged_node_size = 400;
+                var enlarged_node_size = 300;
+                var border_color = '#00008B';
                 if ((moderate_ranks.includes(name) || name == "Clade")){
-                  enlarged_node_size = 200;
+                  enlarged_node_size = 150;
+                  border_color = '#013220';
                 }
 
                 if (style != undefined){
@@ -1621,7 +1623,9 @@
                 }   
                 cy.nodes(`node[id = "${this.id()}"]`).style({
                         'width': enlarged_node_size,
-                        'height': enlarged_node_size
+                        'height': enlarged_node_size,
+                        'border-width': 3,
+                        'border-color': border_color
                 });               
             })
           
@@ -1636,7 +1640,8 @@
             }
             cy.nodes(`node[id = "${this.id()}"]`).style({
                         'width': reg_node_size,
-                        'height': reg_node_size
+                        'height': reg_node_size,
+                        'border-width': 0,
             });
 
           });
