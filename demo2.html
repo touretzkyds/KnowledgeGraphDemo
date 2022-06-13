@@ -9,16 +9,17 @@
     <script src="external/cytoscape-dagre.js"></script>
 
     <style type="text/css">
-      html,body{
-        height: 100%
+      .body{
+        margin: 0;
       }
+
       #cy {
         display: none;
-        height: 70%;
+        height: 70vh;
         width: 100%;
         border-style: solid;
       }
-
+ 
       .title {
         text-align: center;
       }
@@ -29,7 +30,21 @@
         padding: 10px;
         width: 100px;
       }
-      
+
+      .up-down-btn button{
+        background-color: white;
+        display: block;
+        color: rgb(0, 170, 255);
+        margin: 30px;
+        width: 30;
+        height: 30;
+        font-size: 1.5vw;
+        font-weight: bold;
+        cursor: pointer;
+        border: 0;
+        font-size: 28px;
+      }
+
 
       .btn2 {
         background-color: green;
@@ -55,6 +70,9 @@
         width: 100px; 
         height: 30px;
       }
+      
+ 
+
       
     </style>
 
@@ -185,7 +203,6 @@
     function convert_to_cytoscape(data) {
         var nodes_lst = [];
         var edges_lst = [];
-        var node_names = [];
         var rank_node_edges = {}; //consists of objects that have ranks and nodes that are connected by an edge
         var edge_object = {};
         var root = 'noRoot';
@@ -194,6 +211,7 @@
         var qvals = {};
         var root_def = "No def";
         var pref_labels = {}; //key is preflable and value is taxon_name
+        
 
         bindings = data.results.bindings;
         len = bindings.length;
@@ -209,18 +227,49 @@
             
         }
 
-        //adding nodes and definitions
+        /*first we can grab all of the values in our returned json result
+        and add them as nodes in alphabetical order. 
+        */
+        var node_names = [];
+        var node_attributes = {};
+        /*so we'll iterate through our json object and
+        grab the node names and sort them
+        */
+        root = bindings [0].root_name.value;
+        node_names.push(root);
+        root_rank = bindings [0].root_rank.value;
+        root_def = bindings [0].root_def.value;
+        root_qval = bindings [0].parent_qval.value;
+        root_prefLabel = bindings [0].parent_prefLabel.value;
+        if (root_qval.length >= 40){
+              root_qval = root_qval.slice(40, root_qval.length);
+        }
+        def_for_taxons[root] = root_def;
+        qvals[root] = root_qval;
+        if (root_prefLabel != undefined){
+              root_prefLabel = capitalize(root_prefLabel);
+              if (pref_labels[root_prefLabel] == undefined){
+                pref_labels[root_prefLabel] = root;
+              }
+        }
+
         for (let i = 0; i < len; i++){
-            root = bindings [i].root_name.value;
-            child = bindings [i].child_name.value;
+            child_rank = bindings [i].rank_name.value;
+            child_def = bindings [i].def.value;
+            child_qval = bindings [i].child_qval.value;
+            child_prefLabel = bindings [i].child_prefLabel.value;
             parent = bindings [i].parent_name.value;
             rank = bindings [i].rank_name.value;
-            def = bindings [i].def.value;
-            child_qval = bindings [i].child_qval.value;
-            parent_qval = bindings [i].parent_qval.value;
-            child_prefLabel = bindings [i].child_prefLabel.value;
-            parent_prefLabel = bindings [i].parent_prefLabel.value;
 
+            child = bindings [i].child_name.value;
+            node_names.push(child);
+
+            if (child_qval.length >= 40){
+              child_qval = child_qval.slice(40, child_qval.length);
+            }
+
+            def_for_taxons[child] = child_def;
+            qvals[child] = child_qval;
 
             if (child_prefLabel != undefined){
               child_prefLabel = capitalize(child_prefLabel);
@@ -228,74 +277,41 @@
                 pref_labels[child_prefLabel] = child;
               }
             }
-            
-            if (parent_prefLabel != undefined){
-              parent_prefLabel = capitalize(parent_prefLabel);
-              if (pref_labels[parent_prefLabel] == undefined){
-                pref_labels[parent_prefLabel] = parent;
-              }
-            }
-            
+            edge_object[child] = parent; //source is the key and target is the value
+            rank_node_edges[child] = rank;
 
-            if (child_qval.length >= 40){
-              child_qval = child_qval.slice(40, child_qval.length);
-            }
-            if (parent_qval.length >= 40){
-              parent_qval = parent_qval.slice(40, parent_qval.length);
-            }
-            `${child} boltz: ${child_qval.toString()}`
-            child_obj = {
-              data: {id: child, 
-              name:`${child} boltz: ${child_qval.toString()}`,
+        }
+        node_names = node_names.sort()
+        console.log('node names', node_names);
+
+        for (let idx = 0; idx < node_names.length; idx ++){
+          curr_name = node_names[idx];
+          curr_qval = qvals[curr_name];
+          node_obj = {
+              data: {id: curr_name, 
+              name:`${curr_name} boltz: ${curr_qval.toString()}`,
               color: '#ADD8E6', 
               width: 250, 
               height: 250,
               type: 'taxon'
             }};
-            nodes_lst.push(child_obj);
-
-            if (def_for_taxons[child] == undefined){
-              def_for_taxons[child] = def;
-            }
-
-
-            qvals[child] = child_qval;
-            
-            parent_obj = {
-              data: {
-                id: parent, 
-                name:`${parent} boltz: ${parent_qval.toString()}`, 
-                color: '#ADD8E6', 
-                width: 250, 
-                height: 250,
-                type: 'taxon'
-              }};
-            nodes_lst.push(parent_obj);
-           
-            qvals[parent] = parent_qval;
+            nodes_lst.push(node_obj);
           
+          if (curr_name != "Biota"){
+            parent = edge_object[curr_name];
+            rank = rank_node_edges[curr_name];
+            pc_edge = {data: {id: `${curr_name} - ${parent}`, 
+              source: curr_name, target: parent, label:'subTaxonOf'}};
+            edges_lst.push(pc_edge); 
+          }
 
         }
-        //adding edges between parent and child
-        for (let i = 0; i < len; i++){
-            child = bindings [i].child_name.value;
-            parent = bindings [i].parent_name.value;
-            rank = bindings [i].rank_name.value;
-            
-            //adding an edge between the parent and child
-            pc_edge = {data: {id: `${child} - ${parent}`, 
-            source: child, target: parent, label:'subTaxonOf'}};
-            edges_lst.push(pc_edge);
 
-            edge_object[child] = parent; //source is the key and target is the value
-            rank_node_edges[child] = rank;
-            
-        }
 
         edge_object[root] = 'root';
         rank_node_edges[root] = root_rank;
-        def_for_taxons[root] = root_def;
-        console.log("prefLabels", pref_labels);
+        console.log('edges', edge_object)
+        
         return {nodes: nodes_lst, edges: edges_lst, 
           rn_edges: rank_node_edges, pc_edges: edge_object, 
           root_rank: root_rank, root: root, definitions: def_for_taxons, 
@@ -325,7 +341,7 @@
     such that there are only nodes with ranks: correct_ranks.
     if a user enters a taxon in the textbox we automatically want to keep this value
     all missing edges are filled in, also will want to return the rn_edges */
-    function create_new(data, correct_ranks, user_entered_taxon){
+    function create_graphType(data, correct_ranks, user_entered_taxon){
 
         var nodes = data.nodes;
         var edges = data.edges;
@@ -337,6 +353,9 @@
         var taxon_qvals = data.taxon_qvals;
         var new_pc_edges = pc_edges;
 
+        var graphType_pc_edges = {};
+        var node_names = [];
+
         //iterating through all the edges and figuring out which ones are going to be removed 
         for (let i = 0; i < edges.length; i++){
               curr_edge = edges[i];  //of the form: {id: __, source: '', target: '', ...}
@@ -344,8 +363,7 @@
               target_node = curr_edge.data.target;
               keep_source = correct_ranks.includes(rn_edges[source_node]);
               keep_target = correct_ranks.includes(rn_edges[target_node]);
-              source_node_name = `${source_node} boltz:${taxon_qvals[source_node].toString()}`;
-              target_node_name = `${target_node} boltz:${taxon_qvals[target_node].toString()}`;
+              
 
               if (source_node == user_entered_taxon){
                 keep_source = true;
@@ -354,29 +372,12 @@
                 keep_target = true;
               }
 
-              if (keep_source){  //if the source node is connected to a rank we want to display
-                  new_nodes.push({
-                    data: {
-                      id: source_node, 
-                      name: source_node_name, 
-                      color: '#ADD8E6', 
-                      width: 250, 
-                      height: 250,
-                      type: 'taxon'
-                    }});
+              if (keep_source){
+                node_names.push(source_node)
               }
-              if (keep_target){  //if the target node is connected to a rank we want to display
-                  new_nodes.push({
-                    data: {
-                      id: target_node, 
-                      name: target_node_name, 
-                      color: '#ADD8E6', 
-                      width: 250, 
-                      height: 250,
-                      type: 'taxon'
-                    }});
+              if (keep_target && !node_names.includes(target_node)){
+                node_names.push(target_node);
               }
-
 
               if (!keep_source && !keep_target){
                   //this means both the target and the source node aren't going to be added
@@ -408,7 +409,8 @@
                               }
 
               } else {
-                new_edges.push(curr_edge);
+                //new_edges.push(curr_edge);
+                graphType_pc_edges[source_node] = target_node;
               }
 
          }
@@ -427,13 +429,49 @@
                 new_target = find_new_target(old_target, 
                 rn_edges, pc_edges, correct_ranks, user_entered_taxon);
 
-                new_edge = {data: {id: `${curr_source} - ${new_target}`, 
-                source: curr_source, target: new_target, label:'subTaxonOf'}};
+                graphType_pc_edges[curr_source] = new_target;
                 new_pc_edges[curr_source] = new_target;
-                new_edges.push(new_edge);
 
             }
         }
+        console.log('graphType pc edges', graphType_pc_edges)
+        node_names = node_names.sort()
+        //should now be sorted in alphabetical order
+        for (let i = 0; i < node_names.length; i++){
+              source_node = node_names[i];
+              target_node = graphType_pc_edges[source_node];
+              if (source_node != "Biota"){
+                console.log('source', source_node);
+                source_node_name = `${source_node} boltz:${taxon_qvals[source_node].toString()}`;
+                target_node_name = `${target_node} boltz:${taxon_qvals[target_node].toString()}`;
+                if (target_node == "Biota"){
+                  new_nodes.push({
+                      data: {
+                        id: target_node, 
+                        name: target_node_name, 
+                        color: '#ADD8E6', 
+                        width: 250, 
+                        height: 250,
+                        type: 'taxon'
+                      }});
+                }
+                new_nodes.push({
+                  data: {
+                    id: source_node, 
+                    name: source_node_name, 
+                    color: '#ADD8E6', 
+                    width: 250, 
+                    height: 250,
+                    type: 'taxon'
+                  }});
+                new_edge = {data: {id: `${source_node} - ${target_node}`, 
+                source: source_node, target: target_node, label:'subTaxonOf'}};
+                new_edges.push(new_edge);
+              }
+              
+
+        }
+
         console.log('new_pc_edges', new_pc_edges);
         return {nodes: new_nodes, 
                 edges: new_edges, 
@@ -446,9 +484,6 @@
       //all other nodes and edges become transparent
       function shade_other_nodes(node_name, cy_graph, id_lastclicked_node){
           cy_graph.elements().nodes().style( { 'opacity' : '.2', 'text-opacity':0 });
-          
-          
-      
 
           var id_label = `[id = '${node_name}']`;
     
@@ -592,22 +627,18 @@
               var bnode_pos = bnode_data.position;
               var x_pos = bnode_pos.x;
               var y_pos = bnode_pos.y;
-              console.log('bnode x', x_pos, 'bnode y', y_pos);
-              console.log('taxon x ', taxon_x_pos, 'taxon y pos', taxon_y_pos)
               
 
               var old_radius = Math.sqrt(Math.pow(taxon_x_pos - x_pos, 2) 
                                           + Math.pow(taxon_y_pos - y_pos, 2));
-              console.log('old radius', old_radius)
+             
               var x_dist = taxon_x_pos - x_pos;  //need to do this to pretend that taxon is at an origin
-              console.log('x_dist', x_dist);
 
               var bnode_degree = Math.acos(x_dist/old_radius);
               if (taxon_y_pos > y_pos && bnode_degree <= (.5 * Math.PI)) {
                 bnode_degree = (-1 * bnode_degree) + 2* Math.PI;
               }
               //bnode_degree is the degree that the bnode forms with the taxon_value
-              console.log('bnode_degree', bnode_degree * (180/Math.PI))
               
               var added_els = [];
 
@@ -623,7 +654,7 @@
               var bnode_vals = [];
 
               var curr_bnode_props = bnode_properties[bnode_name];
-              console.log('degree movement', degree_movement)
+
               for (let i = 0; i < num_bnode_props; i++){
 
                     if (i == 0){
@@ -644,7 +675,7 @@
                     if (curr_bnode_props[i].obj2Label != undefined){
                       curr_bnode_prop = curr_bnode_props[i].obj2Label.value;
                     }
-                    console.log('curr_node_prop', curr_bnode_prop, 'degree at', curr_degree * (180/Math.PI))
+
                     var node_id = `${curr_bnode_prop} - ${bnode_name}`;
                     if (curr_bnode_prop != undefined){  
           
@@ -1278,9 +1309,8 @@
           }
 
          
-          console.log('old taxon def', taxon_def);
           taxon_def = taxon_def.replace(/[\r\n]/gm, '');
-          console.log('new taxon def', taxon_def);
+
           var id_label = `[id = '${node_name}']`;
           var pos = cy_graph.nodes(id_label).position();
 
@@ -1325,7 +1355,7 @@
                             group: 'edges',
                             data: 
                                 {
-                                    id: def.concat(node_name),
+                                    id: taxon_def.concat(node_name),
                                     source: node_name, 
                                     target: taxon_def,
                                     label: 'DEF',
@@ -1349,7 +1379,7 @@
             'line-height': 1.15
 
           });
-          var edge_id_label = `[id = '${def.concat(node_name)}']`;
+          var edge_id_label = `[id = '${taxon_def.concat(node_name)}']`;
           cy_graph.edges(edge_id_label).style({
             'line-color': '#FF007F',
             'target-arrow-color': '#FF007F',
@@ -1403,14 +1433,14 @@
 
         if (graphType == ('Concise')){
 
-            new_data = create_new(converted_data, concise_ranks, user_entered_taxon);
+            new_data = create_graphType(converted_data, concise_ranks, user_entered_taxon);
             nodes_lst = new_data.nodes;
             edge_lst = new_data.edges;
             graphType_pc_edges = new_data.newPC_edges;
 
         } else if (graphType == 'Moderate') {
 
-            new_data = create_new(converted_data, moderate_ranks, user_entered_taxon);
+            new_data = create_graphType(converted_data, moderate_ranks, user_entered_taxon);
 
             nodes_lst = new_data.nodes;
             edge_lst = new_data.edges;
@@ -1607,10 +1637,10 @@
           cy.nodes().on("mouseover",function(evt){
                 var name = this._private.data.name;
                 var style = evt.target._private.style;
-                var enlarged_node_size = 300;
+                var enlarged_node_size = 275;
                 var border_color = '#00008B';
                 if ((moderate_ranks.includes(name) || name == "Clade")){
-                  enlarged_node_size = 150;
+                  enlarged_node_size = 125;
                   border_color = '#013220';
                 }
 
@@ -1687,8 +1717,11 @@
           var full_data = convert_to_cytoscape(full_json);
 
           var old_pc_edges = short_data.pc_edges;
+          console.log('short pc edges', old_pc_edges);
+
           var pref_labels = full_data.pref_labels;
           var pc_edges = full_data.pc_edges; //grabs the source-target edges so that we can form new edges and add new nodes
+          console.log('full pc edges', pc_edges)
           var root = full_data.root;
           var old_nodes = short_data.nodes;
 
@@ -1715,11 +1748,13 @@
           }
       
           var old_edges = short_data.edges;
+          console.log('old edges', old_edges)
           var curr_node = rootVal;
           var next_node;
 
           while (curr_node != root){
             next_node = pc_edges[curr_node];
+            
             //add this node and a new edge
             var new_node = {
               data: {
@@ -1741,6 +1776,7 @@
 
             curr_node = next_node;
           }
+          console.log('transformed edges', old_edges)
           var new_data = {edges: old_edges, nodes: old_nodes, 
             pc_edges: pc_edges, rn_edges: full_data.rn_edges, 
             root_rank: full_data.root_rank, root: full_data.root, 
@@ -1856,7 +1892,7 @@
 
     <div id="query" style="margin: 10px">
       <h1 class = 'title'>Knowledge Graph Query and Display</h1>
-      <form class="form-inline">
+
         <div class="input-append">
         
           <input id="endpoint" class="span5" value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
@@ -1864,19 +1900,27 @@
           <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
           <button id="Moderate" class="btn" type="button" onclick = "exec('Moderate')">Moderate</button>
           <button id="Concise" class="btn2" type="button" onclick = "exec('Concise')">Concise</button>
+        <!--  <div class="up-down-btn">
+            <button id='nav-up'> ▲ </button>
+            <button id='nav-down'> ▼ </button>  -->
+          </div> 
+          
           <div id ="hierarchy-entry">
             <input id="hierarchySpecies" class="input-species" placeholder="Enter Taxon Name">
           </div>
-
+  
         </div>
-      </form>
+        
       <textarea id="sparql" class="spans9" style="display:none;"></textarea>
 
       <input id="endpoint2" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/Demo/sparql" type="text" style="display:none;">
       <textarea id="sparql2" class="spans10" style="display:none;"></textarea>
 
+      
     </div>
-    <div id="cy"></div>
+      <div id="cy"></div>
+    </div>
+
     <script>
       window.onload = exec('Concise');
       let fullButton = document.querySelector('#Full');
