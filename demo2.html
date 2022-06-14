@@ -1073,6 +1073,7 @@
                               var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
 
                               if (prop_node_type == "bnode"){
+                                    assigned_node_type = 'bnode'
                                     if (new_degree >= ((7/8)*Math.PI) && new_degree <= Math.PI
                                     || new_degree >= Math.PI && new_degree <= (9/8)*Math.PI){
 
@@ -1213,6 +1214,21 @@
                     var concept_id_selector = `node[type = "concept"]`;
 
                     cy_graph.nodes(concept_id_selector).style({
+                      'background-color': '	#FFB52E',
+                      'text-wrap': 'wrap',
+                      'text-max-width': prop_node_diam - 20,
+                      'border-width': 5,
+                      'border-color': '#F6BE00',
+                      'border-style': 'solid',
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+                    });
+
+                    var concept_id_selector = `node[type = "bnode"]`;
+
+                    cy_graph.nodes(concept_id_selector).style({
+                      'shape': 'hexagon',
                       'background-color': '	#fdfa72',
                       'text-wrap': 'wrap',
                       'text-max-width': prop_node_diam - 20,
@@ -1335,6 +1351,7 @@
             cy_graph.remove(`node[type = "property"]`);
             cy_graph.remove(`node[type = "concept"]`);
             cy_graph.remove(`node[type = "literal"]`);
+            cy_graph.remove(`node[type = "bnode"]`);
             cy_graph.remove(`node[type = "property definition"]`);
             cy_graph.remove("node[width = 120]"); //removing box nodes
             cy_graph.animate({
@@ -1360,6 +1377,7 @@
             cy_graph.remove(`node[type = "concept"]`);
             cy_graph.remove(`node[type = "literal"]`);
             cy_graph.remove(`node[type = "property definition"]`);
+            cy_graph.remove(`node[type = "bnode"]`);
             cy_graph.remove("node[width = 120]"); //removing box nodes
 
         if (moderate_ranks.includes(node_name) || node_name == "Clade"){
