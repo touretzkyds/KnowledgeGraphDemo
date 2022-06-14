@@ -91,6 +91,8 @@
         return str.charAt(0).toUpperCase() + (str.toLowerCase()).slice(1);;
     }
 
+
+
     function hierarchy_query(taxon_value, preform_query){
         var prevquery = document.getElementById("sparql");
         prevquery.innerHTML = 
@@ -197,6 +199,35 @@
 
     }
 
+    function box_node_query(taxon_value, preform_query){
+      var prevquery = document.getElementById("sparql3");
+      prevquery.innerHTML = 
+      `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX unit:  <http://qudt.org/vocab/unit/>
+        PREFIX qudt:  <http://qudt.org/schema/qudt/>
+        PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+        PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        SELECT * WHERE {
+          ?taxon kgo:taxonName "${taxon_value}"@en .
+          ?taxon ?r ?b.
+          ?b rdf:type rdf:List;
+            rdf:rest* ?b2.
+          ?b2 ?r2 ?v2.
+          OPTIONAL { ?v2 skos:prefLabel|rdfs:label ?v2Label. } 
+          OPTIONAL { ?r2 skos:prefLabel|rdfs:label ?r2Label. } 
+
+        }`
+        if (preform_query){
+          var endpoint = d3.select("#endpoint3").property("value")
+          var sparql = d3.select("#sparql3").property("value")
+          var url = endpoint + "?query=" + encodeURIComponent(sparql)
+          return url
+        }else{
+          return false
+        }
+    }
+
     /*convert_to_cytoscape will return an object
     that stores the nodes, the edges, the positions of all
     the nodes, and the ranks for each of the nodes*/
@@ -282,7 +313,6 @@
 
         }
         node_names = node_names.sort()
-        console.log('node names', node_names);
 
         for (let idx = 0; idx < node_names.length; idx ++){
           curr_name = node_names[idx];
@@ -310,7 +340,6 @@
 
         edge_object[root] = 'root';
         rank_node_edges[root] = root_rank;
-        console.log('edges', edge_object)
         
         return {nodes: nodes_lst, edges: edges_lst, 
           rn_edges: rank_node_edges, pc_edges: edge_object, 
@@ -434,14 +463,12 @@
 
             }
         }
-        console.log('graphType pc edges', graphType_pc_edges)
         node_names = node_names.sort()
         //should now be sorted in alphabetical order
         for (let i = 0; i < node_names.length; i++){
               source_node = node_names[i];
               target_node = graphType_pc_edges[source_node];
               if (source_node != "Biota"){
-                console.log('source', source_node);
                 source_node_name = `${source_node} boltz:${taxon_qvals[source_node].toString()}`;
                 target_node_name = `${target_node} boltz:${taxon_qvals[target_node].toString()}`;
                 if (target_node == "Biota"){
@@ -472,7 +499,6 @@
 
         }
 
-        console.log('new_pc_edges', new_pc_edges);
         return {nodes: new_nodes, 
                 edges: new_edges, 
                 em: edges_missing,
@@ -608,7 +634,6 @@
             }
 
         }
-        console.log('new prop array', new_property_array)
         return {prop_array: new_property_array, bnodes_obj: bnodes, subtax_rank: subtax_rank};
         
 
@@ -620,7 +645,7 @@
       //bnode_properties is thee object with a list of property nodes
       //bnode_name is going to be the name of the bnode
       function add_values_to_bnode(bnode_name, box_nodes, bnode_properties, cy_graph, 
-            padding_amt, taxon_x_pos, taxon_y_pos){
+             padding_amt, taxon_x_pos, taxon_y_pos, b4node_names){
               
               var diam = 120;
               var bnode_data = box_nodes[bnode_name];
@@ -676,6 +701,9 @@
                       curr_bnode_prop = curr_bnode_props[i].obj2Label.value;
                     }
 
+                    if (curr_bnode_prop == 'b4'){
+                      curr_bnode_prop = `b4: ${b4node_names.rest_list}`;
+                    }
                     var node_id = `${curr_bnode_prop} - ${bnode_name}`;
                     if (curr_bnode_prop != undefined){  
           
@@ -727,6 +755,7 @@
                       'font-family': 'Garamond',
                       'line-height': 1.15
               });
+              cy_graph.elements().edges().style({'font-size': '30'});
 
               var id_label = `[id = ${bnode_name}]`;
               
@@ -738,7 +767,6 @@
             var subtax_node_id= subtax_rank['subTaxonOf'];
             var rank_node_name = subtax_rank['taxonRank'];
             var subtax_node_name = subtax_rank['subtax_identifier'];
-            console.log('subtax_node name', subtax_node_name);
 
             var subTaxonOf_degree = 0;
             var taxon_x_pos = pos.x;
@@ -909,16 +937,54 @@
               });
       }
 
+      function box_4_query(json, node_name, data, cy_graph, 
+          pos, pc_edges, prop_node_diam, graphType_pc_edges){
+        console.log('box_query', json);
+        var prefComparisonList = [];
+        var bindings = json.results.bindings;
+        //assigning node values to b3 and b4
+        var prefComp_bnode_name = `[`;
+        var rest_prefComp_bnode_name = `[`
+        for (let i = 0; i < bindings.length; i++){
+          var comp_value = bindings[i].v2Label;
+          if (comp_value != undefined && comp_value.value != 'List' && comp_value.value != 'nil'){
+            prefComparisonList.push(comp_value.value); 
+            prefComp_bnode_name = `${prefComp_bnode_name} ${comp_value.value},`;
+            if (i > 1){
+              //because we don't want the first one in the list
+              rest_prefComp_bnode_name = `${rest_prefComp_bnode_name} ${comp_value.value}`;
+            }
+          }
+        }
+        var b4node_names = {full_list: `${prefComp_bnode_name}]`, rest_list: `${rest_prefComp_bnode_name}]`}
+        create_property_nodes(node_name, data, cy_graph, 
+          pos, pc_edges, prop_node_diam, graphType_pc_edges, b4node_names)
+      }
+
+      //need this intermediate version because now we have to wait for the result of the b4 query
+      function create_property_nodes_intermediate(node_name, data, cy_graph, 
+          pos, pc_edges, prop_node_diam, graphType_pc_edges){
+          
+            var url = box_node_query(node_name, true);
+              d3.json(url).then(function(json_result){
+                box_4_query(json_result, node_name, data, cy_graph, 
+                   pos, pc_edges, prop_node_diam, graphType_pc_edges);
+              });
+
+      }
 
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
-      function create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam, graphType_pc_edges){
+      function create_property_nodes(node_name, data, cy_graph, pos, pc_edges, 
+            prop_node_diam, graphType_pc_edges, b4node_names){
+            
+
             var prop_node_height = prop_node_diam;
             var taxon_x_pos = pos.x;
             var taxon_y_pos = pos.y;
             var added_els = [];
             var new_diam = prop_node_diam;
-                  
+            
             //first want to trim down our redundancy in our query
             var new_prop_data = trim_prop_query(data.results.bindings);
 
@@ -1029,7 +1095,7 @@
                                               prop_node_val = `${prop_node_val}: ${number} ${units}`;
                                           } else {
                                             var prefcomparison = bnode_props[0].obj2Label.value;
-                                            prop_node_val = `${prop_node_val}: prefComparison is ${prefcomparison}`;
+                                            prop_node_val = `${prop_node_val}: ${b4node_names.full_list}`;
                                           }
                                         }
                                     }
@@ -1171,13 +1237,24 @@
                                   var data = evt.target._private.data;
                                   if (parity_dictionary[`parity_of_tap_${data.id}`] == 'even'){
                                       //bnode_name, box_nodes, bnode_properties, cy_graph
+                                      if (key == 'b3'){
+                                            cy_graph.nodes(id_label).style({
+                                            'label': `b3`
+                                            });
+                                      }
                                       add_values_to_bnode(data.id, box_nodes, bnode_properties, 
-                                      cy_graph, padding_amount, taxon_x_pos, taxon_y_pos);
+                                      cy_graph, padding_amount, taxon_x_pos, taxon_y_pos, b4node_names);
                                       parity_dictionary[`parity_of_tap_${data.id}`] = 'odd';
 
                                   }else {
                                       parity_dictionary[`parity_of_tap_${data.id}`] = 'even';
                                       cy_graph.remove(`node[type = "${data.id} property"]`);
+                                      if (key == 'b3'){
+                                            cy_graph.nodes(id_label).style({
+                                            'label': `b3: ${b4node_names.full_list}`
+                                            });
+                                      }
+                                      
                                   }
                                   
                             }); 
@@ -1201,7 +1278,7 @@
             var pos = cy_graph.nodes(id_label).position();
 
             shade_other_nodes(node_name, cy_graph, id_lastclicked_node);
-            create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam, graphType_pc_edges);
+            create_property_nodes_intermediate(node_name, data, cy_graph, pos, pc_edges, prop_node_diam, graphType_pc_edges);
 
       }
 
@@ -1915,6 +1992,9 @@
 
       <input id="endpoint2" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Demo/sparql" type="text" style="display:none;">
       <textarea id="sparql2" class="spans10" style="display:none;"></textarea>
+
+      <input id="endpoint3" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Demo/sparql" type="text" style="display:none;">
+      <textarea id="sparql3" class="spans10" style="display:none;"></textarea>
 
       
     </div>
