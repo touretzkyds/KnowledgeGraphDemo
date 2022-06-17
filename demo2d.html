@@ -367,7 +367,6 @@
                     parent = qvals_to_names[parent_qval];
 
                     rank = rank_node_edges[curr_qval];
-                    //console.log('curr qval', curr_qval, 'parent qval', parent_qval)
                     pc_edge = {data: {id: `${curr_qval} - ${parent_qval}`, 
                       source: curr_qval, target: parent_qval, label:'subTaxonOf'}};
                     edges_lst.push(pc_edge); 
@@ -533,7 +532,7 @@
                     height: 250,
                     type: 'taxon'
                 }});
-                if (target_node_qval == "Q729"){ //Q2382443 is the Animalia Qval
+                if (target_node_qval == "Q729"){ //Q729 is the Animalia Qval
                   new_nodes.push({
                       data: {
                         id: target_node_qval, 
@@ -553,7 +552,7 @@
               
 
         }
-
+      
         return {nodes: new_nodes, 
                 edges: new_edges, 
                 em: edges_missing,
@@ -980,7 +979,9 @@
 
       
       function add_subtax_rank_nodes(subtax_rank, cy_graph, node_qval, radius, 
-            mult_constant, prop_node_diam, pos, graphType_pc_edges){
+            mult_constant, prop_node_diam, pos, graphType_pc_edges,                 
+            given_taxon, moderate_ranks, pc_edges, taxon_qvals){
+              
             var subtax_node_id= subtax_rank['subTaxonOf'];
             var rank_node_name = subtax_rank['taxonRank'];
             var subtax_node_name = subtax_rank['subtax_identifier'];
@@ -994,6 +995,7 @@
                     
                     
                     var parent_node = graphType_pc_edges[node_qval];
+                    console.log('parent node', parent_node);
                     //first adding the subTaxonOf property node
                     var parent_pos= cy_graph.nodes(`node[id = "${parent_node}"]`).position();
                     //getting the original radius of the subTaxonOf node
@@ -1037,6 +1039,24 @@
 
                     cy_graph.add([new_subtax_node]);
                     cy_graph.add([new_subtax_edge]);
+                    
+                    //now we want to add the clickable feature to these subtax_nodes;
+                    //so the last_id_clicked is the current taxon
+                    //node_id is the subtax node id but we want the query to run on the 'parent_node' id
+                    var id_label = `[id = "${node_id}"]`;
+                    cy_graph.nodes(id_label).on('click', function(evt){
+                        console.log('clicked', parent_node);
+                        var evtTarget = evt.target;
+                        var data = evtTarget._private.data;
+
+                        get_properties(given_taxon, parent_node, cy_graph, moderate_ranks,
+                        pc_edges, prop_node_diam, graphType_pc_edges, node_qval, taxon_qvals)
+
+                        /*get_properties(given_taxon, parent_node, cy_graph, [], 
+                                  pc_edges, prop_node_diam, graphType_pc_edges, 
+                                  '', taxon_qvals);*/
+                         
+                    });
 
             }
 
@@ -1155,7 +1175,8 @@
       }
 
       function box_4_query(json, node_qval, data, cy_graph, 
-          pos, pc_edges, prop_node_diam, graphType_pc_edges, taxon_qvals){
+          pos, pc_edges, prop_node_diam, graphType_pc_edges,
+           taxon_qvals, moderate_ranks, given_taxon){
         var prefComparisonList = [];
         var bindings = json.results.bindings;
         //assigning node values to b3 and b4
@@ -1170,18 +1191,20 @@
 
         var b4node_names = {full_list: prefComparisonList};
         create_property_nodes(node_qval, data, cy_graph, 
-          pos, pc_edges, prop_node_diam, graphType_pc_edges, b4node_names, taxon_qvals)
+          pos, pc_edges, prop_node_diam, graphType_pc_edges, 
+          b4node_names, taxon_qvals, moderate_ranks, given_taxon)
       }
 
       //need this intermediate version because now we have to wait for the result of the b4 query
       function create_property_nodes_intermediate(node_qval, data, cy_graph, 
-          pos, pc_edges, prop_node_diam, graphType_pc_edges, taxon_qvals){
+          pos, pc_edges, prop_node_diam, graphType_pc_edges, taxon_qvals, moderate_ranks, given_taxon){
 
             var node_name = taxon_qvals[node_qval];
             var url = box_node_query(node_name, true);
               d3.json(url).then(function(json_result){
                 box_4_query(json_result, node_qval, data, cy_graph, 
-                   pos, pc_edges, prop_node_diam, graphType_pc_edges, taxon_qvals);
+                   pos, pc_edges, prop_node_diam, graphType_pc_edges, 
+                   taxon_qvals, moderate_ranks, given_taxon);
               });
 
       }
@@ -1189,7 +1212,7 @@
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
       function create_property_nodes(node_qval, data, cy_graph, pos, pc_edges, 
-            prop_node_diam, graphType_pc_edges, b4node_names, taxon_qvals){
+            prop_node_diam, graphType_pc_edges, b4node_names, taxon_qvals, moderate_ranks, given_taxon){
             
             var node_name = taxon_qvals[node_qval]
             var prop_node_height = prop_node_diam;
@@ -1229,7 +1252,9 @@
 
             //going to apply the over_lay property to the subtax and rank nodes
             var start_degree = add_subtax_rank_nodes(new_prop_data.subtax_rank, 
-                      cy_graph, node_qval, radius, mult_constant, prop_node_diam, pos, graphType_pc_edges);
+                cy_graph, node_qval, radius, mult_constant, prop_node_diam, pos, graphType_pc_edges,
+                given_taxon, moderate_ranks, pc_edges, taxon_qvals);
+
             curr_degree = start_degree;
 
             for (let x = 0; x < num_property_nodes; x ++){
@@ -1506,7 +1531,7 @@
 
               
       function show_property_nodes(node_qval, data, cy_graph, pc_edges, 
-      prop_node_diam, graphType_pc_edges, id_lastclicked_node, taxon_qvals){
+      prop_node_diam, graphType_pc_edges, id_lastclicked_node, taxon_qvals, moderate_ranks, given_taxon){
             
             
             var id_label = `[id= '${node_qval}']`;
@@ -1514,58 +1539,58 @@
 
             shade_other_nodes(node_qval, cy_graph, id_lastclicked_node);
             create_property_nodes_intermediate(node_qval, data, cy_graph, pos, pc_edges, 
-            prop_node_diam, graphType_pc_edges, taxon_qvals);
+            prop_node_diam, graphType_pc_edges, taxon_qvals, moderate_ranks, given_taxon);
 
       }
 
 
       //returns the hierarchy back to it's original state
       //after the user unselects a node
-      function return_to_normal(node_name, cy_graph, given_taxon, ranks, prop_node_diam){
+      function return_to_normal(node_name, cy_graph, given_taxon, click_of_subtax){
 
-
-            //changing the nodes back to their original styles
-            cy_graph.elements().nodes().style( 
-              { 'opacity' : '1',
-                'text-opacity': '1'
-              });
-
-            var nodes = cy_graph.elements().nodes();
-            for (let i = 0; i < nodes.length; i++){
-                var curr_node_name = nodes[i]._private.data.name;
-                var curr_node_id = nodes[i]._private.id;
-
-                var id_label = `[id = '${curr_node_id}']`;
-
-                if (ranks.includes(curr_node_name) || curr_node_name == "Clade"){
-                    cy_graph.nodes(id_label).style({
-                      "background-color": "#90EE90",
-                      'text-wrap': 'wrap',
-                      'text-max-width': 150,
-                      'font-size': 35,
-                      'font-family': 'Garamond',
-                      'line-height': 1.15
+            if (!click_of_subtax){
+                //changing the nodes back to their original styles
+                  cy_graph.elements().nodes().style( 
+                    { 'opacity' : '1',
+                      'text-opacity': '1'
                     });
-                }else{
-                    cy_graph.nodes(id_label).style("background-color", "#ADD8E6");
-                }
-            }
 
+                  //var nodes = cy_graph.elements().nodes();
+                  cy_graph.nodes(`node[type = "rank"]`).style({
+                            "background-color": "#90EE90",
+                            'text-wrap': 'wrap',
+                            'text-max-width': 150,
+                            'font-size': 35,
+                            'font-family': 'Garamond',
+                            'line-height': 1.15
+                          });
+                  cy_graph.nodes(`node[type = "taxon"]`).style({
+                            "background-color": "#ADD8E6",
+                          });
+                          cy_graph.elements().edges().style( 
+                            { 'line-opacity' : '1',
+                              'text-opacity': '1'
+                            });
+            }
+            
+
+            //changing the edges back to their original styles
+            
+
+
+            
             var id_label = `[id = '${node_name}']`;
             cy_graph.nodes(id_label).style("background-color", "#ADD8E6");
+
+            if (click_of_subtax){
+              cy_graph.nodes(id_label).style("opacity", ".2");
+
+            }
             
             var id_label = `[id = '${given_taxon}']`;
             cy_graph.nodes(id_label).style("background-color", "red");
-
-            //changing the edges back to their original styles
-            cy_graph.elements().edges().style( 
-              { 'line-opacity' : '1',
-                'text-opacity': '1'
-              });
             cy_graph.elements().nodes().style({'border-width': '0'});
-            
-            var node_id_removed = `node[width = ${prop_node_diam.toString()}]`;
-            
+                        
             cy_graph.remove(`node[type = "subTaxProp"]`);
             cy_graph.remove(`node[type = "rankProp"]`);
             cy_graph.remove(`node[type = "property"]`);
@@ -1574,15 +1599,18 @@
             cy_graph.remove(`node[type = "bnode"]`);
             cy_graph.remove(`node[type = "property definition"]`);
             cy_graph.remove("node[width = 120]"); //removing box nodes
-            cy_graph.animate({
-              fit: {
-                padding: 20
-              }
-            });
+            if (!click_of_subtax){
+                  cy_graph.animate({
+                  fit: {
+                    padding: 20
+                  }
+                });
+            }
+            
       }
 
       //only want this function to preform the query if we select a non-rank node
-      function get_properties(given_taxon, node_qval, cy_graph, all_ranks,
+      function get_properties(given_taxon, node_qval, cy_graph, moderate_ranks,
        pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node, taxon_qvals){
 
             var id_label =`[id = '${given_taxon}']`;
@@ -1602,19 +1630,20 @@
             cy_graph.remove(`node[type = "bnode"]`);
             cy_graph.remove("node[width = 120]"); //removing box nodes
 
-        if (all_ranks.includes(node_name)){
+        if (moderate_ranks.includes(node_name)){
           return false;
         }
         var url = property_query(node_name, true);
           d3.json(url).then(function(json){
             show_property_nodes(node_qval, json, cy_graph, pc_edges,
-             prop_node_diam, graphType_pc_edges, id_lastclicked_node, taxon_qvals);
+             prop_node_diam, graphType_pc_edges, id_lastclicked_node, 
+             taxon_qvals, moderate_ranks, given_taxon);
           })
       }
 
-      function get_definition(node_name, cy_graph, all_ranks, definitions, definition_node_size){
+      function get_definition(node_name, cy_graph, moderate_ranks, definitions, definition_node_size){
 
-          if (all_ranks.includes(node_name)){
+          if (moderate_ranks.includes(node_name)){
             return false;
           }
           var def_node_height;
@@ -1744,6 +1773,11 @@
         'Subfamily', 'Infraorder', 'Tribe', 'Subgenus', 'Subtribe', 
         'Infraphylum', 'Superclass', 'Kingdom'];
 
+        var moderate_ranks = [ "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", 
+            "Species", "noRank", "Subkingdom", "Superfamily", "Infraclass", "Suborder", 
+            "Parvorder", "Subfamily", "Superorder", "Infraphylum", "Subtribe", "Tribe", 
+            "Megaclass", "Subclass", "Superclass","Infraorder", "Subphylum", "Variety", 
+            "Superphylum", "Division", "Domain", "Subdivision", root_rank];
         
         var concise_ranks = [root_rank,
          'Phylum', 'Class', 'Order', 'Family', 
@@ -1755,8 +1789,13 @@
             edge_lst = new_data.edges;
             graphType_pc_edges = new_data.newPC_edges;
 
+        }else if (graphType == ('Moderate')){
+            new_data = create_graphType(converted_data, moderate_ranks, user_entered_taxon);
+            nodes_lst = new_data.nodes;
+            edge_lst = new_data.edges;
+            graphType_pc_edges = new_data.newPC_edges;
+
         }
-        
         else {
           nodes_lst = converted_data.nodes;
           edge_lst = converted_data.edges;
@@ -1912,7 +1951,7 @@
                 if (Object.keys(data).length == 0){
                   if (zoomedInOnNode){
 
-                    return_to_normal(id_lastclicked_node, cy, given_taxon, all_ranks, prop_node_diam);
+                    return_to_normal(id_lastclicked_node, cy, given_taxon, false);
                     id_lastclicked_node = "";
                     zoomedInOnNode = false;
                   }
@@ -1920,12 +1959,12 @@
 
                     if (data.type == 'taxon' && data.id != id_lastclicked_node){
                       var name = data.name;
-                      if (!(all_ranks.includes(name))) {
+                      if (!(moderate_ranks.includes(name))) {
                           cy.nodes(`node[id = "${data.id}"]`).style({
                                       'width': 250,
                                       'height': 250
                           });
-                          get_properties(given_taxon, data.id, cy, all_ranks, 
+                          get_properties(given_taxon, data.id, cy, moderate_ranks, 
                                   pc_edges, prop_node_diam, graphType_pc_edges, 
                                   id_lastclicked_node, taxon_qvals);
                           zoomedInOnNode = true;
@@ -1949,15 +1988,15 @@
                 var style = evt.target._private.style;
                 var enlarged_node_size = 275;
                 var border_color = '#00008B';
-                if ((all_ranks.includes(name))){
+                if ((moderate_ranks.includes(name))){
                   enlarged_node_size = 125;
                   border_color = '#013220';
                 }
 
                 if (style != undefined){
                     if (style.opacity == undefined || style.opacity.value == 1){
-                      if (!(all_ranks.includes(name) || name == "Clade")){
-                          get_definition(this.id(), cy, all_ranks, definitions, definition_node_size);
+                      if (!(moderate_ranks.includes(name) || name == "Clade")){
+                          get_definition(this.id(), cy, moderate_ranks, definitions, definition_node_size);
                       }
                     }
                 }   
@@ -1975,7 +2014,7 @@
 
             var reg_node_size = 250;
             var name = this._private.data.name;
-            if ((all_ranks.includes(name))){
+            if ((moderate_ranks.includes(name))){
                 reg_node_size = 100
             }
             cy.nodes(`node[id = "${this.id()}"]`).style({
@@ -2010,6 +2049,9 @@
       function change_buttons(new_data, full_json, rootVal){
             document.getElementById("Full").onclick = 
                   function () {display_hierarchy(full_json, 'Full', {given_data: new_data, taxon_value: rootVal}, rootVal)};
+
+            document.getElementById("Moderate").onclick = 
+                  function () {display_hierarchy(full_json, 'Moderate', {given_data: new_data, taxon_value: rootVal}, rootVal)};
 
             
             document.getElementById("Concise").onclick = 
@@ -2104,6 +2146,8 @@
           display_hierarchy(full_json, 'Concise', {given_data: new_data, taxon_value: taxon_qval}, taxon_qval);
           document.getElementById("Concise").style.background='green';
           document.getElementById("Full").style.background='black';
+          document.getElementById("Moderate").style.background='black';
+
 
 
     }
@@ -2114,6 +2158,9 @@
 
           document.getElementById("Full").onclick = 
                 function () {exec('Full')};
+          
+          document.getElementById("Moderate").onclick = 
+                function () {exec('Moderate')};
 
           
 
@@ -2123,6 +2170,8 @@
           exec('Concise');
           document.getElementById("Concise").style.background='green';
           document.getElementById("Full").style.background='black';
+          document.getElementById("Moderate").style.background='black';
+
 
           //removing the back to root button because we don't need it
           //if we're already at the root
@@ -2212,6 +2261,8 @@
           <input id="endpoint" class="span5" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
 
           <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
+          <button id="Moderate" class="btn" type="button" onclick = "exec('Moderate')">Moderate</button>
+
           <button id="Concise" class="btn2" type="button" onclick = "exec('Concise')">Concise</button>
 
         <!--  <div class="up-down-btn">
@@ -2242,6 +2293,7 @@
       window.onload = exec('Concise');
       let fullButton = document.querySelector('#Full');
       let conciseButton = document.querySelector('#Concise');
+      let moderateButton = document.querySelector('#Moderate');
 
 
       fullButton.addEventListener('click', () => 
@@ -2249,12 +2301,28 @@
 
       fullButton.addEventListener('click', () => 
       conciseButton.style.backgroundColor = '#000000')
+
+      fullButton.addEventListener('click', () => 
+      moderateButton.style.backgroundColor = '#000000')
       
 
       conciseButton.addEventListener('click', () => 
       conciseButton.style.backgroundColor = 'green')
 
       conciseButton.addEventListener('click', () => 
+      fullButton.style.backgroundColor = '#000000')
+
+      conciseButton.addEventListener('click', () => 
+      moderateButton.style.backgroundColor = '#000000')
+
+
+      moderateButton.addEventListener('click', () => 
+      moderateButton.style.backgroundColor = 'green')
+
+      moderateButton.addEventListener('click', () => 
+      conciseButton.style.backgroundColor = 'black')
+
+      moderateButton.addEventListener('click', () => 
       fullButton.style.backgroundColor = '#000000')
       
 
