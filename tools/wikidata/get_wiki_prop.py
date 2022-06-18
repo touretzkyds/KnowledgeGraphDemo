@@ -1,5 +1,5 @@
-# pip install sparqlwrapper
-# https://rdflib.github.io/sparqlwrapper/
+# Retrieve the label of a WikiData property for use
+# in get_triples.py.
 
 import sys
 from SPARQLWrapper import SPARQLWrapper, JSON
