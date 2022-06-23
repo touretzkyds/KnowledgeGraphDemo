@@ -93,6 +93,7 @@ prop_names = {
     'P361' : 'part of',
     'P373' : "Commons category",
     'P407' : "language of work or name",
+    'P461' : "opposite of",
     'P646' : 'Freebase ID',
     'P672' : "MeSH tree code",
     'P910' : "topic's main category",
@@ -105,6 +106,7 @@ prop_names = {
     'P1417' : "Encyclopædia Britannica Online ID",
     'P1424' : "topic's main template",
     'P1535' : "used by",
+    'P1542' : "has effect",
     'P1545' : "series ordinal",
     'P1552' : 'has quality',
     'P1628' : "equivalent property",
@@ -118,6 +120,7 @@ prop_names = {
     'P1855' : "Wikidata property example",
     'P1889' : 'different from',
     'P1963' : "properties for this type",
+    'P2283' : "uses",
     'P2302' : "property constraint",
     'P2308' : "class",
     'P2309' : "relation",
@@ -186,7 +189,7 @@ for binding in bindings_list:
     print('%50s  =  %s' % (rval,yval))
 
 print(f"\nStatements about {concept} '{label}' (excluding those with non-English content):\n")
-stmt = ''
+current_stmt = ''
 for binding in statement_results['results']['bindings']:
     rval = binding['r']['value']
     yval = binding['y']['value']
@@ -199,8 +202,8 @@ for binding in statement_results['results']['bindings']:
     else:
         zLabel = ''
     if yval.find('/entity/statement/') > 0:
-        if yval != stmt:
-            stmt = yval
+        if yval != current_stmt:
+            current_stmt = yval
             print(val_shortener(rval), ':', val_shortener(yval))
         print('  ', val_shortener(sval), '=', val_shortener(zval) + zLabel)
 
