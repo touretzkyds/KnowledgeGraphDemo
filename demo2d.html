@@ -1279,9 +1279,22 @@
                   if (prop_node_type == 'literal'){
                       prop_node_val = `"${prop_node_val}"`;
                       assigned_node_type = 'literal';
+                      new_diam = 250;}
+                  else if (prop_node_type == 'uri' && prop_node_val != 'Taxon'){
+                      var image = new Image();
+                      // image.crossOrigin = "null";
+                      image.src = prop_node_val;
+                      image.onload = function() {
+                        var height = image.naturalHeight;
+                        var width = image.naturalWidth;
+                        console.log(height, width)
+                        cy_graph.nodes(uri_id_selector).style({
+                          'width': width,
+                          'height': height
+                        }); 
+                      }
+                      assigned_node_type = 'uri';
                       new_diam = 250;
-                      
-
                   }else{
                     //prop_node_type is a concept so we want to ideally get q identifier
                     assigned_node_type = 'concept';
@@ -1422,6 +1435,20 @@
                         padding: padding_amount
                       }
                     });
+
+                    var uri_id_selector = `node[type = "uri"]`;
+                    cy_graph.nodes(uri_id_selector).style({
+                      'shape': 'rectangle',
+                      'background-color': '	#C3B1E1',
+                      'background-image': image.src,
+                      'text-wrap': 'wrap',
+                      'text-max-width': prop_node_diam - 20,
+                      'border-width': 5,
+                      'border-style': 'solid',
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15,
+                    });    
                     
                     var literal_id_selector = `node[type = "literal"]`;
 
