@@ -8,6 +8,7 @@
     <script src="external/dagre.js"></script>
     <script src="external/cytoscape-dagre.js"></script>
 
+
     <style type="text/css">
       .body{
         margin: 0;
@@ -1288,14 +1289,15 @@
                         var height = image.naturalHeight;
                         var width = image.naturalWidth;
                         console.log(height, width)
-                        cy_graph.nodes(uri_id_selector).style({
+                        cy_graph.nodes(image_id_selector).style({
                           'width': width,
                           'height': height
                         }); 
                       }
                       assigned_node_type = 'uri';
                       new_diam = 250;
-                  }else{
+                  }
+                  else{
                     //prop_node_type is a concept so we want to ideally get q identifier
                     assigned_node_type = 'concept';
                     prop_node_height = 250;
@@ -1325,7 +1327,69 @@
 
                               var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
 
-                              if (prop_node_type == "bnode"){
+                              // case on image here 
+                              if (pred_val == "taxonImage"){
+                                assigned_node_type = 'image';
+                                var next_x_pos = taxon_x_pos + (radius*1.6*mult_constant)*(Math.cos(new_degree));
+                                var next_y_pos = taxon_y_pos - (radius*1.6*mult_constant)*(Math.sin(new_degree));
+                                // prop_node_val = '';
+                                // cy_graph.nodes('[id = “node id”]').style(
+                                //   { ‘label’: ‘new label’});
+
+                              var options = {
+                                evtType: "cxttap",
+                                menuItems: [
+                                  {
+                                    id: "copyURL",
+                                    content: "Copy Image Address",
+                                    tooltipText: "View Details",
+                                    selector: "node, edge",
+                                    onClickFunction: function (event) {
+                                      // copy image URL to clipboard
+                                    },
+                                    hasTrailingDivider: true
+                                  },
+                                  {
+                                    id: "copyImage",
+                                    content: "Copy Image",
+                                    selector: "node, edge",
+                                    onClickFunction: function (event) {
+                                      // copy image URL to clipboard
+                                    },
+                                    hasTrailingDivider: true
+                                  },
+                                  {
+                                    id: "saveImage",
+                                    content: "Save Image",
+                                    selector: "node, edge",
+                                    onClickFunction: function (event) {
+                                      var a  = document.createElement('a');
+                                      a.href = canvas.toDataURL('image file here? probably use subscript thing');;
+                                      a.download = 'image.png';
+                                      a.click() 
+                                    },
+                                    hasTrailingDivider: true
+                                  },
+                                  {
+                                    id: "newTab",
+                                    content: "Open Image in New Tab",
+                                    selector: "node, edge",
+                                    onClickFunction: function (event) {
+                                      try { // your browser may block popups
+                                        window.open( this.data('href') );
+                                      } catch(e){ // fall back on url change
+                                        window.location.href = this.data('href');
+                                      }			},
+                                    hasTrailingDivider: true
+                                  }
+                                ],
+                                menuItemClasses: ["custom-menu-item", "custom-menu-item:hover"],
+                                contextMenuClasses: ["custom-context-menu"]
+                              };
+
+
+                              }
+                              else if (prop_node_type == "bnode"){
                                     new_diam = prop_node_height + 50;
                                     console.log('diam', new_diam, 'height', prop_node_height)
                                     assigned_node_type = 'bnode'
@@ -1367,21 +1431,22 @@
                                 
                               }
                               curr_degree = new_degree;
-          
+                              // position: {x: next_x_pos, y: next_y_pos}
+                              // consoloe.log(next_x_pos,next_y_pos)
                               var new_property_node = 
-                                        {
-                                            group: 'nodes',
-                                            data: {
-                                              id: node_id,
-                                              color: '#FFD580',
-                                              name: prop_node_val,
-                                              opacity: 1,
-                                              width: new_diam,
-                                              height: prop_node_height,
-                                              type: assigned_node_type
-                                            },
-                                            position: {x: next_x_pos, y: next_y_pos}
-                                        };
+                                {
+                                    group: 'nodes',
+                                    data: {
+                                      id: node_id,
+                                      color: '#FFD580',
+                                      name: prop_node_val,
+                                      opacity: 1,
+                                      width: new_diam,
+                                      height: prop_node_height,
+                                      type: assigned_node_type
+                                    },
+                                    position: {x: next_x_pos, y: next_y_pos}
+                                };
                                 if(assigned_node_type == 'property definition'){
                                   var collapse_diam = prop_node_diam;
                                   var collapse_height = prop_node_height
@@ -1392,7 +1457,7 @@
                                   
                                 }
                                 added_els.push(new_property_node);
-                                
+                                // IF it's an image: add href property (most important identifier of the node). add to class of image nodes too
                                 
                                 var new_edge = 
                                         {
@@ -1436,8 +1501,9 @@
                       }
                     });
 
-                    var uri_id_selector = `node[type = "uri"]`;
-                    cy_graph.nodes(uri_id_selector).style({
+                    var image_id_selector = `node[type = "image"]`;
+                    cy_graph.nodes(image_id_selector).data('href', image.src)
+                    cy_graph.nodes(image_id_selector).style({
                       'shape': 'rectangle',
                       'background-color': '	#C3B1E1',
                       'background-image': image.src,
@@ -1448,8 +1514,8 @@
                       'font-size': 0,
                       'font-family': 'Garamond',
                       'line-height': 1.15,
-                    });    
-                    
+                    });   
+                  
                     var literal_id_selector = `node[type = "literal"]`;
 
                     cy_graph.nodes(literal_id_selector).style({
@@ -1625,6 +1691,7 @@
             cy_graph.remove(`node[type = "literal"]`);
             cy_graph.remove(`node[type = "bnode"]`);
             cy_graph.remove(`node[type = "property definition"]`);
+            cy_graph.remove(`node[type = "image"]`);       
             cy_graph.remove("node[width = 120]"); //removing box nodes
             if (!click_of_subtax){
                   cy_graph.animate({
@@ -1655,6 +1722,7 @@
             cy_graph.remove(`node[type = "literal"]`);
             cy_graph.remove(`node[type = "property definition"]`);
             cy_graph.remove(`node[type = "bnode"]`);
+            cy_graph.remove(`node[type = "image"]`);
             cy_graph.remove("node[width = 120]"); //removing box nodes
 
         if (moderate_ranks.includes(node_name)){
@@ -2009,7 +2077,8 @@
           })
         
           
-          
+          // MOUSEOVER STUFF
+          // HOVER NODE: reveal definition 
           cy.nodes().on("mouseover",function(evt){
                 var name = this._private.data.name;
                 var style = evt.target._private.style;
@@ -2051,7 +2120,23 @@
             });
 
           });
+          // IMAGE: show taxon image link mouseover
+          cy.on('mouseover', 'node[type = "image"]', function(event) {
+            var node = event.cyTarget;
+            node.qtip({
+                content: this.href,
+                show: {
+                    event: event.type,
+                    ready: true
+                },
+                hide: {
+                    event: 'mouseout unfocus'
+                }
+            }, event);
+        });
 
+
+          // EDGES
           cy.edges().on('mouseover', function(evt){
             var evtTarget = evt.target;
             var data = evtTarget._private.data;
