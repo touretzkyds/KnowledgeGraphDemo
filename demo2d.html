@@ -7,6 +7,13 @@
 
     <script src="external/dagre.js"></script>
     <script src="external/cytoscape-dagre.js"></script>
+    <script src="node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="node_modules/qtip2/dist/jquery.qtip.min.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.js"></script>
+    <script src="node_modules/cytoscape-popper/cytoscape-popper.js"></script>
+    <script src="node_modules/cytoscape-context-menus/cytoscape-context-menus.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/copy-image-clipboard/dist/index.browser.js"></script>
+
 
 
     <style type="text/css">
@@ -72,7 +79,61 @@
         height: 30px;
       }
       
- 
+      /* CONTEXT MENUS */
+      .cy-context-menus-cxt-menu {
+          display:none;
+          z-index: 1000;
+          position:absolute;
+          border:1px solid #A0A0A0;
+          padding: 0;
+          margin: 0;
+          width:auto;
+      }
+
+      .cy-context-menus-cxt-menuitem {
+          display:block;
+          width: 100%;
+          padding: 3px 20px;
+          position:relative;
+          margin:0;
+          background-color:#f8f8f8;
+          font-weight:normal;
+          font-size: 12px;
+          white-space:nowrap;
+          border: 0;
+          text-align: left;
+      }
+
+      .cy-context-menus-cxt-menuitem:enabled {
+          color: #000000;
+      }
+
+      .cy-context-menus-ctx-operation:focus {
+        outline: none;
+      }
+
+      .cy-context-menus-cxt-menuitem:hover {
+          color: #ffffff;
+          text-decoration: none;
+          background-color: #fdd3ef;
+          background-image: none;
+          cursor: pointer;
+      }
+
+      .cy-context-menus-cxt-menuitem[content]:before {
+          content:attr(content);
+      }
+
+      .cy-context-menus-divider {
+        border-bottom:1px solid #A0A0A0;
+      }
+
+      .cy-context-menus-submenu-indicator {
+          position: absolute;
+          right: 2px;
+          top: 50%;
+          transform: translateY(-50%);
+      }
 
       
     </style>
@@ -1221,6 +1282,7 @@
             var taxon_y_pos = pos.y;
             var added_els = [];
             var new_diam = prop_node_diam;
+            console.log(new_diam, prop_node_height);
             
             //first want to trim down our redundancy in our query
             var new_prop_data = trim_prop_query(data.results.bindings);
@@ -1277,11 +1339,13 @@
                       prop_node_val == "Animalia" || prop_node_val == node_name){
                       node_id = prop_node_val.concat(x.toString());
                   }
+                  console.log(prop_node_type, prop_node_val)
                   if (prop_node_type == 'literal'){
                       prop_node_val = `"${prop_node_val}"`;
                       assigned_node_type = 'literal';
                       new_diam = 250;}
                   else if (prop_node_type == 'uri' && prop_node_val != 'Taxon'){
+                      url_id = prop_node_val
                       var image = new Image();
                       // image.crossOrigin = "null";
                       image.src = prop_node_val;
@@ -1289,13 +1353,13 @@
                         var height = image.naturalHeight;
                         var width = image.naturalWidth;
                         console.log(height, width)
-                        cy_graph.nodes(image_id_selector).style({
+                        console.log(prop_node_val)
+                        cy_graph.$id(url_id).data({
                           'width': width,
                           'height': height
                         }); 
                       }
-                      assigned_node_type = 'uri';
-                      new_diam = 250;
+                      assigned_node_type = 'image';
                   }
                   else{
                     //prop_node_type is a concept so we want to ideally get q identifier
@@ -1335,59 +1399,6 @@
                                 // prop_node_val = '';
                                 // cy_graph.nodes('[id = “node id”]').style(
                                 //   { ‘label’: ‘new label’});
-
-                              var options = {
-                                evtType: "cxttap",
-                                menuItems: [
-                                  {
-                                    id: "copyURL",
-                                    content: "Copy Image Address",
-                                    tooltipText: "View Details",
-                                    selector: "node, edge",
-                                    onClickFunction: function (event) {
-                                      // copy image URL to clipboard
-                                    },
-                                    hasTrailingDivider: true
-                                  },
-                                  {
-                                    id: "copyImage",
-                                    content: "Copy Image",
-                                    selector: "node, edge",
-                                    onClickFunction: function (event) {
-                                      // copy image URL to clipboard
-                                    },
-                                    hasTrailingDivider: true
-                                  },
-                                  {
-                                    id: "saveImage",
-                                    content: "Save Image",
-                                    selector: "node, edge",
-                                    onClickFunction: function (event) {
-                                      var a  = document.createElement('a');
-                                      a.href = canvas.toDataURL('image file here? probably use subscript thing');;
-                                      a.download = 'image.png';
-                                      a.click() 
-                                    },
-                                    hasTrailingDivider: true
-                                  },
-                                  {
-                                    id: "newTab",
-                                    content: "Open Image in New Tab",
-                                    selector: "node, edge",
-                                    onClickFunction: function (event) {
-                                      try { // your browser may block popups
-                                        window.open( this.data('href') );
-                                      } catch(e){ // fall back on url change
-                                        window.location.href = this.data('href');
-                                      }			},
-                                    hasTrailingDivider: true
-                                  }
-                                ],
-                                menuItemClasses: ["custom-menu-item", "custom-menu-item:hover"],
-                                contextMenuClasses: ["custom-context-menu"]
-                              };
-
-
                               }
                               else if (prop_node_type == "bnode"){
                                     new_diam = prop_node_height + 50;
@@ -1500,7 +1511,7 @@
                         padding: padding_amount
                       }
                     });
-
+                    // IMAGE PROPERTIES
                     var image_id_selector = `node[type = "image"]`;
                     cy_graph.nodes(image_id_selector).data('href', image.src)
                     cy_graph.nodes(image_id_selector).style({
@@ -1512,9 +1523,7 @@
                       'border-width': 5,
                       'border-style': 'solid',
                       'font-size': 0,
-                      'font-family': 'Garamond',
-                      'line-height': 1.15,
-                    });   
+                    });  
                   
                     var literal_id_selector = `node[type = "literal"]`;
 
@@ -1897,7 +1906,8 @@
         }
         console.log(converted_data)
         const cyDiv = document.querySelector('#cy');
-        cyDiv.style.display = 'block';
+        cyDiv.style.display = 'block';        
+
         var cy = cytoscape({
             container: document.getElementById('cy'),
             elements: {
@@ -1951,9 +1961,133 @@
                         'border-width': 12, // makes the handle easier to hit
                         'border-opacity': 0
                       }
+                  },
+                  {
+                    selector: ':selected',
+                    style: {
+                      "border-width": 2,
+                      "border-color": "rgb(1,105,217)"
+                    }
                   }
                 ]
         });
+
+        // CONTEXT MENU
+        var contextMenu = cy.contextMenus({
+          menuItems: [
+            {
+              id: 'copyURL',
+              content: 'Copy Image Address',
+              selector: 'node[type = "image"]',
+              onClickFunction: function (event) {
+                let target = event.target;
+                console.log(target.data('href'));
+                navigator.clipboard.writeText(target.data('href'));
+                console.log('image URL copied!');
+                // Tooltip confirmation
+                target.popperref = event.target.popper({
+                  content: () => {
+                    tips.innerHTML = "<p>URL Copied!</p>";
+                    tips.style =
+                      "background-color: #949494; color: #fff; text-align: left; padding: 2px 4px; border-radius: 3px; font-size:10px;";
+                    tips.className = "tooltiptext";
+                    document.body.appendChild(tips);
+                    setTimeout(function(){
+                        document.body.removeChild(tips);
+                    }, 1500);
+                    return tips;
+                  },
+                  popper: {
+                    placement: "top-start",
+                    removeOnDestroy: true
+                  }
+                })
+              },
+              hasTrailingDivider: true
+            },
+            {
+              id: 'copyImage',
+              content: 'Copy Image',
+              tooltipText: 'Copy Image',
+              selector: 'node[type = "image"]',
+              hasTrailingDivider: true,
+              onClickFunction: function (event) {
+                let target = event.target;
+                var url = target.data('href');
+                CopyImageClipboard.copyImageToClipboard(
+                  url,
+                )
+                  .then(() => {
+                    console.log('Image Copied')
+                  })
+                  .catch((e) => {
+                    console.log('Error: ', e.message)
+                  })
+                // Tooltip confirmation
+                target.popperref = event.target.popper({
+                  content: () => {
+                    tips.innerHTML = "<p>Image Copied!</p>";
+                    tips.style =
+                      "background-color: #949494; color: #fff; text-align: left; padding: 2px 4px; border-radius: 3px; font-size:10px;";
+                    tips.className = "tooltiptext";
+                    document.body.appendChild(tips);
+                    setTimeout(function(){
+                        document.body.removeChild(tips);
+                    }, 1500);
+                    return tips;
+                  },
+                  popper: {
+                    placement: "top-start",
+                    removeOnDestroy: true
+                  }
+                })
+              },
+            },
+            {
+              id: 'saveImage',
+              content: 'Save image',
+              selector: 'node[type = "image"]',
+              coreAsWell: true,
+              show: true,
+              hasTrailingDivider: true,
+              onClickFunction: function (event) {
+                let target = event.target;
+                var url = target.data('href')
+                function dataToURL(url) {
+                    return fetch(url).then((response) => {
+                            return response.blob();
+                        }).then(blob => {
+                            return URL.createObjectURL(blob);
+                        });
+                }
+                async function downloadImage(url) {
+                        const a = document.createElement("a");
+                        a.href = await dataToURL(url);
+                        a.download = url.split("650px-")[1];
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        console.log("image downloaded!")
+                }
+                downloadImage(url)
+              }
+            },
+            {
+              id: 'newTab',
+              content: 'Open Image in New Tab',
+              tooltipText: 'Copy Image',
+              selector: 'node[type = "image"]',
+              hasTrailingDivider: true,
+              onClickFunction: function (event) {
+                let target = event.target;
+                var url = target.data('href');
+                window.open(url)
+                
+                }
+              },
+          ]
+        });
+
         
         var rank_edges = converted_data.rn_edges;
         var nodes = cy.elements().nodes();
@@ -2120,21 +2254,28 @@
             });
 
           });
-          // IMAGE: show taxon image link mouseover
-          cy.on('mouseover', 'node[type = "image"]', function(event) {
-            var node = event.cyTarget;
-            node.qtip({
-                content: this.href,
-                show: {
-                    event: event.type,
-                    ready: true
-                },
-                hide: {
-                    event: 'mouseout unfocus'
-                }
-            }, event);
-        });
 
+        let tips = document.createElement("div");
+        cy.on('mouseover', 'node[type = "image"]', function(event) {
+            let target = event.target;
+            target.popperref = event.target.popper({
+              content: () => {
+                tips.innerHTML = `<a style="color:white;" href='${event.target.data("href")}'>${event.target.data("href")}</a>`;
+                tips.style =
+                  "background-color: #949494; color: #fff; text-align: left; padding: 6px 8px; border-radius: 4px; font-size:10px;";
+                tips.className = "tooltiptext";
+                document.body.appendChild(tips);
+                return tips;
+              },
+              popper: {
+                placement: "top-start",
+                removeOnDestroy: true
+              }
+            });
+          })
+          cy.on('mouseout', 'node[type = "image"]', function(event) {           
+            document.body.removeChild(tips);
+          });
 
           // EDGES
           cy.edges().on('mouseover', function(evt){
@@ -2153,7 +2294,6 @@
             })
           })
            
-
     }
 
 
