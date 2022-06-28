@@ -10,6 +10,9 @@
     "type": "git",
     "url": "git+https://github.com/touretzkyds/KnowledgeGraphDemo.git"
   },
+  "publishConfig": {
+    "registry":"https://npm.pkg.github.com"
+  },  
   "author": "",
   "license": "ISC",
   "bugs": {
@@ -24,4 +27,5 @@
     "cytoscape-qtip": "^2.8.0",
     "popper": "^1.0.1"
   }
+
 }
