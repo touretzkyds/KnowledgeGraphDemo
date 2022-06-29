@@ -1,5 +1,5 @@
 {
-  "name": "knowledgegraphdemo-master",
+  "name": "knowledgegraphdemo",
   "version": "1.0.0",
   "description": "Knowledge graph demo display ",
   "main": "index.js",
@@ -11,8 +11,8 @@
     "url": "https://github.com/touretzkyds/KnowledgeGraphDemo.git"
   },
   "publishConfig": {
-    "registry":"https://npm.pkg.github.com"
-  },  
+    "registry": "https://npm.pkg.github.com"
+  },
   "author": "",
   "license": "ISC",
   "bugs": {
@@ -23,7 +23,6 @@
     "copy-image-clipboard": "^2.1.2",
     "cytoscape": "^3.21.2",
     "cytoscape-context-menus": "^4.1.0",
-    "cytoscape-popper": "^2.0.0",
+    "cytoscape-popper": "^2.0.0"
   }
-
 }
