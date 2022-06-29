@@ -1484,12 +1484,14 @@
                       image.onload = function() {
                         var height = image.naturalHeight;
                         var width = image.naturalWidth;
-                        console.log(height, width)
-                        console.log(prop_node_val)
                         cy_graph.$id(url_id).data({
                           'width': width,
                           'height': height
                         }); 
+                        cy_graph.$id(url_id).data('href', image.src);
+                        cy_graph.$id(url_id).style({
+                          'background-image': image.src,
+                        });  
                       }
                       assigned_node_type = 'image';
                   }
@@ -1645,15 +1647,9 @@
                     });
                     // IMAGE PROPERTIES
                     var image_id_selector = `node[type = "image"]`;
-                    cy_graph.nodes(image_id_selector).data('href', image.src)
                     cy_graph.nodes(image_id_selector).style({
                       'shape': 'rectangle',
-                      'background-color': '	#C3B1E1',
-                      'background-image': image.src,
-                      'text-wrap': 'wrap',
-                      'text-max-width': prop_node_diam - 20,
-                      'border-width': 5,
-                      'border-style': 'solid',
+                      'background-color': 'white',
                       'font-size': 0,
                     });  
                   
@@ -2867,7 +2863,7 @@
             });
 
           });
-
+        
         let tips = document.createElement("div");
         cy.on('mouseover', 'node[type = "image"]', function(event) {
             let target = event.target;
@@ -2887,7 +2883,7 @@
             });
           })
           cy.on('mouseout', 'node[type = "image"]', function(event) {           
-            document.body.removeChild(tips);
+            tips.style.display = "none";
           });
 
           // EDGES
