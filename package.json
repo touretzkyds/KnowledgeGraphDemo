@@ -24,8 +24,6 @@
     "cytoscape": "^3.21.2",
     "cytoscape-context-menus": "^4.1.0",
     "cytoscape-popper": "^2.0.0",
-    "cytoscape-qtip": "^2.8.0",
-    "popper": "^1.0.1"
   }
 
 }
