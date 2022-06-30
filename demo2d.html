@@ -360,7 +360,23 @@
         len = bindings.length;
 
         if (len > 0){
-            if (bindings [0].root_name != undefined &&
+          //we can assume that the first parent is the root for now?
+            if (bindings [0].parent_name != undefined &&
+                bindings [0].root_rank != undefined &&
+                bindings [0].root_def != undefined){
+                  root = bindings [0].parent_name.value;
+                  root_rank = bindings [0].root_rank.value;
+                  root_def = bindings [0].root_def.value;
+                }
+
+                root_qval = bindings [0].parent.value;
+                if (root_qval.length >= 40){
+                  root_qval = root_qval.slice(40, root_qval.length);
+                }
+                names_to_qvals[root] = root_qval
+                def_for_taxons[root_qval] = root_def;
+                qvals_to_names[root_qval] = root;
+           /* if (bindings [0].root_name != undefined &&
                 bindings [0].root_rank != undefined &&
                 bindings [0].root_def != undefined){
                   root = bindings [0].root_name.value;
@@ -374,7 +390,7 @@
                 }
                 names_to_qvals[root] = root_qval
                 def_for_taxons[root_qval] = root_def;
-                qvals_to_names[root_qval] = root;
+                qvals_to_names[root_qval] = root;*/
             
         }
 
@@ -396,7 +412,7 @@
         }
 
         node_names.push({name: root, qval: root_qval});
-       
+
         for (let i = 0; i < len; i++){
             child_rank = bindings [i].rank_name.value;
             child_def = bindings [i].def.value;
@@ -433,8 +449,9 @@
             //only want to continue if parent and child qvals are diff and if 
             //we haven't seen the child yet
             if (child_qval != parent_qval && qvals_to_names[child_qval] == undefined){
-                      
+
                       node_names.push({name: child, qval: child_qval});
+
                       def_for_taxons[child_qval] = child_def;
                       qvals_to_names[child_qval] = child;
 
@@ -467,7 +484,8 @@
             var result = keyA.localeCompare(keyB);
             return result;
           });
-
+        
+        console.log('node names', node_names);
 
         for (let idx = 0; idx < node_names.length; idx ++){
           curr_name = node_names[idx].name;
@@ -498,6 +516,7 @@
                       parent_and_all_children[parent_qval].push(curr_qval);
                     }
                             
+                    //console.log('source', curr_qval, 'target', parent_qval);
 
                   pc_edge = {data: {id: `${curr_qval} - ${parent_qval}`, 
                       source: curr_qval, target: parent_qval, label:'subTaxonOf'}};
@@ -1194,7 +1213,7 @@
       function add_subtax_rank_nodes(subtax_rank, cy_graph, node_qval, radius, 
             mult_constant, prop_node_diam, pos, graphType_pc_edges,                 
             given_taxon, all_ranks, pc_edges, taxon_qvals, 
-            parent_and_all_children, nodes_we_came_from){
+            parent_and_all_children, nodes_we_came_from, degree_movement){
               
             var subtax_node_id= subtax_rank['subTaxonOf'];
             var rank_node_name = subtax_rank['taxonRank'];
@@ -1203,6 +1222,7 @@
             var subTaxonOf_degree = 0;
             var taxon_x_pos = pos.x;
             var taxon_y_pos = pos.y;
+            var degree_movement = degree_movement;
         
 
             if (subtax_node_id != undefined){
@@ -1281,7 +1301,18 @@
                 return subTaxonOf_degree;
             }
             
-            var rank_pos = {x: taxon_x_pos - radius * mult_constant, y: taxon_y_pos};
+
+            console.log('subtaxonof degree', subTaxonOf_degree * (180/Math.PI));
+            if (Math.abs(subTaxonOf_degree - Math.PI)* (180/Math.PI) <= 15){
+                var next_x_pos = taxon_x_pos + (radius*mult_constant)*(Math.cos(degree_movement + subTaxonOf_degree));
+                var next_y_pos = taxon_y_pos - (radius*mult_constant)*(Math.sin(degree_movement + subTaxonOf_degree));
+                var rank_pos = {x: next_x_pos, y: next_y_pos};
+                var subTaxonOf_degree = degree_movement + subTaxonOf_degree;
+
+            }else{
+                var rank_pos = {x: taxon_x_pos - radius * mult_constant, y: taxon_y_pos};
+            }
+
             var rank_node_id = `prop ${rank_node_name}`;
             var new_rank_node = 
                     {
@@ -1480,6 +1511,7 @@
             var curr_degree = 0;
             var degree_movement = (2 * Math.PI) / (num_property_nodes + 2);
 
+
             var new_degree = 0;
             var box_nodes = {};
 
@@ -1493,7 +1525,7 @@
             var start_degree = add_subtax_rank_nodes(new_prop_data.subtax_rank, 
                 cy_graph, node_qval, radius, mult_constant, prop_node_diam, pos, graphType_pc_edges,
                 given_taxon, all_ranks, pc_edges, taxon_qvals, 
-                parent_and_all_children, nodes_we_came_from);
+                parent_and_all_children, nodes_we_came_from, degree_movement);
 
             curr_degree = start_degree;
 
@@ -2700,7 +2732,7 @@
         //adding ranks to the graph along with edges
 
           var eles = cy.add(add_eles);
-          cy.elements().edges().style( { 'font-size' : '27' });
+          cy.elements().edges().style({ 'font-size' : '27' });
           cy.elements().nodes().style({
             'font-family': 'Garamond'
           });
@@ -2943,30 +2975,35 @@
     function transform_data(full_data, full_json, short_json, taxonVal, taxon_qval){
           
           var short_data = convert_to_cytoscape(short_json);
-          var old_pc_edges = short_data.pc_edges;
-
-
+          var short_pc_edges = short_data.pc_edges;
 
           var pref_labels = full_data.pref_labels;
           var pc_edges = full_data.pc_edges; //grabs the source-target edges so that we can form new edges and add new nodes
           var root = full_data.root;  //in the form of a qval
           var old_nodes = short_data.nodes;
           var names_to_qvals = full_data.names_to_qvals;
-          var qvals_to_names = full_data.taxon_qvals;
+          var qvals_to_names = {...full_data.taxon_qvals};
           
+          var keeping_track_of_new_edges = short_pc_edges;
 
-          
+
           var old_edges = short_data.edges;
           var curr_node = taxon_qval; //in the form of a qval 
           var next_node;
-          const MAX_ITER = 1000
+
+          var old_edges_copy = {...old_edges};
+          console.log('short edges', old_edges_copy);
+
+
+          const MAX_ITER = 1000;
           var iterations = 0;
+          
           while (curr_node != root && iterations != MAX_ITER ){
             iterations += 1;
-            
             next_node = pc_edges[curr_node];
+           // console.log('curr node name', qvals_to_names[curr_node], 'next node', qvals_to_names[next_node]);
 
-            next_node_name = qvals_to_names[next_node];
+            next_node_name = `${qvals_to_names[next_node]} boltz: ${next_node}`;
             //add this node and a new edge
 
             var new_node = {
@@ -2982,9 +3019,13 @@
             
             //only add a new edge if it hasn't already been added
             if ((curr_node!= undefined && next_node != undefined)){
-              var new_edge = {data: {id: curr_node.concat(next_node), 
-                source: curr_node, target: next_node, label: 'subTaxonOf'}};
-                old_edges.push(new_edge);
+              if (short_pc_edges[curr_node] == undefined || short_pc_edges[curr_node] == "root"){
+
+                var new_edge = {data: {id: curr_node.concat(next_node), 
+                  source: curr_node, target: next_node, label: 'subTaxonOf'}};
+                  old_edges.push(new_edge);
+
+              }
             }
 
             curr_node = next_node;
@@ -2997,8 +3038,9 @@
           
           //so we've updated our edges and nodes to include the ones above the root we queried, so 
           //now we want to display the graph.
+
+          console.log('new data', new_data);
           
-          console.log('taxon qval', taxon_qval);
           change_buttons(new_data, full_json, taxon_qval);
           display_hierarchy(full_json, 'Concise', {given_data: new_data, taxon_value: taxon_qval}, taxon_qval);
           document.getElementById("Concise").style.background='green';
