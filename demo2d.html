@@ -191,7 +191,7 @@
               PREFIX la: <https://linked.art/ns/terms/>
               PREFIX un: <http://www.w3.org/2007/ont/unit#> 
               PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
-              SELECT DISTINCT ?root_name ?root_rank ?parent_name ?parent ?parent_prefLabel
+              SELECT DISTINCT ?root_name ?root ?root_rank ?parent_name ?parent ?parent_prefLabel
            ?child_name ?child ?child_prefLabel ?def ?root_def ?rank_name
               WHERE 
                 { 
@@ -354,6 +354,7 @@
         //going to be an object where the keys are parents and the values are a list of all children
 
         
+	      console.log("json data is", data);
 
         bindings = data.results.bindings;
         len = bindings.length;
@@ -366,16 +367,12 @@
                   root_rank = bindings [0].root_rank.value;
                   root_def = bindings [0].root_def.value;
                 }
-                if (root != "Animalia"){
-                  root_qval = bindings [0].child.value;
-                  root_prefLabel = bindings [0].child_prefLabel.value;
-                }else{
-                  root_qval = bindings [0].parent.value;
-                  root_prefLabel = bindings [0].parent_prefLabel.value;
-                }
+
+                root_qval = bindings [0].root.value;
                 if (root_qval.length >= 40){
-                      root_qval = root_qval.slice(40, root_qval.length);
+                  root_qval = root_qval.slice(40, root_qval.length);
                 }
+                names_to_qvals[root] = root_qval
                 def_for_taxons[root_qval] = root_def;
                 qvals_to_names[root_qval] = root;
             
@@ -406,6 +403,7 @@
             child_qval = bindings [i].child.value;
             parent_qval = bindings [i].parent.value;
             child_prefLabel = bindings [i].child_prefLabel.value;
+            parent_prefLabel = bindings [i].parent_prefLabel.value;
             parent = bindings [i].parent_name.value;
             rank = bindings [i].rank_name.value;
             child = bindings [i].child_name.value;
@@ -415,6 +413,21 @@
             if (child_qval.length >= 40 && parent_qval.length >= 40){
               child_qval = child_qval.slice(40, child_qval.length);
               parent_qval = parent_qval.slice(40, parent_qval.length);
+            }
+
+            if (child_qval == root_qval){
+              var root_prefLabel = capitalize(child_prefLabel);
+              
+                        if (pref_labels[root_prefLabel] == undefined){
+                          pref_labels[root_prefLabel] = root;
+                        }
+            }
+            if (parent_qval == root_qval){
+
+               var root_prefLabel = capitalize(parent_prefLabel);
+                        if (pref_labels[root_prefLabel] == undefined){
+                          pref_labels[root_prefLabel] = root;
+                        }
             }
 
             //only want to continue if parent and child qvals are diff and if 
@@ -2365,14 +2378,12 @@
     //givenData is an object {given_data: 'null'} if we're not going to be given anything, otherwise
     //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
     function display_hierarchy(data, graphType, givenData, given_taxon) {
-	      console.log("json data is", data);
 
         var user_entered_taxon = givenData.taxon_value;
 
         if (givenData.given_data != 'null'){ 
           //this implies we are already given what convert_to_cytoscape would produce
             var converted_data = givenData.given_data;
-            console.log('given data', givenData);
         }else{
             var converted_data = convert_to_cytoscape(data);
         }
@@ -2922,8 +2933,10 @@
           var old_edges = short_data.edges;
           var curr_node = taxon_qval; //in the form of a qval 
           var next_node;
-          
-          while (curr_node != root){
+          const MAX_ITER = 1000
+          var iterations = 0;
+          while (curr_node != root && iterations != MAX_ITER ){
+            iterations += 1;
             
             next_node = pc_edges[curr_node];
 
@@ -3008,11 +3021,15 @@
           var full_data = convert_to_cytoscape(full_data_json);
 
           var pref_labels = full_data.pref_labels;
+          console.log('pref labels', pref_labels, 'taxonval', taxonVal);
           var pc_edges = full_data.pc_edges; //grabs the source-target edges so that we can form new edges and add new nodes
           var names_to_qvals = full_data.names_to_qvals;
           var qvals_to_names = full_data.taxon_qvals;
-          
+
+          console.log('names to qvals', names_to_qvals);
+
           var pref_label_of_taxonVal = pref_labels[taxonVal];
+          console.log('pref label', pref_label_of_taxonVal);
 
           var taxon_qval = names_to_qvals[taxonVal];
 
@@ -3156,7 +3173,7 @@
     </div>
 
     <script>
-      window.onload = exec('Full');
+      window.onload = exec('Concise');
       let fullButton = document.querySelector('#Full');
       let conciseButton = document.querySelector('#Concise');
       let moderateButton = document.querySelector('#Moderate');
