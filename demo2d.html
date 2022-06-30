@@ -1282,18 +1282,18 @@
             }
             
             var rank_pos = {x: taxon_x_pos - radius * mult_constant, y: taxon_y_pos};
-            var node_id = `prop ${rank_node_name}`;
+            var rank_node_id = `prop ${rank_node_name}`;
             var new_rank_node = 
                     {
                         group: 'nodes',
                         data: {
-                          id: node_id,
+                          id: rank_node_id,
                           color: '#90EE90',
                           name: rank_node_name,
                           opacity: 1,
                           width: 150,
                           height: 150,
-                          type: 'rankProp'
+                          type: 'overlayRank'
                         },
                         position: rank_pos
                     };
@@ -1303,14 +1303,32 @@
                       group: 'edges',
                       data: 
                           {
-                              id: node_id.concat(rank_node_name),
+                              id: rank_node_id.concat(node_qval),
                               source: node_qval, 
-                              target: node_id,
+                              target: rank_node_id,
                               label: 'taxonRank'
                           }
                     };
 
             cy_graph.add([new_rank_edge]);
+
+            //add a click event to the rank node being displayed
+            var rank_parity_tap = 'even';
+            cy_graph.nodes(`[id = "${rank_node_id}"]`).on('tap', function(evt){
+
+              if (rank_parity_tap == 'even'){
+                get_rank_property_query(rank_node_name, rank_node_id, cy_graph);
+                rank_parity_tap = 'odd';
+              }else{
+                //otherwise remove the property nodes of the current rank
+                cy_graph.remove(`node[type = "rank property"]`);
+                rank_parity_tap = 'even';
+              }
+              
+            })
+
+
+
             cy_graph.nodes(`node[type = "subTaxProp"]`).style({
                       'text-wrap': 'wrap',
                       'text-max-width': 230,
@@ -1321,7 +1339,7 @@
                       'font-family': 'Garamond',
                       'line-height': 1.15
                     });
-            cy_graph.nodes(`node[type = "rankProp"]`).style({
+            cy_graph.nodes(`node[type = "overlayRank"]`).style({
               'text-wrap': 'wrap',
               'text-max-width': 150,
               'border-width': 5,
@@ -1874,7 +1892,7 @@
             cy_graph.elements().nodes().style({'border-width': '0'});
                         
             cy_graph.remove(`node[type = "subTaxProp"]`);
-            cy_graph.remove(`node[type = "rankProp"]`);
+            cy_graph.remove(`node[type = "overlayRank"]`);
             cy_graph.remove(`node[type = "property"]`);
             cy_graph.remove(`node[type = "concept"]`);
             cy_graph.remove(`node[type = "literal"]`);
@@ -2074,7 +2092,7 @@
             var node_name = taxon_qvals[node_qval];
 
             cy_graph.remove(`node[type = "subTaxProp"]`);
-            cy_graph.remove(`node[type = "rankProp"]`);
+            cy_graph.remove(`node[type = "overlayRank"]`);
             cy_graph.remove(`node[type = "property"]`);
             cy_graph.remove(`node[type = "concept"]`);
             cy_graph.remove(`node[type = "literal"]`);
@@ -2735,6 +2753,7 @@
 
 
           var prev_nodes_clicked = [];
+          var rank_parity_tap = 'even';
           
           cy.on('tap', function(evt){
                           
@@ -2759,7 +2778,6 @@
                   }
                 } else {
                       //OTHERWISE WE CLICKED A NODE
-                      console.log('data.type', data.type)
                         if (data.type == "taxon"){
 
                           var name = data.name;
@@ -2794,11 +2812,19 @@
                     if (data.type == "rank"){
                         
                         //IF A USER CLICKS A RANK WE WANT TO DISPLAY IT'S PROPERTIES
+                        //ALSO WANT A WAY TO HIDE THE RANK PROPERTIES WHEN A USER CLICKS ON THE RANK NODE AGAIN
                         //otherwise we clicked a rank node so we want to display the nextHigherRank and nextLowerRank properties
                         var rank_name = data.name;
                         var rank_id = data.id;
-                        console.log('clicked a rank node', rank_name);
-                        get_rank_property_query(rank_name, rank_id, cy);
+                        if (rank_parity_tap == 'even'){
+                          get_rank_property_query(rank_name, rank_id, cy);
+                          rank_parity_tap = 'odd';
+                        }else{
+                          cy.remove(`node[type = "rank property"]`);
+                          rank_parity_tap = 'even';
+                        }
+                       
+
                       }
 
                      
