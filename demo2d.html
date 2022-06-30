@@ -307,6 +307,30 @@
         }
     }
 
+
+    function rank_property_query(rank_name){
+      var prevquery = document.getElementById("sparql4");
+      prevquery.innerHTML = 
+      `PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+      PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#> 
+      PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+        SELECT DISTINCT ?rank ?rLabel ?nextLower ?nextHigher
+      WHERE {
+        ?rank rdfs:label "${rank_name}"@en .
+        ?rank rdfs:label ?rLabel .
+        ?rank kgo:nextLowerRank [ rdfs:label ?nextLower] . 
+        ?rank kgo:nextHigherRank [rdfs:label ?nextHigher ].
+            
+      }
+        ORDER BY ?yLabel`
+          var endpoint = d3.select("#endpoint4").property("value")
+          var sparql = d3.select("#sparql4").property("value")
+          var url = endpoint + "?query=" + encodeURIComponent(sparql)
+          return url
+        
+    }
+
     /*convert_to_cytoscape will return an object
     that stores the nodes, the edges, the positions of all
     the nodes, and the ranks for each of the nodes*/
@@ -460,12 +484,33 @@
                     }else{
                       parent_and_all_children[parent_qval].push(curr_qval);
                     }
-                                   
+                            
 
                   pc_edge = {data: {id: `${curr_qval} - ${parent_qval}`, 
                       source: curr_qval, target: parent_qval, label:'subTaxonOf'}};
                     
                     edges_lst.push(pc_edge); 
+
+                  if (rank_node_edges[curr_qval] == "Species"){
+                    
+                    var temp_id = `temporary node ${idx}`
+                    rank_node_edges[temp_id] = 'no_rank';
+                    qvals_to_names[temp_id] = temp_id
+                    node_obj = {
+                        data: {id: temp_id, 
+                        name: temp_id,
+                        color: 'black', 
+                        width: 0, 
+                        height: 0,
+                        type: 'taxon'
+                      }};
+                      nodes_lst.push(node_obj);
+                      pc_edge = {data: {id: `${temp_id} - ${curr_qval}`, 
+                      source: temp_id, target: curr_qval, label:'subTaxonOf'}};
+                    
+                      edges_lst.push(pc_edge); 
+                      
+                  } 
 
                       
                     
@@ -634,6 +679,13 @@
                 source_node_name = `${source_node_name} boltz:${source_node_qval}`;
                 target_node_name = `${target_node_name} boltz:${target_node_qval}`;
                 
+                if (source_node_qval[0] != `Q`){
+                  var node_width = 0;
+                  var node_height = 0;
+                }else{
+                  var node_width = 250;
+                  var node_height = 250;
+                }
                 //need this because we are only adding the source nodes because the target
                 //nodes will eventually be taken care of except for Animalia which doesn't have a target node
                 new_nodes.push({
@@ -641,8 +693,8 @@
                     id: source_node_qval, 
                     name: source_node_name, 
                     color: '#ADD8E6', 
-                    width: 250, 
-                    height: 250,
+                    width: node_width, 
+                    height: node_height,
                     type: 'taxon'
                 }});
                 if (target_node_qval == "Q729"){ //Q2382443 is the Biota Qval
@@ -2259,6 +2311,39 @@
      }
 
 
+    function display_rank_properties(json_result, rank_name, rank_id, cy_graph){
+      console.log('json for rank properties', json_result);
+      var next_higher_rank = "null";
+      var next_lower_rank = "null";
+      if (json_result.results.bindings.length > 0
+       && json_result.results.bindings[0].nextHigher != undefined
+       && json_result.results.bindings[0].nextHigher.value != undefined){
+          next_higher_rank = json_result.results.bindings[0].nextHigher.value;
+      }
+      if (json_result.results.bindings.length > 0
+       && json_result.results.bindings[0].nextLower != undefined
+       && json_result.results.bindings[0].nextLower.value != undefined){
+          next_lower_rank = json_result.results.bindings[0].nextLower.value;
+      }
+
+      //getting position of curr rank node to know relatively where to place the new prop nodes
+      var curr_rank_node_pos = cy_graph.nodes(`[id = "${rank_id}"]`).position()
+
+      console.log('next_higher rank', next_higher_rank, 'next lower rank', next_lower_rank);
+      //So now  next_higher_rank and next_lower_rank should be the node names
+      //need to make sure the id's are unique since there will be repeats of these
+      //the variable names are null otherwise
+    }
+
+
+    function get_rank_property_query(rank_name, rank_id, cy_graph){
+        var url = rank_property_query(rank_name);
+        d3.json(url).then(function(json_result){
+        display_rank_properties(json_result, rank_name, rank_id, cy_graph);
+      });
+    }
+
+
 
     function exec(graphType){
       var cy_container = document.getElementById("cy");
@@ -2317,7 +2402,7 @@
         
         var concise_ranks = [root_rank,
          'Phylum', 'Class', 'Order', 'Family', 
-         'Genus', 'Species', 'Tribe', 'Kingdom'];
+         'Genus', 'Species', 'Tribe', 'Kingdom', 'no_rank'];
 
         if (graphType == ('Concise')){
             new_data = create_graphType(converted_data, concise_ranks, user_entered_taxon);
@@ -2541,44 +2626,47 @@
             var x_pos = node_pos.x ;
             var y_pos = node_pos.y;
             var rank_node = rank_edges[node_id];
-            var rank_node_id = rank_node;
+            if (rank_node != "no_rank"){
 
-            if (rank_node_id == undefined){
-              rank_node_id = `noRank ${x.toString()}`;
-            }else{
-              rank_node_id = `${rank_node}: ${x.toString()}`
-            }
-            
-            //rank_node_id is undefined in some places
-
-            new_node = 
-            {
-              group: 'nodes',
-              data: {
-                id: rank_node_id,
-                color: '#90EE90',
-                name: rank_node,
-                width: 100,
-                height: 100,
-                type: 'rank'
-              },
-              position: {x: x_pos - 400, y: y_pos}
-            };
-
-            add_eles.push(new_node);
-
-            new_edge = 
-                {
-                  group: 'edges',
-                  data: 
+                  var rank_node_id = rank_node;
+      
+                  if (rank_node_id == undefined){
+                    rank_node_id = `noRank ${x.toString()}`;
+                  }else{
+                    rank_node_id = `${rank_node}: ${x.toString()}`
+                  }
+                  
+                  //rank_node_id is undefined in some places
+      
+                  new_node = 
+                  {
+                    group: 'nodes',
+                    data: {
+                      id: rank_node_id,
+                      color: '#90EE90',
+                      name: rank_node,
+                      width: 100,
+                      height: 100,
+                      type: 'rank'
+                    },
+                    position: {x: x_pos - 400, y: y_pos}
+                  };
+      
+                  add_eles.push(new_node);
+      
+                  new_edge = 
                       {
-                          id: node_id.concat(rank_node),
-                          source: node_id, 
-                          target: rank_node_id,
-                          label: 'taxonRank'
-                      }
-                };
-            add_eles.push(new_edge);
+                        group: 'edges',
+                        data: 
+                            {
+                                id: node_id.concat(rank_node),
+                                source: node_id, 
+                                target: rank_node_id,
+                                label: 'taxonRank'
+                            }
+                      };
+                  add_eles.push(new_edge);
+            }
         }
         //adding ranks to the graph along with edges
 
@@ -2634,7 +2722,6 @@
             position: {x: farthest_second_left_child_pos.x, y: 0}
           });
 
-         // cy.nodes(`[id = "${root}"]`).style({ 'width': 10000, 'height': 10000});
 
           var prev_nodes_clicked = [];
           
@@ -2660,43 +2747,52 @@
                     prev_nodes_clicked = [];
                   }
                 } else {
+                      //OTHERWISE WE CLICKED A NODE
+                      console.log('data.type', data.type)
+                        if (data.type == "taxon"){
 
-                    if (data.type == 'taxon'){
-                      var name = data.name;
-                      if (!(all_ranks.includes(name))) {
-                          cy.nodes(`node[id = "${data.id}"]`).style({
-                                      'width': 250,
-                                      'height': 250
-                          });
-
-                          
-                          
-                          //only want to add it to prev nodes clicked if we are moving up not to a sibling or down
-                          if (id_lastclicked_node != ""){
-                            var curr_pos_y = evtTarget._private.position.y
-                            var prev_pos_y = cy.nodes(`[id = "${id_lastclicked_node}"]`).position().y
-                            if (curr_pos_y < prev_pos_y){
-                                prev_nodes_clicked.push(id_lastclicked_node);
-                            }else{
-                              prev_nodes_clicked = [];
-                            }
-                          }
-
-                          get_properties(given_taxon, data.id, cy, all_ranks, 
-                                  pc_edges, prop_node_diam, graphType_pc_edges, 
-                                  id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
-
-                          zoomedInOnNode = true;
-                          id_lastclicked_node = data.id;
-                          
-
-                      }else {
-                          cy.nodes(`node[id = "${data.id}"]`).style({
-                                      'width': 100,
-                                      'height': 100
-                          });
-                      }
+                          var name = data.name;
+                          if (!(all_ranks.includes(name))) {
+                              cy.nodes(`node[id = "${data.id}"]`).style({
+                                          'width': 250,
+                                          'height': 250
+                              });
+    
+                              
+                              
+                              //only want to add it to prev nodes clicked if we are moving up not to a sibling or down
+                              if (id_lastclicked_node != ""){
+                                var curr_pos_y = evtTarget._private.position.y
+                                var prev_pos_y = cy.nodes(`[id = "${id_lastclicked_node}"]`).position().y
+                                if (curr_pos_y < prev_pos_y){
+                                    prev_nodes_clicked.push(id_lastclicked_node);
+                                }else{
+                                  prev_nodes_clicked = [];
+                                }
+                              }
+    
+                              get_properties(given_taxon, data.id, cy, all_ranks, 
+                                      pc_edges, prop_node_diam, graphType_pc_edges, 
+                                      id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
+    
+                              zoomedInOnNode = true;
+                              id_lastclicked_node = data.id;
+                              
+                        }
                     }
+                    if (data.type == "rank"){
+                        
+                        //IF A USER CLICKS A RANK WE WANT TO DISPLAY IT'S PROPERTIES
+                        //otherwise we clicked a rank node so we want to display the nextHigherRank and nextLowerRank properties
+                        var rank_name = data.name;
+                        var rank_id = data.id;
+                        console.log('clicked a rank node', rank_name);
+                        get_rank_property_query(rank_name, rank_id, cy);
+                      }
+
+                     
+                    
+                    
 
                 }
 
@@ -3051,13 +3147,16 @@
       <input id="endpoint3" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
       <textarea id="sparql3" class="spans10" style="display:none;"></textarea>
 
+      <input id="endpoint4" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
+      <textarea id="sparql4" class="spans10" style="display:none;"></textarea>
+
       
     </div>
       <div id="cy"></div>
     </div>
 
     <script>
-      window.onload = exec('Concise');
+      window.onload = exec('Full');
       let fullButton = document.querySelector('#Full');
       let conciseButton = document.querySelector('#Concise');
       let moderateButton = document.querySelector('#Moderate');
