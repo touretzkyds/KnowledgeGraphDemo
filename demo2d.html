@@ -2391,11 +2391,68 @@
 
       //getting position of curr rank node to know relatively where to place the new prop nodes
       var curr_rank_node_pos = cy_graph.nodes(`[id = "${rank_id}"]`).position()
-
+      console.log(rank_id)
       console.log('next_higher rank', next_higher_rank, 'next lower rank', next_lower_rank);
       //So now  next_higher_rank and next_lower_rank should be the node names
       //need to make sure the id's are unique since there will be repeats of these
       //the variable names are null otherwise
+      var lower_node = 
+            {
+                group: 'nodes',
+                data: {
+                  id: next_lower_rank,
+                  color: '#FFD580',
+                  name: next_lower_rank,
+                  opacity: 1,
+                  width: 150,
+                  height: 150,
+                  type: `rank property`
+                },
+                position: {x: curr_rank_node_pos['x'] - 400, y: curr_rank_node_pos['y'] + 200}
+            };
+          cy_graph.add([lower_node]);
+      var new_edge = 
+            {
+              group: 'edges',
+              data: 
+                  {
+                  id: rank_id.concat(next_lower_rank),
+                  source: rank_id, 
+                  target: next_lower_rank,
+                  label: 'nextLowerRank',
+                  type: 'rank_prop_edges'
+                  }
+                };
+          cy_graph.add([new_edge]);
+      var higher_node = 
+            {
+                group: 'nodes',
+                data: {
+                  id: next_higher_rank,
+                  color: '#FFD580',
+                  name: next_higher_rank,
+                  opacity: 1,
+                  width: 150,
+                  height: 150,
+                  type: `rank property`
+                },
+                position: {x: curr_rank_node_pos['x'] - 400, y: curr_rank_node_pos['y'] - 200}
+            };
+          cy_graph.add([higher_node]);
+      var new_edge1 = 
+            {
+              group: 'edges',
+              data: 
+                  {
+                  id: rank_id.concat(next_higher_rank),
+                  source: rank_id, 
+                  target: next_higher_rank,
+                  label: 'nextHigherRank',
+                  type: 'rank_prop_edges'
+                  }
+                };
+      cy_graph.add([new_edge1]);
+      cy_graph.elements().edges().style({'font-size': '30'});
     }
 
 
