@@ -1553,11 +1553,12 @@
                       prop_node_val = `"${prop_node_val}"`;
                       assigned_node_type = 'literal';
                       new_diam = 250;}
-                  else if (prop_node_type == 'uri' && prop_node_val != 'Taxon'){
+                  else if (pred_val == "taxonImage"){
                       url_id = prop_node_val
                       var image = new Image();
                       // image.crossOrigin = "null";
                       image.src = prop_node_val;
+                      console.log(image.src)
                       image.onload = function() {
                         var height = image.naturalHeight;
                         var width = image.naturalWidth;
