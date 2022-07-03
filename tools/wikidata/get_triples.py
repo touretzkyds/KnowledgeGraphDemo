@@ -86,6 +86,7 @@ prop_names = {
     'P155' : "follows",
     'P156' : "followed by",
     'P171' : "parent taxon",
+    'P225' : "taxon name",
     'P244' : "Library of Congress authority ID",
     'P248' : "stated in",
     'P279' : 'subclass of',
