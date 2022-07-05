@@ -570,7 +570,7 @@
         let new_nodes = [];
         let edges_missing = {}; //keeps track of the nodes that now no longer have edges because of the removed ranks
         let taxon_qvals = data.taxon_qvals;
-        let new_pc_edges = pc_edges;
+
         let graphType_pc_edges = {};
         let node_names = [];  
         let graphType_parent_and_all_children = {};
@@ -636,7 +636,6 @@
               } else {
                 //we are keeping both the source and target nodes so the original edge
                 graphType_pc_edges[source_node] = target_node;
-                new_pc_edges[source_node] = target_node;
               }
 
          }
@@ -655,7 +654,6 @@
                 rn_edges, pc_edges, correct_ranks, user_entered_taxon);
 
                 graphType_pc_edges[curr_source] = new_target;
-                new_pc_edges[curr_source] = new_target;
             }
         }
         //sort the node names in alphabetical order
@@ -737,7 +735,7 @@
         return {nodes: new_nodes, 
                 edges: new_edges, 
                 em: edges_missing,
-                newPC_edges: new_pc_edges,
+                newPC_edges: graphType_pc_edges,
                 graphType_parent_and_all_children: graphType_parent_and_all_children};
 
 
@@ -798,7 +796,6 @@
 
         subtax_rank['subtax_identifier'] = "";
         
-        console.log('property array', property_array);
 
         for (let i = 0; i < property_array.length; i++) {
             curr_data_val = property_array[i];
@@ -881,7 +878,6 @@
 
         }
 
-        console.log('new property array', new_property_array);
         return {prop_array: new_property_array, bnodes_obj: bnodes, subtax_rank: subtax_rank};
         
 
@@ -1203,8 +1199,10 @@
             let subtax_node_id= subtax_rank['subTaxonOf'];
             let rank_node_name = subtax_rank['taxonRank'];
             let subtax_node_name = subtax_rank['subtax_identifier'];
-            console.log('node name of subtax', subtax_node_name);
 
+            //console.log('graphType_pc_edges in add subtax', graphType_pc_edges);
+            //console.log('pc edges in subtax', pc_edges);
+          
             let subTaxonOf_degree = 0;
             let taxon_x_pos = pos.x;
             let taxon_y_pos = pos.y;
@@ -1278,8 +1276,7 @@
                         navDisplayParent.innerHTML = "";
                         let new_nodes_we_came_from = [...nodes_we_came_from]
                         new_nodes_we_came_from.push(node_qval);
-                        
-                        console.log('parent qval', parent_node);
+                        console.log('parent node', parent_node)
                           get_properties(given_taxon, parent_node, cy_graph, all_ranks,
                         pc_edges, prop_node_diam, graphType_pc_edges, node_qval, taxon_qvals, 
                         parent_and_all_children,new_nodes_we_came_from);
@@ -2298,7 +2295,7 @@
           while (curr_node != ROOT_QVAL || curr_node == undefined) {
             node_ids_above.push(curr_node);
             node_names_above.push(taxon_qvals[curr_node]);
-            curr_node = pc_edges[curr_node];
+            curr_node = graphType_pc_edges[curr_node];
             nodes_above_length += 1;
           }
           node_names_above.push(ROOT_NAME);
@@ -2537,9 +2534,9 @@
 	      let pc_edges = converted_data.pc_edges;
         let definitions = converted_data.definitions;
         let taxon_qvals = converted_data.taxon_qvals;
-        let parent_and_all_children = converted_data.parent_and_all_children;
+        let parent_and_all_children = {...(converted_data.parent_and_all_children)};
         //of the form where keys are qvals and values are the taxon names
-        let graphType_pc_edges = pc_edges;
+        let graphType_pc_edges = {...pc_edges};
 
 
         let all_ranks = [
@@ -2549,11 +2546,6 @@
         'Subfamily', 'Infraorder', 'Tribe', 'Subgenus', 'Subtribe', 
         'Infraphylum', 'Superclass', 'Kingdom'];
 
-        /*let all_ranks = [ "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", 
-            "Species", "noRank", "Subkingdom", "Superfamily", "Infraclass", "Suborder", 
-            "Parvorder", "Subfamily", "Superorder", "Infraphylum", "Subtribe", "Tribe", 
-            "Megaclass", "Subclass", "Superclass","Infraorder", "Subphylum", "Variety", 
-            "Superphylum", "Division", "Domain", "Subdivision", root_rank];*/
         
         let concise_ranks = [root_rank,
          'Phylum', 'Class', 'Order', 'Family', 
@@ -2564,20 +2556,21 @@
             nodes_lst = new_data.nodes;
             edge_lst = new_data.edges;
             graphType_pc_edges = new_data.newPC_edges;
-            parent_and_all_children = new_data.graphType_parent_and_all_children;
+            parent_and_all_children = {...(new_data.graphType_parent_and_all_children)};
 
         } else if (graphType == ('Moderate')) {
             new_data = create_graphType(converted_data, all_ranks, user_entered_taxon);
             nodes_lst = new_data.nodes;
             edge_lst = new_data.edges;
             graphType_pc_edges = new_data.newPC_edges;
-            parent_and_all_children = new_data.graphType_parent_and_all_children;
+            parent_and_all_children = {...(new_data.graphType_parent_and_all_children)};
 
         } else {
           nodes_lst = converted_data.nodes;
           edge_lst = converted_data.edges;
         }
 
+        console.log('graph type parent and all kids in display hierarchy', parent_and_all_children, 'graph type', graphType);
 
         const cyDiv = document.querySelector('#cy');
         cyDiv.style.display = 'block';        
@@ -2927,7 +2920,6 @@
                                   prev_nodes_clicked = [];
                                 }
                               }
-    
                               get_properties(given_taxon, data.id, cy, all_ranks, 
                                       pc_edges, prop_node_diam, graphType_pc_edges, 
                                       id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
@@ -3072,13 +3064,13 @@
           
           let short_data = convert_to_cytoscape(short_json);
           let short_pc_edges = short_data.pc_edges;
-
           let pref_labels = full_data.pref_labels;
           let pc_edges = full_data.pc_edges; //grabs the source-target edges so that we can form new edges and add new nodes
           let root = full_data.root;  //in the form of a qval
           let old_nodes = short_data.nodes;
           let names_to_qvals = full_data.names_to_qvals;
           let qvals_to_names = {...full_data.taxon_qvals};
+          let given_taxon_parent_and_all_children = {...(short_data.parent_and_all_children)}
           
           let keeping_track_of_new_edges = short_pc_edges;
 
@@ -3090,7 +3082,7 @@
           let old_edges_copy = {...old_edges};
 
 
-          const MAX_ITER = 1000;
+          const MAX_ITER = 5000;
           let iterations = 0;
           
           while (curr_node != root && ++iterations < MAX_ITER ) {
@@ -3098,7 +3090,6 @@
             next_node = pc_edges[curr_node];
 
             next_node_name = `${qvals_to_names[next_node]} boltz: ${next_node}`;
-            //add this node and a new edge
 
             let new_node = {
               data: {
@@ -3115,6 +3106,14 @@
             if ((curr_node!= undefined && next_node != undefined)) {
               if (short_pc_edges[curr_node] == undefined || short_pc_edges[curr_node] == "root") {
 
+                if (given_taxon_parent_and_all_children[next_node] == undefined) {
+                      given_taxon_parent_and_all_children[next_node] = [curr_node];
+                    } else {
+                      if (!given_taxon_parent_and_all_children[next_node].includes(curr_node) ) {
+                        given_taxon_parent_and_all_children[next_node].push(curr_node);
+                      }
+                    }
+
                 let new_edge = {data: {id: curr_node.concat(next_node), 
                   source: curr_node, target: next_node, label: 'subTaxonOf'}};
                   old_edges.push(new_edge);
@@ -3128,7 +3127,7 @@
             pc_edges: pc_edges, rn_edges: full_data.rn_edges, 
             root_rank: full_data.root_rank, root: full_data.root, 
             definitions: full_data.definitions, taxon_qvals: full_data.taxon_qvals,
-            pref_lables: full_data.pref_labels, parent_and_all_children: full_data.parent_and_all_children};
+            pref_lables: full_data.pref_labels, parent_and_all_children: given_taxon_parent_and_all_children};
           
           //so we've updated our edges and nodes to include the ones above the root we queried, so 
           //now we want to display the graph.
@@ -3332,7 +3331,7 @@
     </div>
 
     <script>
-      window.onload = exec('Concise');
+      window.onload = exec('Full');
       let fullButton = document.querySelector('#Full');
       let conciseButton = document.querySelector('#Concise');
       let moderateButton = document.querySelector('#Moderate');
