@@ -2346,7 +2346,7 @@
               button.style.backgroundColor = "white";
               button.style.fontWeight = '550';
 
-              if (taxon_name == curr_node_name) {
+              if (node_id == node_qval) {
                 if (prev_nodes_we_came_from_length != 0) {
 
                   button.innerHTML =
@@ -2400,7 +2400,7 @@
 
               if (idx >= nodes_above_length) {
                     nodes_lst = [];
-              }else if (taxon_name == curr_node_name) {
+              }else if (node_id == node_qval) {
                     nodes_lst = prev_nodes_we_came_from;
               } else {
                     nodes_lst = new_nodes_we_came_from;
