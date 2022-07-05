@@ -180,42 +180,42 @@
     function hierarchy_query(taxon_value, perform_query) {
         const prevquery = document.getElementById("sparql");
         prevquery.innerHTML = 
-             `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-              PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
-              PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
-              PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-              PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
-              PREFIX qudt:  <http://qudt.org/schema/qudt/>
-              PREFIX unit:  <http://qudt.org/vocab/unit/> 
-              PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
-              PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
-              PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
-              PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
-              PREFIX la: <https://linked.art/ns/terms/>
-              PREFIX un: <http://www.w3.org/2007/ont/unit#> 
-              PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
-              SELECT DISTINCT ?root_name ?root ?root_rank ?parent_name ?parent ?parent_prefLabel
-              ?child_name ?child ?child_prefLabel ?def ?root_def ?rank_name
-                  WHERE 
-                    { 
-                      BIND ("${taxon_value}"@en AS ?root_name). 
-                      ?root kgo:taxonName ?root_name .  
-                      ?root kgo:taxonRank [rdfs:label ?root_rank] .
-                      OPTIONAL {
-                        ?root skos:definition ?root_def .
-                      }
-                      ?child kgo:subTaxonOf* ?root . 
-                      ?child kgo:subTaxonOf ?parent . 
-                      ?child kgo:taxonName ?child_name .
-                      OPTIONAL {
-                        ?child skos:definition ?def .
-                      }
-                      ?child kgo:taxonRank ?rank .
-                      ?rank rdfs:label ?rank_name . 
-                      ?parent kgo:taxonName ?parent_name .
-                      ?child skos:prefLabel ?child_prefLabel .
-                      ?parent skos:prefLabel ?parent_prefLabel .
-                  }`
+          `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+           PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+           PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
+           PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+           PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+           PREFIX qudt:  <http://qudt.org/schema/qudt/>
+           PREFIX unit:  <http://qudt.org/vocab/unit/> 
+           PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+           PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
+           PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
+           PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
+           PREFIX la: <https://linked.art/ns/terms/>
+           PREFIX un: <http://www.w3.org/2007/ont/unit#> 
+           PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
+           SELECT DISTINCT ?root_name ?root ?root_rank ?parent_name ?parent ?parent_prefLabel
+           ?child_name ?child ?child_prefLabel ?def ?root_def ?rank_name
+             WHERE { 
+               BIND ("${taxon_value}"@en AS ?root_name). 
+                 ?root kgo:taxonName ?root_name .  
+                 ?root kgo:taxonRank [rdfs:label ?root_rank] .
+                 OPTIONAL {
+                   ?root skos:definition ?root_def .
+                 }
+                 ?child kgo:subTaxonOf* ?root . 
+                 ?child kgo:subTaxonOf ?parent . 
+                 ?child kgo:taxonName ?child_name .
+                 OPTIONAL {
+                   ?child skos:definition ?def .
+                 }
+                   ?child kgo:taxonRank ?rank .
+                   ?rank rdfs:label ?rank_name . 
+                   ?parent kgo:taxonName ?parent_name .
+                   ?child skos:prefLabel ?child_prefLabel .
+                   ?parent skos:prefLabel ?parent_prefLabel .
+             }`
+
         if (perform_query) {
           const endpoint = d3.select("#endpoint").property("value")
           const sparql = d3.select("#sparql").property("value")
@@ -229,33 +229,33 @@
     function property_query(taxon_value, perform_query) {
       const prevquery = document.getElementById("sparql2");
       prevquery.innerHTML = 
-       `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-        PREFIX dc: <http://purl.org/dc/elements/1.1/> 
-        PREFIX dcterms: <http://purl.org/dc/terms/>
-        PREFIX owl: <http://www.w3.org/2002/07/owl#>
-        PREFIX prefix: <http://qudt.org/vocab/prefix/>
-        PREFIX prov: <http://www.w3.org/ns/prov#> 
-        PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/> 
-        PREFIX quantitykind: <http://qudt.org/vocab/quantitykind/> 
-        PREFIX sou: <http://qudt.org/vocab/sou/> 
-        PREFIX vaem: <http://www.linkedmodel.org/schema/vaem#> 
-        PREFIX voag: <http://voag.linkedmodel.org/schema/voag#>
-        PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
-        PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
-        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
-        PREFIX qudt:  <http://qudt.org/schema/qudt/>
-        PREFIX unit:  <http://qudt.org/vocab/unit/> 
-        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
-        PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
-        PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
-        PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
-        PREFIX la: <https://linked.art/ns/terms/>
-        PREFIX un: <http://www.w3.org/2007/ont/unit#> 
-        PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
-        SELECT DISTINCT ?pred ?predLabel ?obj ?objLabel ?pred2 ?pred2Label ?list ?obj2 ?obj2Label
-            WHERE {
-              BIND ( '${taxon_value}' @en AS ?name).
+        `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+         PREFIX dc: <http://purl.org/dc/elements/1.1/> 
+         PREFIX dcterms: <http://purl.org/dc/terms/>
+         PREFIX owl: <http://www.w3.org/2002/07/owl#>
+         PREFIX prefix: <http://qudt.org/vocab/prefix/>
+         PREFIX prov: <http://www.w3.org/ns/prov#> 
+         PREFIX qkdv: <http://qudt.org/vocab/dimensionvector/> 
+         PREFIX quantitykind: <http://qudt.org/vocab/quantitykind/> 
+         PREFIX sou: <http://qudt.org/vocab/sou/> 
+         PREFIX vaem: <http://www.linkedmodel.org/schema/vaem#> 
+         PREFIX voag: <http://voag.linkedmodel.org/schema/voag#>
+         PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+         PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
+         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+         PREFIX qudt:  <http://qudt.org/schema/qudt/>
+         PREFIX unit:  <http://qudt.org/vocab/unit/> 
+         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+         PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
+         PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
+         PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
+         PREFIX la: <https://linked.art/ns/terms/>
+         PREFIX un: <http://www.w3.org/2007/ont/unit#> 
+         PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
+         SELECT DISTINCT ?pred ?predLabel ?obj ?objLabel ?pred2 ?pred2Label ?list ?obj2 ?obj2Label
+           WHERE {
+             BIND ( '${taxon_value}' @en AS ?name).
               ?Q skos:prefLabel|kgo:taxonName ?name.
               ?Q ?pred ?obj. 
               OPTIONAL {?Q ?pred [ list:index (?pos ?list) ] }
@@ -266,7 +266,7 @@
                       }
               OPTIONAL { ?pred skos:prefLabel|rdfs:label ?predLabel. } 
               OPTIONAL { ?obj kgo:taxonName|skos:prefLabel|rdfs:label ?objLabel. }
-            } ORDER BY ?pred ?pos ?pred2`; 
+           } ORDER BY ?pred ?pos ?pred2`; 
 
         
         if (perform_query) {
@@ -283,17 +283,18 @@
     function box_node_query(taxon_value, perform_query) {
       const prevquery = document.getElementById("sparql3");
       prevquery.innerHTML = 
-      `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-        PREFIX unit:  <http://qudt.org/vocab/unit/>
-        PREFIX qudt:  <http://qudt.org/schema/qudt/>
-        PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
-        PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-        SELECT * WHERE {
+        `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+         PREFIX unit:  <http://qudt.org/vocab/unit/>
+         PREFIX qudt:  <http://qudt.org/schema/qudt/>
+         PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+         PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+         
+         SELECT * WHERE {
           ?taxon kgo:taxonName "${taxon_value}"@en .
           ?taxon ?r ?b.
           ?b rdf:type rdf:List;
-            rdf:rest* ?b2.
+             rdf:rest* ?b2.
           ?b2 ?r2 ?v2.
           OPTIONAL { ?v2 skos:prefLabel|rdfs:label ?v2Label. } 
           OPTIONAL { ?r2 skos:prefLabel|rdfs:label ?r2Label. } 
@@ -313,23 +314,23 @@
     function rank_property_query(rank_name) {
       const prevquery = document.getElementById("sparql4");
       prevquery.innerHTML = 
-     `PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
-      PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#> 
-      PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+        `PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+         PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#> 
+         PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+         SELECT DISTINCT ?rank ?rLabel ?nextLower ?nextHigher
+          WHERE {
+            ?rank rdfs:label "${rank_name}"@en .
+            ?rank rdfs:label ?rLabel .
+            ?rank kgo:nextLowerRank [ rdfs:label ?nextLower] . 
+            ?rank kgo:nextHigherRank [rdfs:label ?nextHigher ].
+              
+          }
+        ORDER BY ?yLabel`;
 
-      SELECT DISTINCT ?rank ?rLabel ?nextLower ?nextHigher
-        WHERE {
-        ?rank rdfs:label "${rank_name}"@en .
-        ?rank rdfs:label ?rLabel .
-        ?rank kgo:nextLowerRank [ rdfs:label ?nextLower] . 
-        ?rank kgo:nextHigherRank [rdfs:label ?nextHigher ].
-            
-      }
-        ORDER BY ?yLabel`
-          const endpoint = d3.select("#endpoint4").property("value");
-          const sparql = d3.select("#sparql4").property("value");
-          const url = endpoint + "?query=" + encodeURIComponent(sparql);
-          return url;
+      const endpoint = d3.select("#endpoint4").property("value");
+      const sparql = d3.select("#sparql4").property("value");
+      const url = endpoint + "?query=" + encodeURIComponent(sparql);
+      return url;
         
     }
 
