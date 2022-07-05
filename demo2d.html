@@ -2045,15 +2045,14 @@
             `<div id = "navigation-buttons" style="width: 100%">
               <div style="float:right; text-align: center; margin-right: 70px;">
                   <button id='nav-up' class="nav-buttons" type="button" style="display: inline-block; border-width:0px"> 
-                    <span id = 'nav-up-text' style="font-size:10px; color:${up_arrow_head_color}">${curr_parent_name}</span> 
+                    <span id = 'nav-up-text' style="font-size:15px; color:${up_arrow_head_color}">${curr_parent_name}</span> 
                     <br>
-                    <span id = 'nav-up-arrow' style="font-size:20px; color:${up_arrow_head_color}">\u25B2</span> 
+                    <span id = 'nav-up-arrow' style="font-size:15px; color:${up_arrow_head_color}">\u25B2</span> 
                   </button>
   
                   <div style="display:flex">
-                    <button id='nav-left' class="nav-buttons" type="button" style="border-width:0px">
-                      <span id = 'nav-left-text' style="font-size:10px; color:${left_arrow_head_color}">${left_sibling_name}</span> 
-                      <span id = 'nav-left-arrow' style="font-size:20px; color:${left_arrow_head_color}">\u25C0</span> 
+                    <button id='nav-left' class="nav-buttons" type="button" style="border-width:0px; position: relative; text-align:right">
+                      <span id = 'nav-left-arrow' style="font-size:15px; color:${left_arrow_head_color}">${left_sibling_name}    \u25C0</span> 
                     </button>
     
                     <button id="middle-nav" class="nav-buttons" type="button" 
@@ -2061,19 +2060,20 @@
                     ${curr_taxon_name}
                     </button>
   
-                    <button id='nav-right' class="nav-buttons" type="button" style="border-width:0px;">
-                      <span id = 'nav-right-arrow' style="font-size:20px;  color:${right_arrow_head_color}">\u25B6</span> 
-                      <span id = 'nav-right-text' style="font-size:10px; color:${right_arrow_head_color};">${right_sibling_name}</span> 
+                    <button id='nav-right' class="nav-buttons" type="button" style="border-width:0px; position: relative; text-align:left">
+                      <span id = 'nav-right-arrow' style="font-size:15px;  color:${right_arrow_head_color}">\u25B6    ${right_sibling_name}</span> 
                     </button>
                    </div>
                   <button id='nav-down' class="nav-buttons" type="button" style="display: inline-block; border-width:0px;"> 
-                    <span id = 'nav-down-arrow' style="font-size:20px; color:${down_arrow_head_color}">\u25BC</span> 
+                    <span id = 'nav-down-arrow' style="font-size:15px; color:${down_arrow_head_color}">\u25BC</span> 
                       <br>
-                      <span id = 'nav-down-text' style="font-size:10px; color:${down_arrow_head_color}">${first_child_name}</span> 
+                      <span id = 'nav-down-text' style="font-size:15px; color:${down_arrow_head_color}">${first_child_name}</span> 
                     </button>
                   <br>             
               </div>
            </div>`
+           
+           
 
            //now we need to add different hover events based on what places we can actually move to
            let idx = 0;
@@ -2085,7 +2085,6 @@
                   nav_btn = document.getElementById(curr_relationship_id)
                   nav_btn.addEventListener("mouseover", 
                   function() {
-                      document.getElementById(`${curr_relationship_id}-text`).style.color = '#00008B';
                       document.getElementById(`${curr_relationship_id}-arrow`).style.color = '#00008B';
                       nav_btn.style.backgroundColor = '#D4F1F4';
                       nav_btn.style.borderWidth = "1px";
@@ -2093,7 +2092,6 @@
                   });
                   nav_btn.addEventListener("mouseout", 
                   function() {
-                      document.getElementById(`${curr_relationship_id}-text`).style.color  = curr_arrow_color;
                       document.getElementById(`${curr_relationship_id}-arrow`).style.color = curr_arrow_color;
                       nav_btn.style.backgroundColor = 'white';
                       nav_btn.style.borderWidth = "0px";
@@ -2103,6 +2101,23 @@
               idx += 1;
 
            })
+
+           //13 has width 150
+           //150 = 13*const
+           //=>const = 11.5
+           //
+           const button_size_increase = 11.6
+           let new_width;
+           if (right_sibling_name.length >= 13){
+                new_width = button_size_increase * (right_sibling_name.length);
+                document.getElementById("nav-right").style.width = `${new_width}px`;
+                document.getElementById("nav-left").style.width = `${new_width}px`;
+           }
+           if (left_sibling_name.length >= 13){
+                new_width = button_size_increase * (left_sibling_name.length);
+                document.getElementById("nav-left").style.width = `${new_width}px`;
+                document.getElementById("nav-right").style.width = `${new_width}px`;
+           }
 
            return [first_child, left_sibling, right_sibling, curr_parent]
       }
@@ -2276,6 +2291,7 @@
      function show_navigation_history(given_taxon, node_qval, cy_graph, all_ranks,
         pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node, 
         taxon_qvals, parent_and_all_children, nodes_we_came_from) {
+
 
           let prev_nodes_we_came_from = [...nodes_we_came_from];
           let node_ids_above = [];
@@ -2876,6 +2892,30 @@
 
           let prev_nodes_clicked = [];
           let rank_parity_tap = 'even';
+
+          show_navigation_history(given_taxon, given_taxon, cy, all_ranks,
+          pc_edges, prop_node_diam, graphType_pc_edges, "", taxon_qvals, 
+          parent_and_all_children, []);
+
+          //so we want the functionality of the nav buttons to be different from the one when we are in
+          //property display mode
+          let four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children);
+          let relationships = ["nav-down", "nav-left", "nav-right", "nav-up"];
+          //relationships needs to be in the same order as is returned by the function display nav buttons
+          let idx = 0;
+          //adding click events for the navigation buttons
+          four_relationships_qvals.forEach(qval => {
+              let nodes_lst = [];
+
+              let curr_relationship_id = relationships[idx];
+           
+              if (qval != " ") {
+                document.getElementById(`${curr_relationship_id}`).addEventListener('click', function() {
+                    gethierarchy(qval);
+                })
+              }
+              idx +=1;
+          });
           
           cy.on('tap', function(evt) {
                           
@@ -3189,8 +3229,14 @@
 
 
           let pref_label_of_taxonVal = pref_labels[taxonVal];
+          let taxon_qval;
 
-          let taxon_qval = names_to_qvals[taxonVal];
+          if (qvals_to_names[taxonVal] != undefined){
+            taxon_qval = taxonVal;
+            taxonVal = qvals_to_names[taxonVal];
+          }else{
+            taxon_qval = names_to_qvals[taxonVal];
+          }
 
           if (pref_label_of_taxonVal != undefined) {
             //means we are looking at a pref_label of something
@@ -3223,44 +3269,54 @@
       }
 
 
-      function gethierarchy() {
+      function gethierarchy(given_taxon) {
+        let navDisplayParent = document.getElementById("navigation-history");
+        navDisplayParent.innerHTML = "";
         
-        //check if a "backtoroot" button exists and if it does get rid of it
-        let el = document.getElementById('changetoRoot_button');
-        if (el != null) {
-           el.parentNode.removeChild(el);
-        }
+        let navButtonsParent = document.getElementById("show-nav-buttons");
+        navButtonsParent.innerHTML = "";
+        let hierarchyVal;
 
-        let el2 = document.getElementById('error_message');
-        if (el2 != null) {
-          el2.parentNode.removeChild(el2);
-        }
-
-        let place = document.getElementById("hierarchy-entry");
-        let backtoRoot_btn = document.createElement("button");
-        backtoRoot_btn.innerHTML = "Back to Root";
-        place.appendChild(backtoRoot_btn);
-        backtoRoot_btn.setAttribute('id',"changetoRoot_button");
-        backtoRoot_btn.style.backgroundColor = 'salmon';
-        backtoRoot_btn.style.width = '100px';
-        backtoRoot_btn.style.height = '30px';
-       /* backtoRoot_btn.setAttribute('style',"width: 100px")
-        backtoRoot_btn.setAttribute('style',"height: 30px")*/
-
-
-
-        backtoRoot_btn.className = "change-root-button";
-        backtoRoot_btn.type = "button";
-        backtoRoot_btn.addEventListener('click', function () {
-          change_to_root();
-        })
-
-
-
-        let hierarchyVal = document.getElementById("hierarchySpecies").value;
-        if (hierarchyVal.length >= 2) {
-            hierarchyVal = capitalize(hierarchyVal);
+        if (given_taxon == "null"){
+          let el = document.getElementById('changetoRoot_button');
+          if (el != null) {
+             el.parentNode.removeChild(el);
           }
+  
+          let el2 = document.getElementById('error_message');
+          if (el2 != null) {
+            el2.parentNode.removeChild(el2);
+          }
+  
+          let place = document.getElementById("hierarchy-entry");
+          let backtoRoot_btn = document.createElement("button");
+          backtoRoot_btn.innerHTML = "Back to Root";
+          place.appendChild(backtoRoot_btn);
+          backtoRoot_btn.setAttribute('id',"changetoRoot_button");
+          backtoRoot_btn.style.backgroundColor = 'salmon';
+          backtoRoot_btn.style.width = '100px';
+          backtoRoot_btn.style.height = '30px';
+         /* backtoRoot_btn.setAttribute('style',"width: 100px")
+          backtoRoot_btn.setAttribute('style',"height: 30px")*/
+  
+  
+  
+          backtoRoot_btn.className = "change-root-button";
+          backtoRoot_btn.type = "button";
+          backtoRoot_btn.addEventListener('click', function () {
+            change_to_root();
+          })
+  
+  
+  
+          hierarchyVal = document.getElementById("hierarchySpecies").value;
+          if (hierarchyVal.length >= 2) {
+              hierarchyVal = capitalize(hierarchyVal);
+            }
+        } else {
+          hierarchyVal = given_taxon;
+        }
+        //check if a "backtoroot" button exists and if it does get rid of it
         let prevquery = document.getElementById("sparql");
         let old_prevquery = prevquery.value;
 
@@ -3332,7 +3388,7 @@
     </div>
 
     <script>
-      window.onload = exec('Full');
+      window.onload = exec('Concise');
       let fullButton = document.querySelector('#Full');
       let conciseButton = document.querySelector('#Concise');
       let moderateButton = document.querySelector('#Moderate');
@@ -3371,7 +3427,7 @@
       let taxonSpecies = document.getElementById("hierarchySpecies");
         taxonSpecies.addEventListener("keydown", function (e) {
           if (e.key == "Enter") {
-            gethierarchy();
+            gethierarchy("null");
           }
         });
 
