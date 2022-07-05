@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<meta charset="UTF-8">
+ <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <html>
   <head>
     <script src="external/d3.v7.min.js"></script>
@@ -43,7 +43,7 @@
         border-radius: 50px;
         background-color: white;
         font-weight: 600;
-        width: 120px;
+        width: 140px;
         height: 40px;
         text-align: center;
         margin: 2px;
@@ -881,7 +881,7 @@
 
         }
 
-        console.log('new property array', new_property_array)
+        console.log('new property array', new_property_array);
         return {prop_array: new_property_array, bnodes_obj: bnodes, subtax_rank: subtax_rank};
         
 
@@ -1277,8 +1277,10 @@
                         let navDisplayParent = document.getElementById("navigation-history");
                         navDisplayParent.innerHTML = "";
                         let new_nodes_we_came_from = [...nodes_we_came_from]
-                        new_nodes_we_came_from.push(node_qval)
-                            get_properties(given_taxon, parent_node, cy_graph, all_ranks,
+                        new_nodes_we_came_from.push(node_qval);
+                        
+                        console.log('parent qval', parent_node);
+                          get_properties(given_taxon, parent_node, cy_graph, all_ranks,
                         pc_edges, prop_node_diam, graphType_pc_edges, node_qval, taxon_qvals, 
                         parent_and_all_children,new_nodes_we_came_from);
                          
@@ -2047,13 +2049,13 @@
                   <button id='nav-up' class="nav-buttons" type="button" style="display: inline-block; border-width:0px"> 
                     <span id = 'nav-up-text' style="font-size:10px; color:${up_arrow_head_color}">${curr_parent_name}</span> 
                     <br>
-                    <span id = 'nav-up-arrow' style="font-size:20px; color:${up_arrow_head_color}">▲</span> 
+                    <span id = 'nav-up-arrow' style="font-size:20px; color:${up_arrow_head_color}">\u25B2</span> 
                   </button>
   
                   <div style="display:flex">
                     <button id='nav-left' class="nav-buttons" type="button" style="border-width:0px">
                       <span id = 'nav-left-text' style="font-size:10px; color:${left_arrow_head_color}">${left_sibling_name}</span> 
-                      <span id = 'nav-left-arrow' style="font-size:20px; color:${left_arrow_head_color}">◄</span> 
+                      <span id = 'nav-left-arrow' style="font-size:20px; color:${left_arrow_head_color}">\u25C0</span> 
                     </button>
     
                     <button id="middle-nav" class="nav-buttons" type="button" 
@@ -2062,12 +2064,12 @@
                     </button>
   
                     <button id='nav-right' class="nav-buttons" type="button" style="border-width:0px;">
-                      <span id = 'nav-right-arrow' style="font-size:20px;  color:${right_arrow_head_color}">►</span> 
+                      <span id = 'nav-right-arrow' style="font-size:20px;  color:${right_arrow_head_color}">\u25B6</span> 
                       <span id = 'nav-right-text' style="font-size:10px; color:${right_arrow_head_color};">${right_sibling_name}</span> 
                     </button>
                    </div>
                   <button id='nav-down' class="nav-buttons" type="button" style="display: inline-block; border-width:0px;"> 
-                    <span id = 'nav-down-arrow' style="font-size:20px; color:${down_arrow_head_color}">▼</span> 
+                    <span id = 'nav-down-arrow' style="font-size:20px; color:${down_arrow_head_color}">\u25BC</span> 
                       <br>
                       <span id = 'nav-down-text' style="font-size:10px; color:${down_arrow_head_color}">${first_child_name}</span> 
                     </button>
@@ -2166,7 +2168,7 @@
 
         show_navigation_history(given_taxon, node_qval, cy_graph, all_ranks,
         pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node, taxon_qvals, 
-        parent_and_all_children, nodes_we_came_from, );
+        parent_and_all_children, nodes_we_came_from);
 
         let url = property_query(node_name, true);
           d3.json(url).then(function(json) {
@@ -2335,11 +2337,11 @@
 
                   button.innerHTML =
                   `<span style="font-size:14px; font-family: Arial">${taxon_name}</span>
-                   <span style="font-size:20px; font-family: Arial">&#x2194</span>`;
+                   <span style="font-size:14px; font-family: Arial">\u25C0</span>`;
 
                   
                 } else {
-                  button.innerHTML = `${taxon_name}`;
+                  button.innerHTML = `<span style="font-size:14px; font-family: Arial">${taxon_name}</span>`
                 }
                 button.style.color = '#FF69B4';
                 button.addEventListener("mouseover", function() {
@@ -2355,12 +2357,12 @@
 
               } else {
                 if (idx == node_names_above.length - 1 ) {
-                  button.innerHTML = `${taxon_name}`;
+                  button.innerHTML =`<span style="font-size:14px; font-family: Arial">${taxon_name}</span>`;
 
                 } else {
                   button.innerHTML = 
                   `<span style="font-size:14px; font-family: Arial">${taxon_name}</span>
-                   <span style="font-size:20px; font-family: Arial">&#x2194</span>`;
+                   <span style="font-size:14px; font-family: Arial">\u25C0</span>`;
                 
                 }
                 button.style.color = '#03a9f4';
