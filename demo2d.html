@@ -2893,6 +2893,12 @@
           let prev_nodes_clicked = [];
           let rank_parity_tap = 'even';
 
+          let navDisplayParent = document.getElementById("navigation-history");
+            navDisplayParent.innerHTML = "";
+
+          let navButtonsParent = document.getElementById("show-nav-buttons");
+            navButtonsParent.innerHTML = "";
+
           show_navigation_history(given_taxon, given_taxon, cy, all_ranks,
           pc_edges, prop_node_diam, graphType_pc_edges, "", taxon_qvals, 
           parent_and_all_children, []);
