@@ -2185,10 +2185,16 @@
             cy_graph.remove(`node[type = "property definition"]`);
             cy_graph.remove(`node[type = "bnode"]`);
             cy_graph.remove(`node[type = "image"]`);
-            // cy_graph.remove(`node[type = "rank"]`);
             cy_graph.remove(`node[type = "rank property"]`);   // remove rank properties   
             cy_graph.remove(`node[type = "rank property edges"]`);   // remove rank properties      
             cy_graph.remove("node[width = 120]"); //removing box nodes
+            // Restoring previous rank nodes
+
+            if (rank_removed) {
+              rank_removal.restore();
+              rank_removed = false;
+            }
+            
         if (all_ranks.includes(node_name)) {
           return false;
         }
@@ -2984,13 +2990,16 @@
                                   prev_nodes_clicked = [];
                                 }
                               }
+                          
+                              get_properties(given_taxon, data.id, cy, all_ranks, 
+                                      pc_edges, prop_node_diam, graphType_pc_edges, 
+                                      id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
+                              
+                              // Set new rank removed node to the current node
                               if (!rank_removed){
                                 rank_removal = cy.remove(cy.$id(data.rank_id));
                                 rank_removed = true;
                               }
-                              get_properties(given_taxon, data.id, cy, all_ranks, 
-                                      pc_edges, prop_node_diam, graphType_pc_edges, 
-                                      id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
     
                               zoomedInOnNode = true;
                               id_lastclicked_node = data.id;
