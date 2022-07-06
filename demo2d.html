@@ -2349,13 +2349,16 @@
               if (node_id == node_qval) {
                 if (prev_nodes_we_came_from_length != 0) {
 
-                  button.innerHTML =
-                  `<span style="font-size:14px; font-family: Arial">${taxon_name}</span>
-                   <span style="font-size:14px; font-family: Arial">\u25C0</span>`;
+                  button.innerHTML = `${taxon_name} \u25C0`;
+                  button.style.fontFamily = "Arial";
+                  button.style.fontSize = '14px';
+                  button.style.textAlign = 'center';
 
-                  
                 } else {
-                  button.innerHTML = `<span style="font-size:14px; font-family: Arial">${taxon_name}</span>`
+                  button.innerHTML = `${taxon_name}`;
+                  button.style.fontFamily = "Arial";
+                  button.style.fontSize = '14px';
+                  button.style.textAlign = 'center';
                 }
                 button.style.color = '#FF69B4';
                 button.addEventListener("mouseover", function() {
@@ -2371,12 +2374,16 @@
 
               } else {
                 if (idx == node_names_above.length - 1 ) {
-                  button.innerHTML =`<span style="font-size:14px; font-family: Arial">${taxon_name}</span>`;
+                  button.innerHTML = `${taxon_name}`;
+                  button.style.fontFamily = "Arial";
+                  button.style.fontSize = '14px';
+                  button.style.textAlign = 'center';
 
                 } else {
-                  button.innerHTML = 
-                  `<span style="font-size:14px; font-family: Arial">${taxon_name}</span>
-                   <span style="font-size:14px; font-family: Arial">\u25C0</span>`;
+                  button.innerHTML = `${taxon_name} \u25C0`;
+                  button.style.fontFamily = "Arial";
+                  button.style.fontSize = '14px';
+                  button.style.textAlign = 'center';
                 
                 }
                 button.style.color = '#03a9f4';
