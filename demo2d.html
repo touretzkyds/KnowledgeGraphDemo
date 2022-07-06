@@ -1363,8 +1363,22 @@
                               label: 'taxonRank'
                           }
                     };
-
             cy_graph.add([new_rank_edge]);
+
+            // Mouseover Functionality (ranks) to indicate clickability
+            cy_graph.on('mouseover', 'node[type = "overlayRank"]', function(event) {
+              cy_graph.nodes(`node[id = "${this.id()}"]`).style({
+                        'width': 175,
+                        'height': 175,
+                }); 
+            })
+            cy_graph.on('mouseout', 'node[type = "overlayRank"]', function(event) {           
+              cy_graph.nodes(`node[id = "${this.id()}"]`).style({
+                        'width': 150,
+                        'height': 150,
+                }); 
+          });
+
 
             //add a click event to the rank node being displayed
             let rank_parity_tap = 'even';
@@ -1505,7 +1519,6 @@
       function create_property_nodes(node_qval, data, cy_graph, pos, pc_edges, 
             prop_node_diam, graphType_pc_edges, b4node_names, taxon_qvals, all_ranks,
              given_taxon, parent_and_all_children, nodes_we_came_from) {
-            
             let node_name = taxon_qvals[node_qval]
             let prop_node_height = prop_node_diam;
             let taxon_x_pos = pos.x;
@@ -1903,11 +1916,11 @@
 
       }
 
-
+      var rank_removal;
+      var rank_removed = false;
       //returns the hierarchy back to it's original state
       //after the user unselects a node
       function return_to_normal(node_name, cy_graph, given_taxon, click_of_subtax, farthest_second_left_child_pos) {
-
             let navDisplayParent = document.getElementById("navigation-history");
             navDisplayParent.innerHTML = "";
 
@@ -1941,13 +1954,8 @@
             
 
             //changing the edges back to their original styles
-            
-
-
-            
             let id_label = `[id = '${node_name}']`;
             cy_graph.nodes(id_label).style("background-color", "#ADD8E6");
-
             if (click_of_subtax) {
               cy_graph.nodes(id_label).style("opacity", ".2");
 
@@ -1956,7 +1964,7 @@
             id_label = `[id = '${given_taxon}']`;
             cy_graph.nodes(id_label).style("background-color", "red");
             cy_graph.elements().nodes().style({'border-width': '0'});
-                        
+                  
             cy_graph.remove(`node[type = "subTaxProp"]`);
             cy_graph.remove(`node[type = "overlayRank"]`);
             cy_graph.remove(`node[type = "property"]`);
@@ -1964,7 +1972,9 @@
             cy_graph.remove(`node[type = "literal"]`);
             cy_graph.remove(`node[type = "bnode"]`);
             cy_graph.remove(`node[type = "property definition"]`);
-            cy_graph.remove(`node[type = "image"]`);       
+            cy_graph.remove(`node[type = "image"]`); 
+            cy_graph.remove(`node[type = "rank property"]`);   // remove rank properties   
+            cy_graph.remove(`node[type = "rank property edges"]`);   // remove rank properties      
             cy_graph.remove("node[width = 120]"); //removing box nodes
             if (!click_of_subtax) {
                   cy_graph.fit({
@@ -1978,7 +1988,9 @@
                   }
                 });
             }
-            
+            rank_removal.restore();
+            rank_removed = false;
+           
       }
 
       function display_nav_buttons(node_qval, graphType_pc_edges, taxon_qvals, parent_and_all_children) {
@@ -2173,8 +2185,10 @@
             cy_graph.remove(`node[type = "property definition"]`);
             cy_graph.remove(`node[type = "bnode"]`);
             cy_graph.remove(`node[type = "image"]`);
+            // cy_graph.remove(`node[type = "rank"]`);
+            cy_graph.remove(`node[type = "rank property"]`);   // remove rank properties   
+            cy_graph.remove(`node[type = "rank property edges"]`);   // remove rank properties      
             cy_graph.remove("node[width = 120]"); //removing box nodes
-
         if (all_ranks.includes(node_name)) {
           return false;
         }
@@ -2477,7 +2491,7 @@
                   source: rank_id, 
                   target: next_lower_rank,
                   label: 'nextLowerRank',
-                  type: 'rank_prop_edges'
+                  type: 'rank property edges'
                   }
                 };
           cy_graph.add([new_edge]);
@@ -2505,7 +2519,7 @@
                   source: rank_id, 
                   target: next_higher_rank,
                   label: 'nextHigherRank',
-                  type: 'rank_prop_edges'
+                  type: 'rank property edges'
                   }
                 };
       cy_graph.add([new_edge1]);
@@ -2807,7 +2821,7 @@
                   }
                   
                   //rank_node_id is undefined in some places
-      
+                  cy.nodes(`node[id="${node_id}"]`).data('rank_id', rank_node_id)
                   new_node = 
                   {
                     group: 'nodes',
@@ -2821,7 +2835,7 @@
                     },
                     position: {x: x_pos - 400, y: y_pos}
                   };
-      
+                  
                   add_eles.push(new_node);
       
                   new_edge = 
@@ -2929,20 +2943,16 @@
               }
               idx +=1;
           });
-          
           cy.on('tap', function(evt) {
                           
                 let evtTarget = evt.target;
                 let data = evtTarget._private.data;
 
-
                 if (Object.keys(data).length == 0) {
                   if (zoomedInOnNode) {
-
                     return_to_normal(id_lastclicked_node, cy, given_taxon, false, farthest_second_left_child_pos);
                     
-                    //when we're not displaying the navigation history we want the display height to 
-                    //go back to normal
+                    //when we're not displaying the navigation history we want the display height to go back to normal
 
                     let cy_container = document.getElementById("cy");
                     cy_container.style.height = "67vh";
@@ -2974,6 +2984,10 @@
                                   prev_nodes_clicked = [];
                                 }
                               }
+                              if (!rank_removed){
+                                rank_removal = cy.remove(cy.$id(data.rank_id));
+                                rank_removed = true;
+                              }
                               get_properties(given_taxon, data.id, cy, all_ranks, 
                                       pc_edges, prop_node_diam, graphType_pc_edges, 
                                       id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
@@ -2995,6 +3009,7 @@
                           rank_parity_tap = 'odd';
                         } else {
                           cy.remove(`node[type = "rank property"]`);
+                          cy.remove(`node[type = "rank property edges"]`);
                           rank_parity_tap = 'even';
                         }
                        
