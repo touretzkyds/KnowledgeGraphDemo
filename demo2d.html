@@ -1075,6 +1075,15 @@
               let curr_bnode_props = bnode_properties[bnode_name];
               let add_b5 = false;
 
+              let next_x_pos;
+              let next_y_pos;
+              let curr_bnode_prop;
+              let curr_edge_label;
+              let b4_node_id;
+              let node_id;
+              let new_property_node;
+              let new_edge;
+
               for (let i = 0; i < num_bnode_props; i++) {
 
                     if (i == 0) {
@@ -1082,12 +1091,12 @@
                     } else {
                       new_degree = (curr_degree + (degree_movement))% (Math.PI *2);
                     }
-                    let next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(new_degree));
-                    let next_y_pos = y_pos - (radius*mult_constant)*(Math.sin(new_degree));
-                    let curr_degree = new_degree;
+                    next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(new_degree));
+                    next_y_pos = y_pos - (radius*mult_constant)*(Math.sin(new_degree));
+                    curr_degree = new_degree;
 
-                    let curr_bnode_prop = curr_bnode_props[i].obj2;
-                    let curr_edge_label = curr_bnode_props[i].pred2;
+                    curr_bnode_prop = curr_bnode_props[i].obj2;
+                    curr_edge_label = curr_bnode_props[i].pred2;
 
                     if (curr_bnode_props[i].pred2Label != undefined) {
                       curr_edge_label = curr_bnode_props[i].pred2Label.value;
@@ -1100,13 +1109,13 @@
                       rest_list = b4node_names.full_list.slice(1, b4node_names.full_list.length);
                       curr_bnode_prop = `b4: [${rest_list.join(', ')}]`;
                       add_b5 = true;
-                      let b4_node_id = `${curr_bnode_prop} - ${bnode_name}`
+                      b4_node_id = `${curr_bnode_prop} - ${bnode_name}`
                       //so only want to add an onclick function 
                     }
-                    let node_id = `${curr_bnode_prop} - ${bnode_name}`;
+                    node_id = `${curr_bnode_prop} - ${bnode_name}`;
                     if (curr_bnode_prop != undefined) {  
           
-                                  let new_property_node = 
+                                  new_property_node = 
                                             {
                                                 group: 'nodes',
                                                 data: {
@@ -1124,7 +1133,7 @@
                                     
                                     added_els.push(new_property_node);
 
-                                   let new_edge = 
+                                   new_edge = 
                                             {
                                               group: 'edges',
                                               data: 
