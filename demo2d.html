@@ -3329,9 +3329,13 @@
   
   
           hierarchyVal = document.getElementById("hierarchySpecies").value;
+          
+          hierarchyVal = hierarchyVal.trim();
+
           if (hierarchyVal.length >= 2) {
               hierarchyVal = capitalize(hierarchyVal);
-            }
+          }
+
         } else {
           hierarchyVal = given_taxon;
         }
