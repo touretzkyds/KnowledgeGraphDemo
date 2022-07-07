@@ -3329,9 +3329,9 @@
   
   
           hierarchyVal = document.getElementById("hierarchySpecies").value;
-          
-          hierarchyVal = hierarchyVal.trim();
 
+          hierarchyVal = hierarchyVal.trim();
+          hierarchyVal = hierarchyVal.replace(/ +/g, ' ');
           if (hierarchyVal.length >= 2) {
               hierarchyVal = capitalize(hierarchyVal);
           }
