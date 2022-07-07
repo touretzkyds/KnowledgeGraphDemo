@@ -2185,15 +2185,14 @@
             cy_graph.remove(`node[type = "property definition"]`);
             cy_graph.remove(`node[type = "bnode"]`);
             cy_graph.remove(`node[type = "image"]`);
+            if (!rank_removed) {
+              rank_removal = cy_graph.remove(`node[type = "rank"]`);
+              rank_removed = true;
+            }
             cy_graph.remove(`node[type = "rank property"]`);   // remove rank properties   
             cy_graph.remove(`node[type = "rank property edges"]`);   // remove rank properties      
             cy_graph.remove("node[width = 120]"); //removing box nodes
             // Restoring previous rank nodes
-
-            if (rank_removed) {
-              rank_removal.restore();
-              rank_removed = false;
-            }
             
         if (all_ranks.includes(node_name)) {
           return false;
@@ -2562,7 +2561,7 @@
     //givenData is an object {given_data: 'null'} if we're not going to be given anything, otherwise
     //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
     function display_hierarchy(data, graphType, givenData, given_taxon) {
-
+        console.log(data)
         let user_entered_taxon = givenData.taxon_value;
         let converted_data;
 
@@ -2572,7 +2571,7 @@
         } else {
              converted_data = convert_to_cytoscape(data);
         }
-
+        console.log(converted_data)
         let root_rank = converted_data.root_rank;
         let root = converted_data.root;
 	      let pc_edges = converted_data.pc_edges;
@@ -2995,11 +2994,7 @@
                                       pc_edges, prop_node_diam, graphType_pc_edges, 
                                       id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
                               
-                              // Set new rank removed node to the current node
-                              if (!rank_removed){
-                                rank_removal = cy.remove(cy.$id(data.rank_id));
-                                rank_removed = true;
-                              }
+    
     
                               zoomedInOnNode = true;
                               id_lastclicked_node = data.id;
@@ -3078,6 +3073,7 @@
 
           });
         
+        // Hover over image link: reveal image link 
         let tips = document.createElement("div");
         cy.on('mouseover', 'node[type = "image"]', function(event) {
             let target = event.target;
@@ -3116,11 +3112,9 @@
               'arrow-scale': 1
             })
           })
-
-
-           
     }
 
+    // function create_cy2
 
       //changes the buttons for the new input node 
       function change_buttons(new_data, full_json, taxonVal) {
@@ -3422,6 +3416,7 @@
       
     </div>
       <div id="cy"></div>
+      <div id="cy2"></div>
     </div>
 
     <script>
