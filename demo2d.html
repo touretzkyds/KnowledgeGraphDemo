@@ -955,17 +955,21 @@
           cy_graph.add([new_edge]);
           let id_selector = `node[type = 'b4 property']`;
               cy_graph.nodes(id_selector).style({
-                      'background-color': '#CBC3E3',
+                      'shape': 'hexagon',
+                      'background-color': '	#fdfa72',
                       'text-wrap': 'wrap',
-                      'text-max-width': diam - 10,
                       'border-width': 3,
-                      'border-color': '#301934',
+                      'border-color': '#F6BE00',
+                      'border-style': 'solid',
                       'font-size': 35,
-                      'font-family': 'Calibri',
-                      'line-height': 1.15
+                      'font-family': 'Garamond',
+                      'line-height': 1.15,
+                      'text-max-width': diam - 10,
+                      
               });
-              cy_graph.elements().edges().style({'font-size': '30'});
-
+          cy_graph.elements().edges().style({'font-size': '30'});
+          
+          
           let id_label = `[id = '${b5_node_id}']`;
           let parity_of_tap = 'even'
           cy_graph.nodes(id_label).on('click', function(evt) {
@@ -998,19 +1002,22 @@
                 ]);
               let id_selector = `node[type = "b5 property"]`;
               cy_graph.nodes(id_selector).style({
-                      'background-color': '#CBC3E3',
+                      'shape': 'hexagon',
+                      'background-color': '	#fdfa72',
                       'text-wrap': 'wrap',
-                      'text-max-width': diam - 10,
                       'border-width': 3,
-                      'border-color': '#301934',
+                      'border-color': '#F6BE00',
+                      'border-style': 'solid',
                       'font-size': 35,
-                      'font-family': 'Calibri',
-                      'line-height': 1.15
+                      'font-family': 'Garamond',
+                      'line-height': 1.15,
+                      'text-max-width': diam - 10,
               });
+
                 cy_graph.elements().edges().style({'font-size': '30'});
                 parity_of_tap = 'odd';
-                cy_graph.nodes(`[id = "${data.id}"]`).style(
-                  {'label': 'b5',
+                cy_graph.nodes(`[id = "${data.id}"]`).style({
+                  'label': 'b5',
                   'shape': 'hexagon',
                   'background-color': '	#fdfa72',
                   'border-color': '#F6BE00'
@@ -1023,10 +1030,9 @@
                 
                 cy_graph.nodes(`[id = "${data.id}"]`).style({
                   'label': `b5: [${last_val}]`,
-                  'shape': 'ellipse',
-                  'background-color': '	#CBC3E3',
-                  'border-color': '#301934',
-                  'border-style': 'solid'
+                  'shape': 'hexagon',
+                  'background-color': '	#fdfa72',
+                  'border-color': '#F6BE00'
                 });
                 parity_of_tap = 'even';
               }
@@ -1154,16 +1160,48 @@
               cy_graph.add(added_els);
               let id_selector = `node[width = ${diam}]`;
               cy_graph.nodes(id_selector).style({
-                      'background-color': '#CBC3E3',
+                      'shape': 'hexagon',
+                      'background-color': '	#fdfa72',
                       'text-wrap': 'wrap',
-                      'text-max-width': diam - 10,
                       'border-width': 3,
-                      'border-color': '#301934',
+                      'border-color': '#F6BE00',
+                      'border-style': 'solid',
                       'font-size': 35,
-                      'font-family': 'Calibri',
-                      'line-height': 1.15
+                      'font-family': 'Garamond',
+                      'line-height': 1.15,
+                      'text-max-width': diam - 10,
+                 
               });
+
               cy_graph.elements().edges().style({'font-size': '30'});
+              cy_graph.nodes().on('mouseover', function(evt){
+
+                  const node = evt.target._private.data;
+                  const node_width = node.width;
+                  const node_height = node.height;
+                  cy_graph.nodes(`[id = "${node.id}"]`).style({
+
+                      'width': node_width + 25,
+                      'height': node_height + 25
+
+                  });
+
+              });
+
+              cy_graph.nodes().on('mouseout', function(evt){
+
+                  const node = evt.target._private.data;
+                  const node_width = node.width
+                  const node_height = node.height
+                  cy_graph.nodes(`[id = "${node.id}"]`).style({
+
+                      'width': node_width,
+                      'height': node_height
+
+                  });
+
+              });
+
 
               if (add_b5) {
                 let id_label = `[id = "${b4_node_id}"]`;
@@ -1178,9 +1216,6 @@
                         parity_of_tap = 'odd';
                         cy_graph.nodes(`[id = '${data.id}']`).style({
                            'label': `b4`,
-                           'shape': 'hexagon',
-                            'background-color': '	#fdfa72',
-                            'border-color': '#F6BE00'
                            
                          })
                       } else {
@@ -1189,9 +1224,7 @@
 
                          cy_graph.nodes(`[id = '${data.id}']`).style({
                            'label': `b4: [${rest_names}]`,
-                           'shape': 'ellipse',
-                           'background-color': '#CBC3E3',
-                          'border-color': '#301934',
+                          
                          });
                          parity_of_tap = 'even';
                       }
@@ -1476,6 +1509,7 @@
            parent_and_all_children, nodes_we_came_from) {
         let prefComparisonList = [];
         let bindings = json.results.bindings;
+
         //assigning node values to b3 and b4
         //let prefComp_bnode_name = `[`;
        // let rest_prefComp_bnode_name = `[`
@@ -1739,6 +1773,8 @@
                                   added_els.push(new_edge);
                                   
                     }
+
+                  
                         
               }     
 
@@ -1818,18 +1854,46 @@
                     });
 
                     let bnode_id_selector = `node[type = "bnode"]`;
-
                     cy_graph.nodes(bnode_id_selector).style({
-                      'shape': 'ellipse',
-                      'background-color': '#CBC3E3',
+                      'shape': 'hexagon',
+                      'background-color': '	#fdfa72',
                       'text-wrap': 'wrap',
                       'text-max-width': prop_node_diam - 20,
                       'border-width': 5,
-                      'border-color': '#301934',
+                      'border-color': '#F6BE00',
                       'border-style': 'solid',
                       'font-size': 35,
-                      'font-family': 'Calibri',
+                      'font-family': 'Garamond',
                       'line-height': 1.15
+                    });
+
+
+                    cy_graph.nodes().on('mouseover', function(evt){
+
+                        const node = evt.target._private.data;
+                        const node_width = node.width;
+                        const node_height = node.height;
+                        cy_graph.nodes(`[id = "${node.id}"]`).style({
+
+                            'width': node_width + 25,
+                            'height': node_height + 25
+
+                        });
+
+                    });
+                    
+                    cy_graph.nodes().on('mouseout', function(evt){
+
+                        const node = evt.target._private.data;
+                        const node_width = node.width
+                        const node_height = node.height
+                        cy_graph.nodes(`[id = "${node.id}"]`).style({
+
+                            'width': node_width,
+                            'height': node_height
+
+                        });
+
                     });
 
       
@@ -1863,13 +1927,6 @@
 
                                   } else {
                                       parity_dictionary[`parity_of_tap_${data.id}`] = 'even';
-
-                                      cy_graph.nodes(`[id = "${data.id}"]`).style({
-                                        'shape': 'ellipse',
-                                        'background-color': '	#CBC3E3',
-                                        'border-color': '#301934',
-                                        'border-style': 'solid'
-                                      });
 
                                       cy_graph.remove(`node[type = "${data.id} property"]`);
                                       
