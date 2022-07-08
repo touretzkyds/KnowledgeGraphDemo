@@ -9,16 +9,17 @@
     <script src="external/cytoscape-dagre.js"></script>
 
     <style type="text/css">
-      html,body{
-        height: 100%
+      .body{
+        margin: 0;
       }
+
       #cy {
         display: none;
-        height: 70%;
+        height: 70vh;
         width: 100%;
         border-style: solid;
       }
-
+ 
       .title {
         text-align: center;
       }
@@ -29,7 +30,21 @@
         padding: 10px;
         width: 100px;
       }
-      
+
+      .up-down-btn button{
+        background-color: white;
+        display: block;
+        color: rgb(0, 170, 255);
+        margin: 30px;
+        width: 30;
+        height: 30;
+        font-size: 1.5vw;
+        font-weight: bold;
+        cursor: pointer;
+        border: 0;
+        font-size: 28px;
+      }
+
 
       .btn2 {
         background-color: green;
@@ -56,6 +71,9 @@
         height: 30px;
       }
       
+ 
+
+      
     </style>
 
     <script> 
@@ -72,6 +90,7 @@
     function capitalize(str){
         return str.charAt(0).toUpperCase() + (str.toLowerCase()).slice(1);;
     }
+
 
     function hierarchy_query(taxon_value, preform_query){
         var prevquery = document.getElementById("sparql");
@@ -179,21 +198,55 @@
 
     }
 
+    function box_node_query(taxon_value, preform_query){
+      var prevquery = document.getElementById("sparql3");
+      prevquery.innerHTML = 
+      `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX unit:  <http://qudt.org/vocab/unit/>
+        PREFIX qudt:  <http://qudt.org/schema/qudt/>
+        PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+        PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        SELECT * WHERE {
+          ?taxon kgo:taxonName "${taxon_value}"@en .
+          ?taxon ?r ?b.
+          ?b rdf:type rdf:List;
+            rdf:rest* ?b2.
+          ?b2 ?r2 ?v2.
+          OPTIONAL { ?v2 skos:prefLabel|rdfs:label ?v2Label. } 
+          OPTIONAL { ?r2 skos:prefLabel|rdfs:label ?r2Label. } 
+
+        }`
+        if (preform_query){
+          var endpoint = d3.select("#endpoint3").property("value")
+          var sparql = d3.select("#sparql3").property("value")
+          var url = endpoint + "?query=" + encodeURIComponent(sparql)
+          return url
+        }else{
+          return false
+        }
+    }
+
     /*convert_to_cytoscape will return an object
     that stores the nodes, the edges, the positions of all
     the nodes, and the ranks for each of the nodes*/
     function convert_to_cytoscape(data) {
+        console.log('json data', data)
         var nodes_lst = [];
         var edges_lst = [];
-        var node_names = [];
         var rank_node_edges = {}; //consists of objects that have ranks and nodes that are connected by an edge
-        var edge_object = {};
+        var pc_edges = {};
         var root = 'noRoot';
         var root_rank = "noRank";
         var def_for_taxons = {};
-        var qvals = {};
+        var node_names = [];
+
+        var qvals_to_names = {};
+        var names_to_qvals = {};
         var root_def = "No def";
         var pref_labels = {}; //key is preflable and value is taxon_name
+        //need to make edge object based on qvalues and not names
+        
 
         bindings = data.results.bindings;
         len = bindings.length;
@@ -206,112 +259,144 @@
                   root_rank = bindings [0].root_rank.value;
                   root_def = bindings [0].root_def.value;
                 }
+                if (root != "Biota"){
+                  root_qval = bindings [0].child_qval.value;
+                  root_prefLabel = bindings [0].child_prefLabel.value;
+                }else{
+                  root_qval = bindings [0].parent_qval.value;
+                  root_prefLabel = bindings [0].parent_prefLabel.value;
+                }
+                if (root_qval.length >= 40){
+                      root_qval = root_qval.slice(40, root_qval.length);
+                }
+                def_for_taxons[root_qval] = root_def;
+                qvals_to_names[root_qval] = root;
             
         }
 
-        //adding nodes and definitions
+        /*first we can grab all of the values in our returned json result
+        and add them as nodes in alphabetical order. 
+        */
+        var node_names = [];
+        /*so we'll iterate through our json object and
+        grab the node names and sort them
+        */
+        
+        
+
+        if (root_prefLabel != undefined){
+              root_prefLabel = capitalize(root_prefLabel);
+              if (pref_labels[root_prefLabel] == undefined){
+                pref_labels[root_prefLabel] = root;
+              }
+        }
+
+        node_names.push({name: root, qval: root_qval});
+
+
+       
         for (let i = 0; i < len; i++){
-            root = bindings [i].root_name.value;
-            child = bindings [i].child_name.value;
-            parent = bindings [i].parent_name.value;
-            rank = bindings [i].rank_name.value;
-            def = bindings [i].def.value;
+            child_rank = bindings [i].rank_name.value;
+            child_def = bindings [i].def.value;
             child_qval = bindings [i].child_qval.value;
             parent_qval = bindings [i].parent_qval.value;
             child_prefLabel = bindings [i].child_prefLabel.value;
-            parent_prefLabel = bindings [i].parent_prefLabel.value;
+            parent = bindings [i].parent_name.value;
+            rank = bindings [i].rank_name.value;
+            child = bindings [i].child_name.value;
 
+            //ignore the data if the parent and child qvals are the same
 
-            if (child_prefLabel != undefined){
-              child_prefLabel = capitalize(child_prefLabel);
-              if (pref_labels[child_prefLabel] == undefined){
-                pref_labels[child_prefLabel] = child;
-              }
-            }
-            
-            if (parent_prefLabel != undefined){
-              parent_prefLabel = capitalize(parent_prefLabel);
-              if (pref_labels[parent_prefLabel] == undefined){
-                pref_labels[parent_prefLabel] = parent;
-              }
-            }
-            
-
-            if (child_qval.length >= 40){
+            if (child_qval.length >= 40 && parent_qval.length >= 40){
               child_qval = child_qval.slice(40, child_qval.length);
-            }
-            if (parent_qval.length >= 40){
               parent_qval = parent_qval.slice(40, parent_qval.length);
             }
-            `${child} boltz: ${child_qval.toString()}`
-            child_obj = {
-              data: {id: child, 
-              name:`${child} boltz: ${child_qval.toString()}`,
+
+            //only want to continue if parent and child qvals are diff and if 
+            //we haven't seen the child yet
+            if (child_qval != parent_qval && qvals_to_names[child_qval] == undefined){
+                      
+                      node_names.push({name: child, qval: child_qval});
+                      def_for_taxons[child_qval] = child_def;
+                      qvals_to_names[child_qval] = child;
+
+                      if (names_to_qvals[child] != undefined){
+                        names_to_qvals[`${child}: ${rank}`] = child_qval;
+                      }else{
+                        names_to_qvals[child] = child_qval;
+                      }
+                      //because the child name can be repeated
+
+
+                      if (child_prefLabel != undefined){
+                        child_prefLabel = capitalize(child_prefLabel);
+                        if (pref_labels[child_prefLabel] == undefined){
+                          pref_labels[child_prefLabel] = child;
+                        }
+                      }
+                      pc_edges[child_qval] = parent_qval; //source is the key and target is the value
+                      rank_node_edges[child_qval] = rank;
+            }
+
+        }
+        node_names = node_names.sort(function(a, b) {
+            var keyA = a.name;
+            var keyB = b.name;
+            // Compare the 2 dates
+            var result = keyA.localeCompare(keyB);
+            return result;
+          });
+        console.log('pc edges', pc_edges);
+
+        for (let idx = 0; idx < node_names.length; idx ++){
+          curr_name = node_names[idx].name;
+          curr_qval = node_names[idx].qval;
+          node_obj = {
+              data: {id: curr_qval, 
+              name:`${curr_name} boltz: ${curr_qval.toString()}`,
               color: '#ADD8E6', 
               width: 250, 
               height: 250,
               type: 'taxon'
             }};
-            nodes_lst.push(child_obj);
+            nodes_lst.push(node_obj);
 
-            if (def_for_taxons[child] == undefined){
-              def_for_taxons[child] = def;
+          if (curr_name != "Biota"){
+            parent_qval = pc_edges[curr_qval];
+            if (curr_qval != undefined && parent_qval != undefined){
+                    parent = qvals_to_names[parent_qval];
+
+                    rank = rank_node_edges[curr_qval];
+                    pc_edge = {data: {id: `${curr_qval} - ${parent_qval}`, 
+                      source: curr_qval, target: parent_qval, label:'subTaxonOf'}};
+                    edges_lst.push(pc_edge); 
             }
-
-
-            qvals[child] = child_qval;
             
-            parent_obj = {
-              data: {
-                id: parent, 
-                name:`${parent} boltz: ${parent_qval.toString()}`, 
-                color: '#ADD8E6', 
-                width: 250, 
-                height: 250,
-                type: 'taxon'
-              }};
-            nodes_lst.push(parent_obj);
-           
-            qvals[parent] = parent_qval;
-          
+          }
 
         }
-        //adding edges between parent and child
-        for (let i = 0; i < len; i++){
-            child = bindings [i].child_name.value;
-            parent = bindings [i].parent_name.value;
-            rank = bindings [i].rank_name.value;
-            
-            //adding an edge between the parent and child
-            pc_edge = {data: {id: `${child} - ${parent}`, 
-            source: child, target: parent, label:'subTaxonOf'}};
-            edges_lst.push(pc_edge);
 
-            edge_object[child] = parent; //source is the key and target is the value
-            rank_node_edges[child] = rank;
-            
-        }
 
-        edge_object[root] = 'root';
-        rank_node_edges[root] = root_rank;
-        def_for_taxons[root] = root_def;
-        console.log("prefLabels", pref_labels);
+        pc_edges[root_qval] = 'root';
+        rank_node_edges[root_qval] = root_rank;
+
         return {nodes: nodes_lst, edges: edges_lst, 
-          rn_edges: rank_node_edges, pc_edges: edge_object, 
-          root_rank: root_rank, root: root, definitions: def_for_taxons, 
-          taxon_qvals: qvals, pref_labels: pref_labels};
+          rn_edges: rank_node_edges, pc_edges: pc_edges, 
+          root_rank: root_rank, root: root_qval, definitions: def_for_taxons, 
+          taxon_qvals: qvals_to_names, pref_labels: pref_labels, 
+          names_to_qvals:names_to_qvals};
     }
 
 
 
-    //graphType variable is used to keep track of if the Full, Concise, or Moderate button was pressed
+    //graphType variable is used to keep track of if the Full or Concise button was pressed
 
     function find_new_target(old_target, rn_edges, pc_edges, correct_ranks, user_entered_taxon){
         //pc_edges is an object where the sources are keys and the values are the targets
         var curr_source = old_target;
         var curr_target = pc_edges[curr_source];
         var is_valid_rank = correct_ranks.includes(rn_edges[curr_target]);
-
+        //console.log('curr_source', curr_source, 'curr_target', curr_target);
         while (!is_valid_rank && curr_target != user_entered_taxon) {
            curr_source = curr_target; //idea is to keep "climbing up" this tree
            //assumption is that curr_source is never going to be undefined
@@ -325,28 +410,30 @@
     such that there are only nodes with ranks: correct_ranks.
     if a user enters a taxon in the textbox we automatically want to keep this value
     all missing edges are filled in, also will want to return the rn_edges */
-    function create_new(data, correct_ranks, user_entered_taxon){
+    function create_graphType(data, correct_ranks, user_entered_taxon){
 
         var nodes = data.nodes;
         var edges = data.edges;
         var rn_edges = data.rn_edges;
         var pc_edges = data.pc_edges;  //keys are sources and values are targets
+        
         var new_edges = [];
         var new_nodes = [];
         var edges_missing = {}; //keeps track of the nodes that now no longer have edges because of the removed ranks
         var taxon_qvals = data.taxon_qvals;
         var new_pc_edges = pc_edges;
-
+        var graphType_pc_edges = {};
+        var node_names = [];  
         //iterating through all the edges and figuring out which ones are going to be removed 
         for (let i = 0; i < edges.length; i++){
+
               curr_edge = edges[i];  //of the form: {id: __, source: '', target: '', ...}
               source_node = curr_edge.data.source;
               target_node = curr_edge.data.target;
               keep_source = correct_ranks.includes(rn_edges[source_node]);
               keep_target = correct_ranks.includes(rn_edges[target_node]);
-              source_node_name = `${source_node} boltz:${taxon_qvals[source_node].toString()}`;
-              target_node_name = `${target_node} boltz:${taxon_qvals[target_node].toString()}`;
-
+              
+              //taking care of the case when a user enters a taxon into the text box
               if (source_node == user_entered_taxon){
                 keep_source = true;
               }
@@ -354,35 +441,20 @@
                 keep_target = true;
               }
 
-              if (keep_source){  //if the source node is connected to a rank we want to display
-                  new_nodes.push({
-                    data: {
-                      id: source_node, 
-                      name: source_node_name, 
-                      color: '#ADD8E6', 
-                      width: 250, 
-                      height: 250,
-                      type: 'taxon'
-                    }});
+              if (keep_source){
+                node_names.push({name: taxon_qvals[source_node], qval: source_node});
+                //node_names.push(source_node);
               }
-              if (keep_target){  //if the target node is connected to a rank we want to display
-                  new_nodes.push({
-                    data: {
-                      id: target_node, 
-                      name: target_node_name, 
-                      color: '#ADD8E6', 
-                      width: 250, 
-                      height: 250,
-                      type: 'taxon'
-                    }});
+              if (keep_target){
+                node_names.push({name: taxon_qvals[target_node], qval: target_node});
+                //node_names.push(target_node);
               }
-
 
               if (!keep_source && !keep_target){
                   //this means both the target and the source node aren't going to be added
                   var count = "pass";
 
-              } else if (!keep_source|| !keep_target)  {
+              } else if (!keep_source || !keep_target)  {
                   //adding missing: "target" regardless, b/c that's what we want to prioritize
                   //and only adding missing: "source" if the em object doesn't already have something there
                               if (!keep_source){
@@ -408,33 +480,79 @@
                               }
 
               } else {
-                new_edges.push(curr_edge);
+                graphType_pc_edges[source_node] = target_node;
               }
 
          }
-         
         //at this point don't really need to add anymore nodes
-        
         for (node in edges_missing){
             curr_data = edges_missing[node]  ;
             //of the form {missing: "source/target", old_edge: {id: , source:, target: }}
 
             //don't need to worry about curr_data.missing target 
+            
             if (curr_data.missing == 'target'){
-                old_target = curr_data.old_edge.data.target;
-                curr_source = curr_data.old_edge.data.source;
+                old_target = curr_data.old_edge.data.target; //qval
+                curr_source = curr_data.old_edge.data.source; //qval
                 //now we want to find a new target
                 new_target = find_new_target(old_target, 
                 rn_edges, pc_edges, correct_ranks, user_entered_taxon);
-
-                new_edge = {data: {id: `${curr_source} - ${new_target}`, 
-                source: curr_source, target: new_target, label:'subTaxonOf'}};
+                //console.log('new target', new_target, 'for source', curr_source);
+                graphType_pc_edges[curr_source] = new_target;
                 new_pc_edges[curr_source] = new_target;
-                new_edges.push(new_edge);
-
             }
         }
-        console.log('new_pc_edges', new_pc_edges);
+        node_names = node_names.sort(function(a, b) {
+            var keyA = a.name;
+            var keyB = b.name;
+            // Compare the 2 node names
+            var result = keyA.localeCompare(keyB);
+            return result;
+          });
+        
+
+        //should now be sorted in alphabetical order
+        for (let i = 0; i < node_names.length; i++){
+              source_node_qval = node_names[i].qval;
+              source_node_name = node_names[i].name;
+              target_node_qval = graphType_pc_edges[source_node_qval];
+              target_node_name = taxon_qvals[target_node_qval];
+              if (source_node_qval != "Q2382443"){
+                source_node_name = `${source_node_name} boltz:${source_node_qval}`;
+                target_node_name = `${target_node_name} boltz:${target_node_qval}`;
+                
+                //need this because we are only adding the source nodes because the target
+                //nodes will eventually be taken care of except for Biota which doesn't have a target node
+                new_nodes.push({
+                  data: {
+                    id: source_node_qval, 
+                    name: source_node_name, 
+                    color: '#ADD8E6', 
+                    width: 250, 
+                    height: 250,
+                    type: 'taxon'
+                }});
+                if (target_node_qval == "Q2382443"){ //Q2382443 is the Biota Qval
+                  new_nodes.push({
+                      data: {
+                        id: target_node_qval, 
+                        name: target_node_name, 
+                        color: '#ADD8E6', 
+                        width: 250, 
+                        height: 250,
+                        type: 'taxon'
+                      }});
+                }
+                if (source_node_qval != undefined && target_node_qval != undefined){
+                    new_edge = {data: {id: `${source_node_qval} - ${target_node_qval}`, 
+                    source: source_node_qval, target: target_node_qval, label:'subTaxonOf'}};
+                    new_edges.push(new_edge);
+                }
+              }
+              
+
+        }
+      
         return {nodes: new_nodes, 
                 edges: new_edges, 
                 em: edges_missing,
@@ -444,11 +562,10 @@
     }
       //when a specific node is clicked,i.e. node_name
       //all other nodes and edges become transparent
-      function shade_other_nodes(node_name, cy_graph){
+      function shade_other_nodes(node_qval, cy_graph, id_lastclicked_node){
           cy_graph.elements().nodes().style( { 'opacity' : '.2', 'text-opacity':0 });
 
-
-          var id_label = `[id = '${node_name}']`;
+          var id_label = `[id = '${node_qval}']`;
     
           cy_graph.nodes(id_label).style({
                       'background-color': '#FFB6C1',
@@ -463,7 +580,15 @@
                       'font-family': 'Garamond',
                       'line-height': 1.15
           });
-      
+          
+          if (id_lastclicked_node != ""){
+              var id_label = `[id = '${id_lastclicked_node}']`;
+              cy_graph.nodes(id_label).style({
+                "background-color": "#ADD8E6",
+                'border-width': 0
+              });
+            }
+          
           cy_graph.elements().edges().style( { 'line-opacity' : '.2', 'text-opacity':'0' });
       }
 
@@ -482,6 +607,7 @@
         var bnode_obj_values = [];
         var curr_bnode_num = 'b0';
         var subtax_rank = {};
+        subtax_rank['subtax_identifier'] = "";
         
         for (let i = 0; i < property_array.length; i ++){
             var curr_data_val = property_array[i];
@@ -529,13 +655,24 @@
             //assumption is that we can have redundant
             //predLabels (i.e. two defintions could be possible)
             else if (curr_data_val.objLabel != undefined){
+              
+
               var obj_label = curr_data_val.objLabel.value;
               
               if (!(obj_labels.includes(obj_label))){
 
                   if (curr_data_val.predLabel != undefined){
                     if (curr_data_val.predLabel.value == 'subTaxonOf'){
+
                       subtax_rank['subTaxonOf'] = obj_label;
+
+                      var qval_url = curr_data_val.obj.value;
+
+                          if (qval_url.length >= 40
+                              && (qval_url.slice(0, 40)) == 'http://solid.boltz.cs.cmu.edu:3030/data/'){
+                              subtax_name = `${obj_label}    boltz: ${qval_url.slice(40, qval_url.length)}`;
+                              subtax_rank['subtax_identifier'] = subtax_name;
+                          }
                     }
                     else if (curr_data_val.predLabel.value == 'taxonRank'){
                       subtax_rank['taxonRank'] = obj_label;
@@ -551,45 +688,196 @@
             }
 
         }
-        
         return {prop_array: new_property_array, bnodes_obj: bnodes, subtax_rank: subtax_rank};
         
 
       }
       
+      //takes care of the functionality after clicking the b4 node
+      function add_b5_node(b4_node_id, b4_node_pos, rest_of_prefs, cy_graph, diam){
+          var b4_x = b4_node_pos.x;
+          var b4_y = b4_node_pos.y;
+          var first_node_id = 'b4 first prop';
+          var b5_node_id = 'b5';
+          var b5_x = b4_x - 175
+          var b5_y = b4_y - 150
+          //var first_comp = rest_of_prefs.shift();
+          var first_comp = rest_of_prefs[0];
+          var first_node = 
+                    {
+                        group: 'nodes',
+                        data: {
+                          id: first_node_id,
+                          color: '#FFD580',
+                          name: first_comp,
+                          opacity: 1,
+                          width: diam,
+                          height: diam,
+                          type: `b4 property`
+                        },
+                        position: {x: b4_x - 175, y: b4_y + 150}
+                    };
+          cy_graph.add([first_node]);
+          var new_edge = 
+                    {
+                      group: 'edges',
+                      data: 
+                          {
+                              id: b4_node_id.concat(first_node_id),
+                              source: b4_node_id, 
+                              target: first_node_id,
+                              label: 'first'
+                          }
+                        };
+          cy_graph.add([new_edge]);
+          
+          //var b5_node_name = `b5: [${rest_of_prefs.shift()}]`;
+          var last_val = rest_of_prefs[1]
+          var b5_node_name = `b5: [${last_val}]`;
+
+          var b5_node = 
+                    {
+                        group: 'nodes',
+                        data: {
+                          id: b5_node_id,
+                          color: '#FFD580',
+                          name: b5_node_name,
+                          opacity: 1,
+                          width: diam,
+                          height: diam,
+                          type: `b4 property`
+                        },
+                        position: {x: b5_x, y: b5_y}
+                    };
+          cy_graph.add([b5_node]);
+          var new_edge = 
+                    {
+                      group: 'edges',
+                      data: 
+                          {
+                              id: b4_node_id.concat(b5_node_id),
+                              source: b4_node_id, 
+                              target: b5_node_id,
+                              label: 'rest'
+                          }
+                        };
+          cy_graph.add([new_edge]);
+          var id_selector = `node[width = ${diam}]`;
+              cy_graph.nodes(id_selector).style({
+                      'background-color': '#CBC3E3',
+                      'text-wrap': 'wrap',
+                      'text-max-width': diam - 10,
+                      'border-width': 3,
+                      'border-color': '#301934',
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+              });
+              cy_graph.elements().edges().style({'font-size': '30'});
+
+          var id_label = `[id = '${b5_node_id}']`;
+          var parity_of_tap = 'even'
+          cy_graph.nodes(id_label).on('click', function(evt){
+              if (parity_of_tap == 'even'){
+                cy_graph.add([
+                  {group: 'nodes', data: {id: 'b5 first prop', color:'#FFD580',
+                  name: last_val, width: diam, height: diam, type: 'b5 property'},
+                  position: {x: b5_x -175, y: b5_y + 175}}]);
+                cy_graph.add([
+                  {group: 'nodes', data: {id: 'empty list', color:'#FFD580',
+                  name: '[]', width: diam, height: diam, type: 'b5 property'},
+                  position: {x: b5_x -175, y: b5_y - 175}}]);
+                cy_graph.add([
+                  {group: 'edges',data: {
+                              id: b5_node_id.concat('b5 first prop'),
+                              source: b5_node_id, 
+                              target: 'b5 first prop',
+                              label: 'first'
+                          }}
+                        ]);
+                cy_graph.add([
+                  {group: 'edges',data: {
+                      id: b5_node_id.concat('empty list'),
+                      source: b5_node_id, 
+                      target: 'empty list',
+                      label: 'rest'
+                  }}
+                ]);
+              var id_selector = `node[width = ${diam}]`;
+              cy_graph.nodes(id_selector).style({
+                      'background-color': '#CBC3E3',
+                      'text-wrap': 'wrap',
+                      'text-max-width': diam - 10,
+                      'border-width': 3,
+                      'border-color': '#301934',
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+              });
+              cy_graph.elements().edges().style({'font-size': '30'});
+                parity_of_tap = 'odd';
+                cy_graph.nodes(id_label).style({'label': 'b5'});
+              }else{
+                cy_graph.remove('node[type = "b5 property"]');
+                
+                cy_graph.nodes(id_label).style({'label': `b5: [${last_val}]`});
+                parity_of_tap = 'even';
+              }
+          })
+
+      }
 
 
       //box_nodes is just the data of the node
       //bnode_properties is thee object with a list of property nodes
       //bnode_name is going to be the name of the bnode
-      function add_values_to_bnode(bnode_name, box_nodes, bnode_properties, cy_graph, padding_amt){
+      function add_values_to_bnode(bnode_name, box_nodes, bnode_properties, cy_graph, 
+             padding_amt, taxon_x_pos, taxon_y_pos, b4node_names){
               
               var diam = 120;
               var bnode_data = box_nodes[bnode_name];
-             
-
               var bnode_pos = bnode_data.position;
               var x_pos = bnode_pos.x;
               var y_pos = bnode_pos.y;
+              
+
+              var old_radius = Math.sqrt(Math.pow(taxon_x_pos - x_pos, 2) 
+                                          + Math.pow(taxon_y_pos - y_pos, 2));
+             
+              var x_dist = taxon_x_pos - x_pos;  //need to do this to pretend that taxon is at an origin
+
+              var bnode_degree = Math.acos(x_dist/old_radius);
+              if (taxon_y_pos > y_pos && bnode_degree <= (.5 * Math.PI)) {
+                bnode_degree = (-1 * bnode_degree) + 2* Math.PI;
+              }
+              //bnode_degree is the degree that the bnode forms with the taxon_value
+              
               var added_els = [];
 
               var num_bnode_props = bnode_properties[bnode_name].length;
-              var mult_constant = 5;
+              var mult_constant =5;
 
-              var circumference = num_bnode_props * diam;
+              var circumference = (num_bnode_props) * diam;
               var radius = circumference / (2* Math.PI);
-              var curr_degree = .52;
-              var degree_movement = (2 * Math.PI) / num_bnode_props;
+              var curr_degree = bnode_degree;
+              var degree_movement = (2 * Math.PI) / (num_bnode_props);
+              //+1 because we want to count the edge as another 'piece'
 
-              var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(curr_degree));
-              var next_y_pos = y_pos + (radius*mult_constant)*(Math.sin(curr_degree));
-
-              var new_degree = 0;
               var bnode_vals = [];
 
               var curr_bnode_props = bnode_properties[bnode_name];
+              var add_b5 = false;
 
               for (let i = 0; i < num_bnode_props; i++){
+
+                    if (i == 0){
+                      new_degree = (curr_degree + (degree_movement/2))% (Math.PI *2);
+                    }else{
+                      new_degree = (curr_degree + (degree_movement))% (Math.PI *2);
+                    }
+                    var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(new_degree));
+                    var next_y_pos = y_pos - (radius*mult_constant)*(Math.sin(new_degree));
+                    var curr_degree = new_degree;
 
                     var curr_bnode_prop = curr_bnode_props[i].obj2;
                     var curr_edge_label = curr_bnode_props[i].pred2;
@@ -601,6 +889,13 @@
                       curr_bnode_prop = curr_bnode_props[i].obj2Label.value;
                     }
 
+                    if (curr_bnode_prop == 'b4'){
+                      rest_list = b4node_names.full_list.slice(1, b4node_names.full_list.length);
+                      curr_bnode_prop = `b4: [${rest_list.join(', ')}]`;
+                      add_b5 = true;
+                      var b4_node_id = `${curr_bnode_prop} - ${bnode_name}`
+                      //so only want to add an onclick function 
+                    }
                     var node_id = `${curr_bnode_prop} - ${bnode_name}`;
                     if (curr_bnode_prop != undefined){  
           
@@ -636,13 +931,6 @@
 
                                       added_els.push(new_edge);
 
-                                    
-                                      var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
-
-                                      var next_x_pos = x_pos + (radius*mult_constant)*(Math.cos(new_degree));
-                                      var next_y_pos = y_pos + (radius*mult_constant)*(Math.sin(new_degree));
-                                        
-                                      curr_degree = new_degree;
                         }
 
               }
@@ -659,23 +947,55 @@
                       'font-family': 'Garamond',
                       'line-height': 1.15
               });
+              cy_graph.elements().edges().style({'font-size': '30'});
 
-              var id_label = `[id = ${bnode_name}]`;
-              
+              if (add_b5){
+                var id_label = `[id = "${b4_node_id}"]`;
+                var parity_of_tap = 'even';
+                var len = b4node_names.full_list.length;
+                var rest_names = b4node_names.full_list.slice(1,len).join(', ');
+                cy_graph.nodes(id_label).on('click', function(evt){
+                      var data = evt.target._private.data;
+                      var pos = evt.target._private.position;
+                      if (parity_of_tap == 'even'){
+                        add_b5_node(data.id, pos, b4node_names.full_list, cy_graph, diam);
+                        parity_of_tap = 'odd';
+                        cy_graph.nodes(id_label).style({
+                           'label': `b4`
+                         })
+                      }else{
+                         cy_graph.remove(`node[type = "b4 property"]`);
+                         cy_graph.remove(`node[type = "b5 property"]`);
 
+                         cy_graph.nodes(id_label).style({
+                           'label': `b4: [${rest_names}]`
+                         });
+                         parity_of_tap = 'even';
+                      }
+                });
+              }
+    
       }
 
-      function add_subtax_rank_nodes(subtax_node_name, rank_node_name, 
-            cy_graph, node_name, radius, mult_constant, prop_node_diam, pos, graphType_pc_edges){
+      
+      function add_subtax_rank_nodes(subtax_rank, cy_graph, node_qval, radius, 
+            mult_constant, prop_node_diam, pos, graphType_pc_edges,                 
+            given_taxon, moderate_ranks, pc_edges, taxon_qvals){
+              
+            var subtax_node_id= subtax_rank['subTaxonOf'];
+            var rank_node_name = subtax_rank['taxonRank'];
+            var subtax_node_name = subtax_rank['subtax_identifier'];
+
             var subTaxonOf_degree = 0;
             var taxon_x_pos = pos.x;
             var taxon_y_pos = pos.y;
         
 
-            if (subtax_node_name != undefined){
+            if (subtax_node_id != undefined){
                     
                     
-                    var parent_node = graphType_pc_edges[node_name];
+                    var parent_node = graphType_pc_edges[node_qval];
+                    console.log('parent node', parent_node);
                     //first adding the subTaxonOf property node
                     var parent_pos= cy_graph.nodes(`node[id = "${parent_node}"]`).position();
                     //getting the original radius of the subTaxonOf node
@@ -690,7 +1010,7 @@
                                           y: taxon_y_pos - radius * (mult_constant * Math.sin(subTaxonOf_degree))
                                         };
                     
-                    var node_id = `prop ${subtax_node_name}`;
+                    var node_id = `prop ${subtax_node_id}`;
                     var new_subtax_node = 
                             {
                                 group: 'nodes',
@@ -710,8 +1030,8 @@
                               group: 'edges',
                               data: 
                                   {
-                                      id: node_id.concat(node_name),
-                                      source: node_name, 
+                                      id: node_id.concat(node_qval),
+                                      source: node_qval, 
                                       target: node_id,
                                       label: 'subTaxonOf'
                                   }
@@ -719,6 +1039,24 @@
 
                     cy_graph.add([new_subtax_node]);
                     cy_graph.add([new_subtax_edge]);
+                    
+                    //now we want to add the clickable feature to these subtax_nodes;
+                    //so the last_id_clicked is the current taxon
+                    //node_id is the subtax node id but we want the query to run on the 'parent_node' id
+                    var id_label = `[id = "${node_id}"]`;
+                    cy_graph.nodes(id_label).on('click', function(evt){
+                        console.log('clicked', parent_node);
+                        var evtTarget = evt.target;
+                        var data = evtTarget._private.data;
+
+                        get_properties(given_taxon, parent_node, cy_graph, moderate_ranks,
+                        pc_edges, prop_node_diam, graphType_pc_edges, node_qval, taxon_qvals)
+
+                        /*get_properties(given_taxon, parent_node, cy_graph, [], 
+                                  pc_edges, prop_node_diam, graphType_pc_edges, 
+                                  '', taxon_qvals);*/
+                         
+                    });
 
             }
 
@@ -751,7 +1089,7 @@
                       data: 
                           {
                               id: node_id.concat(rank_node_name),
-                              source: node_name, 
+                              source: node_qval, 
                               target: node_id,
                               label: 'taxonRank'
                           }
@@ -783,9 +1121,100 @@
       
       }
 
+      function create_collapsable_def_box(full_def, cy_graph, num_lines, node_id, prop_node_diam, prop_node_height, old_def){
+          var id_label = `node[id = "${node_id}"]`;
+          var new_width = 1000
+          
+          var new_num_lines = full_def.length/20;
+          var def_height = new_num_lines*15 + 50;
+          if (full_def.length <= 50){
+            new_width = 500;
+          }
+          
+          var parity_of_tap = 'even';
+          var collapsed_node_id = '';
+
+              cy_graph.elements(id_label).on('tap', function(evt){
+                    
+                    if (parity_of_tap == 'even'){
+                      cy_graph.elements(id_label).style({
+                        'background-color': '#ee7600',
+                        'width': new_width,
+                        'height': def_height,
+                        'label': full_def,
+                        'text-wrap': 'wrap',
+                        'text-max-width': new_width - 20,
+                        'border-width': 5,
+                        'border-color': '	#ff4d01',
+                        'border-style': 'solid',
+                        'font-size': 35,
+                        'font-family': 'Garamond',
+                        'line-height': 1.15
+
+                      });
+                      parity_of_tap = 'odd'
+                    }else{
+                      cy_graph.elements(id_label).style({
+                        'background-color': '#FFD580',
+                        'width': prop_node_diam,
+                        'height': prop_node_height,
+                        'label': old_def,
+                        'text-wrap': 'wrap',
+                        'text-max-width': prop_node_diam - 20,
+                        'border-width': 5,
+                        'border-color': '#F6BE00',
+                        'border-style': 'solid',
+                        'font-size': 35,
+                        'font-family': 'Garamond',
+                        'line-height': 1.15
+
+                        });
+                      parity_of_tap = 'even'
+                    }
+              });
+      }
+
+      function box_4_query(json, node_qval, data, cy_graph, 
+          pos, pc_edges, prop_node_diam, graphType_pc_edges,
+           taxon_qvals, moderate_ranks, given_taxon){
+        var prefComparisonList = [];
+        var bindings = json.results.bindings;
+        //assigning node values to b3 and b4
+        //var prefComp_bnode_name = `[`;
+       // var rest_prefComp_bnode_name = `[`
+        for (let i = 0; i < bindings.length; i++){
+          var comp_value = bindings[i].v2Label;
+          if (comp_value != undefined && comp_value.value != 'List' && comp_value.value != 'nil'){
+            prefComparisonList.push(comp_value.value); 
+          }
+        }
+
+        var b4node_names = {full_list: prefComparisonList};
+        create_property_nodes(node_qval, data, cy_graph, 
+          pos, pc_edges, prop_node_diam, graphType_pc_edges, 
+          b4node_names, taxon_qvals, moderate_ranks, given_taxon)
+      }
+
+      //need this intermediate version because now we have to wait for the result of the b4 query
+      function create_property_nodes_intermediate(node_qval, data, cy_graph, 
+          pos, pc_edges, prop_node_diam, graphType_pc_edges, taxon_qvals, moderate_ranks, given_taxon){
+
+            var node_name = taxon_qvals[node_qval];
+            var url = box_node_query(node_name, true);
+              d3.json(url).then(function(json_result){
+                box_4_query(json_result, node_qval, data, cy_graph, 
+                   pos, pc_edges, prop_node_diam, graphType_pc_edges, 
+                   taxon_qvals, moderate_ranks, given_taxon);
+              });
+
+      }
+
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
-      function create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam, graphType_pc_edges){
+      function create_property_nodes(node_qval, data, cy_graph, pos, pc_edges, 
+            prop_node_diam, graphType_pc_edges, b4node_names, taxon_qvals, moderate_ranks, given_taxon){
+            
+            var node_name = taxon_qvals[node_qval]
             var prop_node_height = prop_node_diam;
             var taxon_x_pos = pos.x;
             var taxon_y_pos = pos.y;
@@ -815,13 +1244,17 @@
             var new_degree = 0;
             var box_nodes = {};
 
-            var subtax_node_name = new_prop_data.subtax_rank['subTaxonOf'];
-            var rank_node_name = new_prop_data.subtax_rank['taxonRank'];
-            var assigned_node_type = 'concept'
+            var assigned_node_type = 'concept';
+            var collapse_full_def = 'null';      
+            var collapse_node_id = 'null';
+            var collapse_num_lines = 0;
+    
 
             //going to apply the over_lay property to the subtax and rank nodes
-            var start_degree = add_subtax_rank_nodes(subtax_node_name, rank_node_name, 
-                      cy_graph, node_name, radius, mult_constant, prop_node_diam, pos, graphType_pc_edges);
+            var start_degree = add_subtax_rank_nodes(new_prop_data.subtax_rank, 
+                cy_graph, node_qval, radius, mult_constant, prop_node_diam, pos, graphType_pc_edges,
+                given_taxon, moderate_ranks, pc_edges, taxon_qvals);
+
             curr_degree = start_degree;
 
             for (let x = 0; x < num_property_nodes; x ++){
@@ -832,6 +1265,8 @@
                   var pred_val = new_property_array[x].predLabel ? new_property_array[x].predLabel.value : new_property_array[x].pred.value;
 
                   var prop_node_type = new_property_array[x].obj.type;
+
+                  //I define a line to have <= 15 characters 
                   var num_lines = Math.ceil((prop_node_val.length)/15);
                   prop_node_height = num_lines * 50 + 50;
 
@@ -844,16 +1279,33 @@
                   if (prop_node_type == 'literal'){
                       prop_node_val = `"${prop_node_val}"`;
                       assigned_node_type = 'literal';
+                      new_diam = 250;
                       
 
                   }else{
+                    //prop_node_type is a concept so we want to ideally get q identifier
                     assigned_node_type = 'concept';
                     prop_node_height = 250;
                     new_diam = 250;
                   }
 
                   if (pred_val == 'definition'){
-                    node_id = `${prop_node_val} - def`;
+                    new_diam = 250;
+                    node_id = `${node_id}:def`;
+                   // assigned_node_type = 'literall';
+                    //If a definition has >=3 lines then we want to implement the collapsable
+                    //box feature and change the propnodeval to be something shorter.
+                        if (num_lines > 3){
+                          collapse_full_def = prop_node_val;
+                          collapse_node_id = node_id;
+                          collapse_num_lines = num_lines;
+                          
+                          //want to slice it at 45 because that's 3 lines
+                          prop_node_val = `${prop_node_val.slice(0, 45)} ... \n \ more ▼`;
+                          collapse_prop_node_val = prop_node_val;
+                        }
+                    prop_node_height = 3*50 + 50;
+                    assigned_node_type = 'property definition';
                   }
 
                   if (prop_node_val != undefined){  
@@ -861,14 +1313,17 @@
                               var new_degree = (curr_degree + degree_movement) % (2 * Math.PI);
 
                               if (prop_node_type == "bnode"){
+                                    new_diam = prop_node_height + 50;
+                                    console.log('diam', new_diam, 'height', prop_node_height)
+                                    assigned_node_type = 'bnode'
                                     if (new_degree >= ((7/8)*Math.PI) && new_degree <= Math.PI
                                     || new_degree >= Math.PI && new_degree <= (9/8)*Math.PI){
 
                                         new_degree = (new_degree + degree_movement) % (2 * Math.PI);
 
                                     }
-                                    var next_x_pos = taxon_x_pos + (radius*1.5*mult_constant)*(Math.cos(new_degree));
-                                    var next_y_pos = taxon_y_pos - (radius*1.5*mult_constant)*(Math.sin(new_degree));
+                                    var next_x_pos = taxon_x_pos + (radius*1.6*mult_constant)*(Math.cos(new_degree));
+                                    var next_y_pos = taxon_y_pos - (radius*1.6*mult_constant)*(Math.sin(new_degree));
                                     
                                     var bnode_props = bnode_properties[prop_node_val];
 
@@ -883,7 +1338,7 @@
                                               prop_node_val = `${prop_node_val}: ${number} ${units}`;
                                           } else {
                                             var prefcomparison = bnode_props[0].obj2Label.value;
-                                            prop_node_val = `${prop_node_val}: prefComparison is ${prefcomparison}`;
+                                            prop_node_val = `${prop_node_val}: [${(b4node_names.full_list).join(', ')}]`;
                                           }
                                         }
                                     }
@@ -914,6 +1369,10 @@
                                             },
                                             position: {x: next_x_pos, y: next_y_pos}
                                         };
+                                if(assigned_node_type == 'property definition'){
+                                  var collapse_diam = prop_node_diam;
+                                  var collapse_height = prop_node_height
+                                }
                                 
                                 if (prop_node_type == 'bnode'){
                                   box_nodes[node_id] = (new_property_node);
@@ -921,14 +1380,14 @@
                                 }
                                 added_els.push(new_property_node);
                                 
-
+                                
                                 var new_edge = 
                                         {
                                           group: 'edges',
                                           data: 
                                               {
-                                                  id: node_id.concat(node_name),
-                                                  source: node_name, 
+                                                  id: node_id.concat(node_qval),
+                                                  source: node_qval, 
                                                   target: node_id,
                                                   label: pred_val
                                               }
@@ -942,7 +1401,7 @@
 
                     cy_graph.add(added_els);
 
-                    var id_label = `[id = '${node_name}']`
+                    var id_label = `[id = '${node_qval}']`
 
 
                     var clientWidth = document.getElementById('cy').clientWidth;
@@ -979,9 +1438,39 @@
                       'line-height': 1.15
                     });
 
+                    var def_id_selector = `node[type = "property definition"]`;
+
+                    cy_graph.nodes(def_id_selector).style({
+                      'shape': 'square',
+                      'background-color': '#FFD580',
+                      'text-wrap': 'wrap',
+                      'text-max-width': prop_node_diam - 20,
+                      'border-width': 5,
+                      'border-color': '#FFA500',
+                      'border-style': 'solid',
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+                    });
+
                     var concept_id_selector = `node[type = "concept"]`;
 
                     cy_graph.nodes(concept_id_selector).style({
+                      'background-color': '	#FFB52E',
+                      'text-wrap': 'wrap',
+                      'text-max-width': prop_node_diam - 20,
+                      'border-width': 5,
+                      'border-color': '#F6BE00',
+                      'border-style': 'solid',
+                      'font-size': 35,
+                      'font-family': 'Garamond',
+                      'line-height': 1.15
+                    });
+
+                    var concept_id_selector = `node[type = "bnode"]`;
+
+                    cy_graph.nodes(concept_id_selector).style({
+                      'shape': 'hexagon',
                       'background-color': '	#fdfa72',
                       'text-wrap': 'wrap',
                       'text-max-width': prop_node_diam - 20,
@@ -992,153 +1481,182 @@
                       'font-family': 'Garamond',
                       'line-height': 1.15
                     });
+
       
                     cy_graph.elements().edges().style({'font-size': '30'});
-                    
                     var parity_dictionary = {}
                     for (const[key, value] of Object.entries(box_nodes)){
 
-                      var id_label = `node[id = "${key}"]`;
-                      parity_dictionary[`parity_of_tap_${key}`] = 'even';  //a way of creating a "new" var for each bnode
+                            var id_label = `node[id = "${key}"]`;
+                            parity_dictionary[`parity_of_tap_${key}`] = 'even';  //a way of creating a "new" var for each bnode
+                            var all_names = (b4node_names.full_list).join(', ');
+                            cy_graph.nodes(id_label).on('tap', function(evt){
+                                  var data = evt.target._private.data;
+                                  if (parity_dictionary[`parity_of_tap_${data.id}`] == 'even'){
+                                      //bnode_name, box_nodes, bnode_properties, cy_graph
+                                      if (key == 'b3'){
+                                            cy_graph.nodes(id_label).style({
+                                            'label': `b3`
+                                            });
+                                      }
+                                      add_values_to_bnode(data.id, box_nodes, bnode_properties, 
+                                      cy_graph, padding_amount, taxon_x_pos, taxon_y_pos, b4node_names);
+                                      parity_dictionary[`parity_of_tap_${data.id}`] = 'odd';
 
-                      cy_graph.nodes(id_label).on('tap', function(evt){
-                            var data = evt.target._private.data;
-                            if (parity_dictionary[`parity_of_tap_${data.id}`] == 'even'){
-                                //bnode_name, box_nodes, bnode_properties, cy_graph
-                                add_values_to_bnode(data.id, box_nodes, bnode_properties, cy_graph, padding_amount);
-                                parity_dictionary[`parity_of_tap_${data.id}`] = 'odd';
-
-                            }else {
-                              parity_dictionary[`parity_of_tap_${data.id}`] = 'even';
-                                cy_graph.remove(`node[type = "${data.id} property"]`);
-                            }
-                            
-                    });
-
-                       
+                                  }else {
+                                      parity_dictionary[`parity_of_tap_${data.id}`] = 'even';
+                                      cy_graph.remove(`node[type = "${data.id} property"]`);
+                                      
+                                      if (key == 'b3'){
+                                          cy_graph.remove( `node[type = "b4 property"]`);
+                                          cy_graph.remove(`node[type = "b5 property"]`);
+                                            cy_graph.nodes(id_label).style({
+                                            'label': `b3: [${all_names}]`
+                                            });
+                                      }
+                                      
+                                  }
+                                  
+                            }); 
 
                     }
+                    //should only do this if full_def is redefined.
+                    if (collapse_full_def != 'null'){
+                   
+                        create_collapsable_def_box(collapse_full_def, cy_graph, 
+                        collapse_num_lines, collapse_node_id, collapse_diam, collapse_height, collapse_prop_node_val);
+                    }
+
           }
 
               
-      function show_property_nodes(node_name, data, cy_graph, pc_edges, prop_node_diam, graphType_pc_edges){
+      function show_property_nodes(node_qval, data, cy_graph, pc_edges, 
+      prop_node_diam, graphType_pc_edges, id_lastclicked_node, taxon_qvals, moderate_ranks, given_taxon){
             
-            console.log("property data", data);
             
-            var id_label = `[id= '${node_name}']`;
+            var id_label = `[id= '${node_qval}']`;
             var pos = cy_graph.nodes(id_label).position();
 
-            shade_other_nodes(node_name, cy_graph);
-            create_property_nodes(node_name, data, cy_graph, pos, pc_edges, prop_node_diam, graphType_pc_edges);
+            shade_other_nodes(node_qval, cy_graph, id_lastclicked_node);
+            create_property_nodes_intermediate(node_qval, data, cy_graph, pos, pc_edges, 
+            prop_node_diam, graphType_pc_edges, taxon_qvals, moderate_ranks, given_taxon);
 
       }
 
 
       //returns the hierarchy back to it's original state
       //after the user unselects a node
-      function return_to_normal(node_name, cy_graph, given_taxon, ranks, prop_node_diam){
+      function return_to_normal(node_name, cy_graph, given_taxon, click_of_subtax){
 
-
-            //changing the nodes back to their original styles
-            cy_graph.elements().nodes().style( 
-              { 'opacity' : '1',
-                'text-opacity': '1'
-              });
-
-            var nodes = cy_graph.elements().nodes();
-            for (let i = 0; i < nodes.length; i++){
-                var curr_node_name = nodes[i]._private.data.name;
-                var curr_node_id = nodes[i]._private.id;
-
-                var id_label = `[id = '${curr_node_id}']`;
-
-                if (ranks.includes(curr_node_name) || curr_node_name == "Clade"){
-                    cy_graph.nodes(id_label).style({
-                      "background-color": "#90EE90",
-                      'text-wrap': 'wrap',
-                      'text-max-width': 150,
-                      'font-size': 35,
-                      'font-family': 'Garamond',
-                      'line-height': 1.15
+            if (!click_of_subtax){
+                //changing the nodes back to their original styles
+                  cy_graph.elements().nodes().style( 
+                    { 'opacity' : '1',
+                      'text-opacity': '1'
                     });
-                }else{
-                    cy_graph.nodes(id_label).style("background-color", "#ADD8E6");
-                }
-            }
 
+                  //var nodes = cy_graph.elements().nodes();
+                  cy_graph.nodes(`node[type = "rank"]`).style({
+                            "background-color": "#90EE90",
+                            'text-wrap': 'wrap',
+                            'text-max-width': 150,
+                            'font-size': 35,
+                            'font-family': 'Garamond',
+                            'line-height': 1.15
+                          });
+                  cy_graph.nodes(`node[type = "taxon"]`).style({
+                            "background-color": "#ADD8E6",
+                          });
+                          cy_graph.elements().edges().style( 
+                            { 'line-opacity' : '1',
+                              'text-opacity': '1'
+                            });
+            }
+            
+
+            //changing the edges back to their original styles
+            
+
+
+            
             var id_label = `[id = '${node_name}']`;
             cy_graph.nodes(id_label).style("background-color", "#ADD8E6");
+
+            if (click_of_subtax){
+              cy_graph.nodes(id_label).style("opacity", ".2");
+
+            }
             
             var id_label = `[id = '${given_taxon}']`;
             cy_graph.nodes(id_label).style("background-color", "red");
-
-            //changing the edges back to their original styles
-            cy_graph.elements().edges().style( 
-              { 'line-opacity' : '1',
-                'text-opacity': '1'
-              });
             cy_graph.elements().nodes().style({'border-width': '0'});
-            
-            var node_id_removed = `node[width = ${prop_node_diam.toString()}]`;
-            
+                        
             cy_graph.remove(`node[type = "subTaxProp"]`);
             cy_graph.remove(`node[type = "rankProp"]`);
             cy_graph.remove(`node[type = "property"]`);
             cy_graph.remove(`node[type = "concept"]`);
             cy_graph.remove(`node[type = "literal"]`);
+            cy_graph.remove(`node[type = "bnode"]`);
+            cy_graph.remove(`node[type = "property definition"]`);
             cy_graph.remove("node[width = 120]"); //removing box nodes
-            cy_graph.animate({
-              fit: {
-                padding: 20
-              }
-            });
+            if (!click_of_subtax){
+                  cy_graph.animate({
+                  fit: {
+                    padding: 20
+                  }
+                });
+            }
+            
       }
 
       //only want this function to preform the query if we select a non-rank node
-      function get_properties(given_taxon, node_name, cy_graph, moderate_ranks,
-       pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node){
-
-            if (id_lastclicked_node != ""){
-              var id_label = `[id = '${id_lastclicked_node}']`;
-              cy_graph.nodes(id_label).style({
-                "background-color": "#ADD8E6",
-                'border-width': 0
-              });
-            }
+      function get_properties(given_taxon, node_qval, cy_graph, moderate_ranks,
+       pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node, taxon_qvals){
 
             var id_label =`[id = '${given_taxon}']`;
               cy_graph.nodes(id_label).style({
                 "background-color": "red",
                 'border-width': 0
               });
+            
+            var node_name = taxon_qvals[node_qval];
 
             cy_graph.remove(`node[type = "subTaxProp"]`);
             cy_graph.remove(`node[type = "rankProp"]`);
             cy_graph.remove(`node[type = "property"]`);
             cy_graph.remove(`node[type = "concept"]`);
             cy_graph.remove(`node[type = "literal"]`);
+            cy_graph.remove(`node[type = "property definition"]`);
+            cy_graph.remove(`node[type = "bnode"]`);
             cy_graph.remove("node[width = 120]"); //removing box nodes
 
-        if (moderate_ranks.includes(node_name) || node_name == "Clade"){
+        if (moderate_ranks.includes(node_name)){
           return false;
         }
         var url = property_query(node_name, true);
           d3.json(url).then(function(json){
-            show_property_nodes(node_name, json, cy_graph, pc_edges, prop_node_diam, graphType_pc_edges)
+            show_property_nodes(node_qval, json, cy_graph, pc_edges,
+             prop_node_diam, graphType_pc_edges, id_lastclicked_node, 
+             taxon_qvals, moderate_ranks, given_taxon);
           })
       }
 
       function get_definition(node_name, cy_graph, moderate_ranks, definitions, definition_node_size){
 
-          if (moderate_ranks.includes(node_name) || node_name == "Clade"){
+          if (moderate_ranks.includes(node_name)){
             return false;
           }
           var def_node_height;
+          var text_just = 'center';
         
           var taxon_def = definitions[node_name];
           if (taxon_def == undefined || taxon_def == ""){
             taxon_def = "No definition available";
           }
+
+         
+          taxon_def = taxon_def.replace(/[\r\n]/gm, '');
+
           var id_label = `[id = '${node_name}']`;
           var pos = cy_graph.nodes(id_label).position();
 
@@ -1146,7 +1664,25 @@
           
           var num_lines = Math.ceil(def_length/15);
           var definition_node_height = num_lines*90 + 50;
+
+          var right_shift = 600
+          if (num_lines > 3){
+              definition_node_size = 1900
           
+              var new_num_lines = def_length/20;
+              var definition_node_height = new_num_lines*40 + 50;
+              right_shift = 1300
+              if (def_length <= 50){
+                definition_node_height = new_num_lines*100 + 100;
+                definition_node_size = 500;
+                right_shift = 500;
+              }
+              
+          }
+          
+          if (num_lines > 1){
+            text_just = 'left'
+          }
 
           def_node = {
                               group: 'nodes',
@@ -1159,13 +1695,13 @@
                                 height: definition_node_height,
                                 type: 'definition'
                               },
-                               position: {x: pos.x + 500 , y: pos.y}
+                               position: {x: pos.x + right_shift , y: pos.y}
                           };
           def_edge = {
                             group: 'edges',
                             data: 
                                 {
-                                    id: def.concat(node_name),
+                                    id: taxon_def.concat(node_name),
                                     source: node_name, 
                                     target: taxon_def,
                                     label: 'DEF',
@@ -1178,8 +1714,10 @@
           cy_graph.style().selector(id_selector).style({
             'shape': 'rectangle',
             'text-wrap': 'wrap',
+            'text-justification': text_just,
+            'text-valign': 'center',
             'text-max-width': definition_node_size - 20,
-            'border-width': 20,
+            'border-width': 5,
             'border-color': '#FF007F',
             'border-style': 'solid',
             'font-size': 75,
@@ -1187,7 +1725,7 @@
             'line-height': 1.15
 
           });
-          var edge_id_label = `[id = '${def.concat(node_name)}']`;
+          var edge_id_label = `[id = '${taxon_def.concat(node_name)}']`;
           cy_graph.edges(edge_id_label).style({
             'line-color': '#FF007F',
             'target-arrow-color': '#FF007F',
@@ -1209,54 +1747,60 @@
     //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
     function display_hierarchy(data, graphType, givenData, given_taxon) {
 	      console.log("json data is", data);
-
         var user_entered_taxon = givenData.taxon_value;
+
         if (givenData.given_data != 'null'){ 
           //this implies we are already given what convert_to_cytoscape would produce
             var converted_data = givenData.given_data;
+            console.log('given data', givenData);
         }else{
             var converted_data = convert_to_cytoscape(data);
         }
+
         var root_rank = converted_data.root_rank;
         var root = converted_data.root;
 	      var pc_edges = converted_data.pc_edges;
         var definitions = converted_data.definitions;
         var taxon_qvals = converted_data.taxon_qvals;
+        //of the form where keys are qvals and values are the taxon names
         var graphType_pc_edges = pc_edges;
 
-        //this will mainly be used to pass into other fns to know what nodes
-        //already exist in our graph
-        
+
+        var all_ranks = [
+        'Subkingdom', 'Phylum', 'Subphylum', 'Infrakingdom', 
+        'Superphylum', 'Class', 'Subclass', 'Infraclass', 'Superorder', 
+        'Order', 'Suborder', 'Family', 'Genus', 'Species', 'Superfamily', 
+        'Subfamily', 'Infraorder', 'Tribe', 'Subgenus', 'Subtribe', 
+        'Infraphylum', 'Superclass', 'Kingdom'];
+
         var moderate_ranks = [ "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", 
             "Species", "noRank", "Subkingdom", "Superfamily", "Infraclass", "Suborder", 
             "Parvorder", "Subfamily", "Superorder", "Infraphylum", "Subtribe", "Tribe", 
             "Megaclass", "Subclass", "Superclass","Infraorder", "Subphylum", "Variety", 
             "Superphylum", "Division", "Domain", "Subdivision", root_rank];
         
-        var concise_ranks = [
-              root_rank, "Kingdom", "Phylum", "Class", 
-              "Order", "Family", "Genus", "Species", "noRank"];
+        var concise_ranks = [root_rank,
+         'Phylum', 'Class', 'Order', 'Family', 
+         'Genus', 'Species', 'Tribe', 'Kingdom'];
 
         if (graphType == ('Concise')){
-
-            new_data = create_new(converted_data, concise_ranks, user_entered_taxon);
+            new_data = create_graphType(converted_data, concise_ranks, user_entered_taxon);
             nodes_lst = new_data.nodes;
             edge_lst = new_data.edges;
             graphType_pc_edges = new_data.newPC_edges;
 
-        } else if (graphType == 'Moderate') {
-
-            new_data = create_new(converted_data, moderate_ranks, user_entered_taxon);
-
+        }else if (graphType == ('Moderate')){
+            new_data = create_graphType(converted_data, moderate_ranks, user_entered_taxon);
             nodes_lst = new_data.nodes;
             edge_lst = new_data.edges;
             graphType_pc_edges = new_data.newPC_edges;
+
         }
         else {
           nodes_lst = converted_data.nodes;
           edge_lst = converted_data.edges;
         }
-        
+        console.log(converted_data)
         const cyDiv = document.querySelector('#cy');
         cyDiv.style.display = 'block';
         var cy = cytoscape({
@@ -1328,11 +1872,12 @@
             var x_pos = node_pos.x ;
             var y_pos = node_pos.y;
             var rank_node = rank_edges[node_id];
-            var rank_node_id = rank.node;
+            var rank_node_id = rank_node;
+
             if (rank_node_id == undefined){
               rank_node_id = `noRank ${x.toString()}`;
             }else{
-              rank_node_id = rank.node.concat(x.toString());
+              rank_node_id = `${rank_node}: ${x.toString()}`
             }
             
             //rank_node_id is undefined in some places
@@ -1404,12 +1949,9 @@
                 var data = evtTarget._private.data;
 
                 if (Object.keys(data).length == 0){
-                  console.log('clicked background');
                   if (zoomedInOnNode){
 
-                    console.log('data', data);
-
-                    return_to_normal(id_lastclicked_node, cy, given_taxon, moderate_ranks, prop_node_diam);
+                    return_to_normal(id_lastclicked_node, cy, given_taxon, false);
                     id_lastclicked_node = "";
                     zoomedInOnNode = false;
                   }
@@ -1417,12 +1959,21 @@
 
                     if (data.type == 'taxon' && data.id != id_lastclicked_node){
                       var name = data.name;
-                      if (!(moderate_ranks.includes(name) || name == "Clade")) {
-                          console.log('last clicked node', id_lastclicked_node)
+                      if (!(moderate_ranks.includes(name))) {
+                          cy.nodes(`node[id = "${data.id}"]`).style({
+                                      'width': 250,
+                                      'height': 250
+                          });
                           get_properties(given_taxon, data.id, cy, moderate_ranks, 
-                                  pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node);
+                                  pc_edges, prop_node_diam, graphType_pc_edges, 
+                                  id_lastclicked_node, taxon_qvals);
                           zoomedInOnNode = true;
                           id_lastclicked_node = data.id;
+                      }else {
+                          cy.nodes(`node[id = "${data.id}"]`).style({
+                                      'width': 100,
+                                      'height': 100
+                          });
                       }
                     }
 
@@ -1434,20 +1985,62 @@
           
           cy.nodes().on("mouseover",function(evt){
                 var name = this._private.data.name;
-                var style = evt.target._private.style
+                var style = evt.target._private.style;
+                var enlarged_node_size = 275;
+                var border_color = '#00008B';
+                if ((moderate_ranks.includes(name))){
+                  enlarged_node_size = 125;
+                  border_color = '#013220';
+                }
+
                 if (style != undefined){
                     if (style.opacity == undefined || style.opacity.value == 1){
                       if (!(moderate_ranks.includes(name) || name == "Clade")){
                           get_definition(this.id(), cy, moderate_ranks, definitions, definition_node_size);
-                        }
+                      }
                     }
-                }                  
+                }   
+                cy.nodes(`node[id = "${this.id()}"]`).style({
+                        'width': enlarged_node_size,
+                        'height': enlarged_node_size,
+                        'border-width': 1,
+                        'border-color': border_color
+                });               
             })
           
           .on("mouseout", function(evt){
             var id_selector = `node[type = "definition"]`;
             cy.remove(id_selector);
+
+            var reg_node_size = 250;
+            var name = this._private.data.name;
+            if ((moderate_ranks.includes(name))){
+                reg_node_size = 100
+            }
+            cy.nodes(`node[id = "${this.id()}"]`).style({
+                        'width': reg_node_size,
+                        'height': reg_node_size,
+                        'border-width': 0,
+            });
+
+          });
+
+          cy.edges().on('mouseover', function(evt){
+            var evtTarget = evt.target;
+            var data = evtTarget._private.data;
+            cy.edges(`edge[id = "${data.id}"]`).style({
+              'arrow-scale': 5
+            })
+            
           })
+          .on('mouseout', function(evt){
+            var evtTarget = evt.target;
+            var data = evtTarget._private.data;
+            cy.edges(`edge[id = "${data.id}"]`).style({
+              'arrow-scale': 1
+            })
+          })
+           
 
     }
 
@@ -1460,6 +2053,7 @@
             document.getElementById("Moderate").onclick = 
                   function () {display_hierarchy(full_json, 'Moderate', {given_data: new_data, taxon_value: rootVal}, rootVal)};
 
+            
             document.getElementById("Concise").onclick = 
                   function () {display_hierarchy(full_json, 'Concise', {given_data: new_data, taxon_value: rootVal}, rootVal)};
 
@@ -1467,59 +2061,71 @@
 
     /*transform_data is a function that takes in the query from the new root node
     and then updates it so that it returns all the nodes above the queried node*/
-    function transform_data(short_json, full_json, rootVal){
+    function transform_data(short_json, full_json, taxonVal){
           
           var short_data = convert_to_cytoscape(short_json);
           var full_data = convert_to_cytoscape(full_json);
 
           var old_pc_edges = short_data.pc_edges;
+
+
           var pref_labels = full_data.pref_labels;
           var pc_edges = full_data.pc_edges; //grabs the source-target edges so that we can form new edges and add new nodes
-          var root = full_data.root;
+          var root = full_data.root;  //in the form of a qval
           var old_nodes = short_data.nodes;
+          var names_to_qvals = full_data.names_to_qvals;
+          var qvals_to_names = full_data.taxon_qvals;
+          
 
-          var pref_label_of_root_val = pref_labels[rootVal];
-          if (pref_label_of_root_val == undefined){
-            pref_label_of_root_val = "null"
+          var pref_label_of_taxonVal = pref_labels[taxonVal];
+
+          var taxon_qval = names_to_qvals[taxonVal];
+
+          if (pref_label_of_taxonVal != undefined){
+            //means we are looking at a pref_label of something
+            taxonVal = pref_label_of_taxonVal;
+            taxon_qval = names_to_qvals[taxonVal];
           }
+      
 
-          if (pc_edges[rootVal]== undefined && (pc_edges[pref_label_of_root_val]) == undefined){
-            console.log('error');
+          if ((taxon_qval == undefined && pref_label_of_taxonVal == undefined)){
             //now we want to tell the user they have input something invalid
             var place = document.getElementById("hierarchy-entry");
             var error_message = document.createElement("p");
-            error_message.innerHTML = `Concept '${rootVal}' is not found. Please try again.`;
+            error_message.innerHTML = `Concept '${taxonVal}' is not found. Please try again.`;
             error_message.id = "error_message";
             place.appendChild(error_message);
             error_message.style.color = 'red';
             return false;
           }
           
-          if (pc_edges[rootVal] == undefined){
-            //means we are looking at a pref_label of something
-            rootVal = pref_label_of_root_val;
-          }
-      
+          
           var old_edges = short_data.edges;
-          var curr_node = rootVal;
+          var curr_node = taxon_qval; //in the form of a qval 
           var next_node;
-
+          console.log('old edges', old_edges);
+          
           while (curr_node != root){
+            
             next_node = pc_edges[curr_node];
+            console.log('curr_node', curr_node, 'next_node', next_node)
+
+            next_node_name = qvals_to_names[next_node];
             //add this node and a new edge
+
             var new_node = {
               data: {
                   id: next_node, 
-                  name: next_node, 
+                  name: next_node_name, 
                   color: '#ADD8E6', 
-                  width: 150, 
-                  height: 150,
+                  width: 250, 
+                  height: 250,
                   type: 'taxon'
                 }};
             old_nodes.push(new_node);
             
             //only add a new edge if it hasn't already been added
-            if (old_pc_edges[curr_node] == undefined){
+            if ((curr_node!= undefined && next_node != undefined)){
               var new_edge = {data: {id: curr_node.concat(next_node), 
                 source: curr_node, target: next_node, label: 'subTaxonOf'}};
                 old_edges.push(new_edge);
@@ -1532,14 +2138,17 @@
             root_rank: full_data.root_rank, root: full_data.root, 
             definitions: full_data.definitions, taxon_qvals: full_data.taxon_qvals,
             pref_lables: full_data.pref_labels};
+          
           //so we've updated our edges and nodes to include the ones above the root we queried, so 
           //now we want to display the graph.
 
-          change_buttons(new_data, full_json, rootVal);
-          display_hierarchy(full_json, 'Concise', {given_data: new_data, taxon_value: rootVal}, rootVal);
+          change_buttons(new_data, full_json, taxon_qval);
+          display_hierarchy(full_json, 'Concise', {given_data: new_data, taxon_value: taxon_qval}, taxon_qval);
           document.getElementById("Concise").style.background='green';
-          document.getElementById("Moderate").style.background='black';
           document.getElementById("Full").style.background='black';
+          document.getElementById("Moderate").style.background='black';
+
+
 
     }
 
@@ -1549,16 +2158,20 @@
 
           document.getElementById("Full").onclick = 
                 function () {exec('Full')};
-
+          
           document.getElementById("Moderate").onclick = 
                 function () {exec('Moderate')};
+
+          
+
           document.getElementById("Concise").onclick = 
                 function () {exec('Concise')};
 
           exec('Concise');
           document.getElementById("Concise").style.background='green';
-          document.getElementById("Moderate").style.background='black';
           document.getElementById("Full").style.background='black';
+          document.getElementById("Moderate").style.background='black';
+
 
           //removing the back to root button because we don't need it
           //if we're already at the root
@@ -1642,32 +2255,46 @@
 
     <div id="query" style="margin: 10px">
       <h1 class = 'title'>Knowledge Graph Query and Display</h1>
-      <form class="form-inline">
+
         <div class="input-append">
-          
+        
           <input id="endpoint" class="span5" value="https://solid.boltz.cs.cmu.edu:3031/Demo/sparql" type="text" style="display:none;">
 
           <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
           <button id="Moderate" class="btn" type="button" onclick = "exec('Moderate')">Moderate</button>
+
           <button id="Concise" class="btn2" type="button" onclick = "exec('Concise')">Concise</button>
+
+        <!--  <div class="up-down-btn">
+            <button id='nav-up'> ▲ </button>
+            <button id='nav-down'> ▼ </button>  -->
+          </div> 
+          
           <div id ="hierarchy-entry">
             <input id="hierarchySpecies" class="input-species" placeholder="Enter Taxon Name">
           </div>
-
+  
         </div>
-      </form>
+        
       <textarea id="sparql" class="spans9" style="display:none;"></textarea>
 
       <input id="endpoint2" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Demo/sparql" type="text" style="display:none;">
       <textarea id="sparql2" class="spans10" style="display:none;"></textarea>
 
+      <input id="endpoint3" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Demo/sparql" type="text" style="display:none;">
+      <textarea id="sparql3" class="spans10" style="display:none;"></textarea>
+
+      
     </div>
-    <div id="cy"></div>
+      <div id="cy"></div>
+    </div>
+
     <script>
       window.onload = exec('Concise');
       let fullButton = document.querySelector('#Full');
-      let moderateButton = document.querySelector('#Moderate');
       let conciseButton = document.querySelector('#Concise');
+      let moderateButton = document.querySelector('#Moderate');
+
 
       fullButton.addEventListener('click', () => 
       fullButton.style.backgroundColor = 'green')
@@ -1677,17 +2304,7 @@
 
       fullButton.addEventListener('click', () => 
       moderateButton.style.backgroundColor = '#000000')
-
-
-      moderateButton.addEventListener('click', () => 
-      moderateButton.style.backgroundColor = 'green')
-
-      moderateButton.addEventListener('click', () => 
-      fullButton.style.backgroundColor = '#000000')
-
-      moderateButton.addEventListener('click', () => 
-      conciseButton.style.backgroundColor = '#000000')
-
+      
 
       conciseButton.addEventListener('click', () => 
       conciseButton.style.backgroundColor = 'green')
@@ -1697,6 +2314,17 @@
 
       conciseButton.addEventListener('click', () => 
       moderateButton.style.backgroundColor = '#000000')
+
+
+      moderateButton.addEventListener('click', () => 
+      moderateButton.style.backgroundColor = 'green')
+
+      moderateButton.addEventListener('click', () => 
+      conciseButton.style.backgroundColor = 'black')
+
+      moderateButton.addEventListener('click', () => 
+      fullButton.style.backgroundColor = '#000000')
+      
 
       var taxonSpecies = document.getElementById("hierarchySpecies");
         taxonSpecies.addEventListener("keydown", function (e){

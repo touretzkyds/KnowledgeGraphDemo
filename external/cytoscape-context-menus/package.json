@@ -1,0 +1,68 @@
+{
+  "_args": [
+    [
+      "cytoscape-context-menus@4.1.0",
+      "/Users/deyaliao/Downloads/KnowledgeGraphDemo-devel"
+    ]
+  ],
+  "_from": "cytoscape-context-menus@4.1.0",
+  "_id": "cytoscape-context-menus@4.1.0",
+  "_inBundle": false,
+  "_integrity": "sha512-qbrdRfz8JQuZBZamhzmExPpJvUNR4VA3rcN4qChu4eVplWYU4n8N98A0ksrr2kfmUvCAL529N04KzwZd8xra7w==",
+  "_location": "/cytoscape-context-menus",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "version",
+    "registry": true,
+    "raw": "cytoscape-context-menus@4.1.0",
+    "name": "cytoscape-context-menus",
+    "escapedName": "cytoscape-context-menus",
+    "rawSpec": "4.1.0",
+    "saveSpec": null,
+    "fetchSpec": "4.1.0"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/cytoscape-context-menus/-/cytoscape-context-menus-4.1.0.tgz",
+  "_spec": "4.1.0",
+  "_where": "/Users/deyaliao/Downloads/KnowledgeGraphDemo-devel",
+  "bugs": {
+    "url": "https://github.com/iVis-at-Bilkent/cytoscape.js-context-menus/issues"
+  },
+  "description": "A Cytoscape.js extension to provide context menu around elements and core instance.",
+  "devDependencies": {
+    "@babel/core": "^7.10.3",
+    "@babel/preset-env": "^7.10.3",
+    "babel-loader": "^8.1.0",
+    "camelcase": "^6.2.0",
+    "cross-env": "^7.0.2",
+    "webpack": "^5.36.1",
+    "webpack-cli": "^4.6.0"
+  },
+  "homepage": "https://github.com/iVis-at-Bilkent/cytoscape.js-context-menus",
+  "keywords": [
+    "cytoscape",
+    "cyext"
+  ],
+  "license": "MIT",
+  "main": "cytoscape-context-menus.js",
+  "name": "cytoscape-context-menus",
+  "peerDependencies": {
+    "cytoscape": "^2.7.0 || ^3.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iVis-at-Bilkent/cytoscape.js-context-menus.git"
+  },
+  "scripts": {
+    "build": "cross-env NODE_ENV=production webpack",
+    "build:dev": "cross-env NODE_ENV=development webpack",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "spm": {
+    "main": "cytoscape-context-menus.js"
+  },
+  "style": "cytoscape-context-menus.css",
+  "version": "4.1.0"
+}
