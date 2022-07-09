@@ -11,6 +11,11 @@
     <script src="external/cytoscape-popper/cytoscape-popper.js"></script>
     <script src="external/cytoscape-context-menus/cytoscape-context-menus.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/copy-image-clipboard/dist/index.browser.js"></script>
+    <script src="external/cytoscape-expand-collapse.js"></script>
+    <script src="https://unpkg.com/layout-base/layout-base.js"></script>
+    <script src="https://unpkg.com/cose-base/cose-base.js"></script>
+
+    <script src="external/cytoscape-fcose/cytoscape-fcose.js"></script>
 
 
 
@@ -27,14 +32,6 @@
         border-style: solid;
       }
 
-      #cy2 {
-        display: none;
-        visibility: hidden;
-        top: 30px;
-        height: 40vh;
-        width: 40vh;
-        border-style: solid;
-      }
 
       #navigation-history{
         max-width: 100%;
@@ -341,6 +338,29 @@
       const url = endpoint + "?query=" + encodeURIComponent(sparql);
       return url;
         
+    }
+
+    // Obtain all ranks in the system, to be displayed in a new window
+    function all_ranks_query(){
+      const prevquery = document.getElementById("sparql5");
+      prevquery.innerHTML = 
+        `PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+          PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
+
+          SELECT ?rank ?rankLabel ?definition ?nextHigher ?nextLower WHERE {
+            ?rank kgo:instanceOf boltz:Q427626 ;
+                  rdfs:label ?rankLabel ;
+                  skos:definition ?definition .
+            OPTIONAL{?rank kgo:nextHigherRank ?nextHigher}.
+            OPTIONAL{?rank kgo:nextLowerRank ?nextLower}.
+          } `;
+
+      const endpoint = d3.select("#endpoint5").property("value");
+      const sparql = d3.select("#sparql5").property("value");
+      const url = endpoint + "?query=" + encodeURIComponent(sparql);
+      return url;
     }
 
     /*convert_to_cytoscape will return an object
@@ -1243,7 +1263,6 @@
                     new_parent_pos = {x: taxon_x_pos + radius * mult_constant * (Math.cos(subTaxonOf_degree)), 
                                           y: taxon_y_pos - radius * (mult_constant * Math.sin(subTaxonOf_degree))
                                         };
-                    
                     node_id = `prop ${subtax_node_id}`;
                     new_subtax_node = 
                             {
@@ -1392,7 +1411,10 @@
             //add a click event to the rank node being displayed
             let rank_parity_tap = 'even';
             cy_graph.nodes(`[id = "${rank_node_id}"]`).on('tap', function(evt) {
-
+              // var temp_node = {
+              //   data: evt.target.data()};
+              // console.log(temp_node)
+              // api.isExpandable(temp_node);
               if (rank_parity_tap == 'even') {
                 get_rank_property_query(rank_node_name, rank_node_id, cy_graph);
                 rank_parity_tap = 'odd';
@@ -1999,7 +2021,6 @@
             }
             rank_removal.restore();
             rank_removed = false;
-           close_cy2();
       }
 
       function display_nav_buttons(node_qval, graphType_pc_edges, taxon_qvals, parent_and_all_children) {
@@ -2458,7 +2479,7 @@
 
      }
 
-    //  Rank properties for taxon ranks, most notably nextHigher and nextLower rank at the current moment 
+    //  Rank properties for taxon ranks, most notably nextHigher and nextLower rank at the current moment. Goal: expansion to open up entirety of new panel. 
     function display_rank_properties(json_result, rank_name, rank_id, cy_graph) {
       let next_higher_rank = "null";
       let next_lower_rank = "null";
@@ -2474,6 +2495,9 @@
         next_lower_rank = json_result.results.bindings[0].nextLower.value;
       }
 
+      console.log(next_higher_rank)
+      console.log(next_lower_rank)
+
       //getting position of curr rank node to know relatively where to place the new prop nodes
       let curr_rank_node_pos = cy_graph.nodes(`[id = "${rank_id}"]`).position()
       
@@ -2481,70 +2505,65 @@
       //So now  next_higher_rank and next_lower_rank should be the node names
       //need to make sure the id's are unique since there will be repeats of these
       //the letiable names are null otherwise
-      let lower_node = 
-            {
-                group: 'nodes',
-                data: {
-                  id: next_lower_rank,
-                  color: '#90EE90',
-                  name: next_lower_rank,
-                  opacity: 1,
-                  width: 150,
-                  height: 150,
-                  type: `rank property`
-                },
-                position: {x: curr_rank_node_pos['x'] - 400, y: curr_rank_node_pos['y'] + 200}
-            };
-          cy_graph.add([lower_node]);
-      let new_edge = 
-            {
-              group: 'edges',
-              data: 
-                  {
-                  id: rank_id.concat(next_lower_rank),
-                  source: rank_id, 
-                  target: next_lower_rank,
-                  label: 'nextLowerRank',
-                  type: 'rank property edges'
-                  }
-                };
-          cy_graph.add([new_edge]);
-      let higher_node = 
-            {
-                group: 'nodes',
-                data: {
-                  id: next_higher_rank,
-                  color: '#90EE90',
-                  name: next_higher_rank,
-                  opacity: 1,
-                  width: 150,
-                  height: 150,
-                  type: `rank property`
-                },
-                position: {x: curr_rank_node_pos['x'] - 400, y: curr_rank_node_pos['y'] - 200}
-            };
-          cy_graph.add([higher_node]);
-      let new_edge1 = 
-            {
-              group: 'edges',
-              data: 
-                  {
-                  id: rank_id.concat(next_higher_rank),
-                  source: rank_id, 
-                  target: next_higher_rank,
-                  label: 'nextHigherRank',
-                  type: 'rank property edges'
-                  }
-                };
-      cy_graph.add([new_edge1]);
-      cy_graph.elements().edges().style({'font-size': '30'});
+      // let lower_node = 
+      //       {
+      //           group: 'nodes',
+      //           data: {
+      //             id: next_lower_rank,
+      //             color: '#90EE90',
+      //             name: next_lower_rank,
+      //             opacity: 1,
+      //             width: 150,
+      //             height: 150,
+      //             type: `rank property`
+      //           },
+      //           position: {x: curr_rank_node_pos['x'] - 400, y: curr_rank_node_pos['y'] + 200}
+      //       };
+      //     cy_graph.add([lower_node]);
+      // let new_edge = 
+      //       {
+      //         group: 'edges',
+      //         data: 
+      //             {
+      //             id: rank_id.concat(next_lower_rank),
+      //             source: rank_id, 
+      //             target: next_lower_rank,
+      //             label: 'nextLowerRank',
+      //             type: 'rank property edges'
+      //             }
+      //           };
+      //     cy_graph.add([new_edge]);
+      // let higher_node = 
+      //       {
+      //           group: 'nodes',
+      //           data: {
+      //             id: next_higher_rank,
+      //             color: '#90EE90',
+      //             name: next_higher_rank,
+      //             opacity: 1,
+      //             width: 150,
+      //             height: 150,
+      //             type: `rank property`
+      //           },
+      //           position: {x: curr_rank_node_pos['x'] - 400, y: curr_rank_node_pos['y'] - 200}
+      //       };
+      //     cy_graph.add([higher_node]);
+      // let new_edge1 = 
+      //       {
+      //         group: 'edges',
+      //         data: 
+      //             {
+      //             id: rank_id.concat(next_higher_rank),
+      //             source: rank_id, 
+      //             target: next_higher_rank,
+      //             label: 'nextHigherRank',
+      //             type: 'rank property edges'
+      //             }
+      //           };
+      // cy_graph.add([new_edge1]);
+      // cy_graph.elements().edges().style({'font-size': '30'});
 
-      // Open NEW cy2 container whenever we display such property ranks too. 
-      const cy = document.getElementById('cy');
-      const cy2 = document.getElementById('cy2');
-      cy2.style.display = 'block';
-      cy2.style.visibility = 'visible';
-      cy.style.height = '97vh';
+    
     }
 
 
@@ -2553,6 +2572,71 @@
         d3.json(url).then(function(json_result) {
         display_rank_properties(json_result, rank_name, rank_id, cy_graph);
       });
+    }
+
+    function create_ranks(cy_graph, api, id, position) {
+      let url = all_ranks_query();
+      var taxonomic_rank_nodes = [];
+      var taxonomic_rank_edges = [];
+      var nextHigherRank = "null";
+      var nextLowerRank = "null";
+      // Goal is to create the nodes out of this json_result
+      d3.json(url).then(function(json_result) {
+        var data = json_result.results.bindings;
+        for (rank_key in data) {
+          var rank_object = data[rank_key];
+          var rank_qval = rank_object.rank.value.toString().replace('http://solid.boltz.cs.cmu.edu:3030/data/', '')
+          var name = rank_object.rankLabel.value;
+          if ("nextHigher" in rank_object) {
+            var nextHigherRank_qval = rank_object.nextHigher.value.toString().replace('http://solid.boltz.cs.cmu.edu:3030/data/', '');
+          }
+          if ("nextLower" in rank_object) {
+            var nextLowerRank_qval = rank_object.nextLower.value.toString().replace('http://solid.boltz.cs.cmu.edu:3030/data/', '');
+          }
+          // Create node object to push onto graph 
+          node_obj = {
+            group: 'nodes',
+            data:
+            {id: 'display: ' + rank_qval, 
+            name:`${name} boltz:${rank_qval}`,
+            color: '#ADD8E6', 
+            width: 250, 
+            height: 250,
+            parent: 'prop Kingdom',
+            type: 'displayed rank'
+            }};
+          // Create corresponding edge objects between taxonomic ranks
+          edge_obj = {
+            group: 'edges',
+            data: 
+            {id: `${rank_qval} to ${nextHigherRank_qval}`, 
+            source: 'display: ' + rank_qval, 
+            target: 'display: ' + nextHigherRank_qval, 
+            label:'nextHigherRank',
+            }};
+
+          taxonomic_rank_nodes.push(node_obj);
+          taxonomic_rank_edges.push(edge_obj);
+        }
+        console.log(taxonomic_rank_nodes)
+        cy_graph.add(taxonomic_rank_nodes)
+        // Change node location
+        cy_graph.nodes('node[type = "displayed rank"]').position('x', position['x'])
+        // Create edge between 
+        // new_edge = 
+        // {
+        //   group: 'edges',
+        //   data: 
+        //       {
+        //           id: 'random test',
+        //           source: 'Q729', 
+        //           target: "display: Q36732",
+        //           label: 'taxonRank'
+        //       }
+        // };
+        // cy_graph.add(new_edge)
+        api.expandAll();
+    });
     }
 
 
@@ -2571,13 +2655,14 @@
       d3.json(url).then(function(json_result) {
         display_hierarchy(json_result, graphType, {given_data: 'null', taxon_value: "null"}, "root");
       });
+
     }
 
-
+    
     //givenData is an object {given_data: 'null'} if we're not going to be given anything, otherwise
     //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
     function display_hierarchy(data, graphType, givenData, given_taxon) {
-        console.log(data)
+      
         let user_entered_taxon = givenData.taxon_value;
         let converted_data;
 
@@ -2665,7 +2750,13 @@
                       'font-size': 30,
                       'background-color': 'data(color)'
                     }
-
+                  },
+                  {
+                    selector: "node.cy-expand-collapse-collapsed-node",
+                    style: {
+                      "background-color": "green",
+                      "shape": "rectangle"
+                    }
                   },
                   {
                     selector: 'edge',
@@ -2698,6 +2789,23 @@
                   }
                 ]
         });
+
+         // Expandable frames
+        cy.expandCollapse({
+          layoutBy: {
+            name: "fcose",
+            animate: true,
+            randomize: false,
+            fit: true
+          },
+          fisheye: true,
+          animate: true,
+          undoable: false,
+          expandCueImage: "external/icon-plus.png",
+          collapseCueImage: "external/icon-minus.png"
+        });
+        var api = cy.expandCollapse('get');
+        console.log(api)
 
         // CONTEXT MENU
         let contextMenu = cy.contextMenus({
@@ -2968,6 +3076,7 @@
                           
                 let evtTarget = evt.target;
                 let data = evtTarget._private.data;
+                console.log(data)
 
                 if (Object.keys(data).length == 0) {
                   if (zoomedInOnNode) {
@@ -2985,16 +3094,12 @@
                 } else {
                       //OTHERWISE WE CLICKED A NODE
                         if (data.type == "taxon") {
-
                           let name = data.name;
                           if (!(all_ranks.includes(name))) {
                               cy.nodes(`node[id = "${data.id}"]`).style({
                                           'width': 250,
                                           'height': 250
                               });
-    
-                              
-                              
                               //only want to add it to prev nodes clicked if we are moving up not to a sibling or down
                               if (id_lastclicked_node != "") {
                                 let curr_pos_y = evtTarget._private.position.y
@@ -3005,20 +3110,25 @@
                                   prev_nodes_clicked = [];
                                 }
                               }
-                          
                               get_properties(given_taxon, data.id, cy, all_ranks, 
                                       pc_edges, prop_node_diam, graphType_pc_edges, 
                                       id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
-                              
-    
-    
                               zoomedInOnNode = true;
-                              id_lastclicked_node = data.id;
-                              
+                              id_lastclicked_node = data.id; 
                         }
                     }
-                    if (data.type == "rank") {
-                        
+                    else if (data.type == "overlayRank") {
+                      console.log(data.id);
+                      var rank_node_position = cy.nodes(`[id = "${data.id}"]`).position()
+                      // Open NEW subgraph with browser ranks information 
+                      create_ranks(cy, api, data.id, rank_node_position);
+                      cy.zoom({
+                          level: 1, // the zoom level
+                          position: cy.getElementById('Q729').position()
+                        });
+                    
+                    }
+                    else if (data.type == "rank") {
                         //IF A USER CLICKS A RANK WE WANT TO DISPLAY IT'S PROPERTIES
                         //ALSO WANT A WAY TO HIDE THE RANK PROPERTIES WHEN A USER CLICKS ON THE RANK NODE AGAIN
                         //otherwise we clicked a rank node so we want to display the nextHigherRank and nextLowerRank properties
@@ -3128,100 +3238,6 @@
               'arrow-scale': 1
             })
           })
-    }
-
-    function create_cy2(){
-      test_nodes = [];
-      node_obj1 = {
-        data: {id: 'Q34740', 
-        name:`Genus boltz:Q34740`,
-        color: '#90EE90', 
-        width: 250, 
-        height: 250,
-        type: 'rank'
-      }};
-      node_obj2 = {
-        data: {id: 'Q3238261', 
-        name:`Subgenus boltz:Q3238261`,
-        color: '#90EE90', 
-        width: 250, 
-        height: 250,
-        type: 'rank'
-      }};
-      edge_obj = {
-        data: {id: `$Q34740 - Q3238261`, 
-        source: 'Q34740', 
-        target: 'Q3238261', 
-        label:'subTaxonOf'
-        }};
-      let cy2 = cytoscape({
-            container: document.getElementById('cy2'),
-            elements: {
-              nodes: [node_obj1, node_obj2],
-              edges: [edge_obj]
-            },
-            layout: {
-              name: 'dagre', 
-              spacingFactor: 4,
-              rankDir: 'BT',
-              avoidOverlap: true,
-            },
-            style: [
-                    {
-                      selector: 'node[name]',
-                        style: {
-                            'content': 'data(name)',
-                            'text-valign': 'center',
-                      }
-
-                  },
-                  {
-                    selector: 'node',
-                    style: {
-                      'width': 10000,
-                      'height': 10000,
-                      'font-size': 30,
-                      'background-color': '#B3767E',
-                      'content' : 'data(id)'
-                    }
-
-                  },
-                  {
-                    selector: 'edge',
-                    style: {
-                        'curve-style': 'bezier',
-                        'target-arrow-shape': 'triangle',
-                        'label': 'data(label)',
-                        'width': 10
-
-                      }
-                  },
-                  {
-                    selector: '.eh-handle',
-                      style: {
-                        'background-color': 'red',
-                        'width': 12,
-                        'height': 12,
-                        'shape': 'ellipse',
-                        'overlay-opacity': 0,
-                        'border-width': 12, // makes the handle easier to hit
-                        'border-opacity': 0
-                      }
-                  },
-                  {
-                    selector: ':selected',
-                    style: {
-                      "border-width": 2,
-                      "border-color": "rgb(1,105,217)"
-                    }
-                  }
-                ]
-        });
-    }
-    function close_cy2() {
-      const cy2 = document.getElementById("cy2");
-      cy2.style.display = 'none';
-      cy2.style.visibility = 'hidden';
     }
 
       //changes the buttons for the new input node 
@@ -3512,13 +3528,12 @@
       <input id="endpoint4" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
       <textarea id="sparql4" class="spans10" style="display:none;"></textarea>
 
+      <input id="endpoint5" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
+      <textarea id="sparql5" class="spans10" style="display:none;"></textarea>
+
       
     </div>
       <div id="cy">
-        <div id="cy2">
-          <button id="close_container" class="btn2" type="button" onclick = "close_cy2()">Close Display</button> 
-      </div>
-
       </div>
     </div>
 
