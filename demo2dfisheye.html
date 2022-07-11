@@ -191,7 +191,7 @@
               PREFIX la: <https://linked.art/ns/terms/>
               PREFIX un: <http://www.w3.org/2007/ont/unit#> 
               PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
-              SELECT DISTINCT ?root_name ?root_rank ?parent_name ?parent ?parent_prefLabel
+              SELECT DISTINCT ?root_name ?root ?root_rank ?parent_name ?parent ?parent_prefLabel
            ?child_name ?child ?child_prefLabel ?def ?root_def ?rank_name
               WHERE 
                 { 
@@ -307,6 +307,30 @@
         }
     }
 
+
+    function rank_property_query(rank_name){
+      var prevquery = document.getElementById("sparql4");
+      prevquery.innerHTML = 
+      `PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+      PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#> 
+      PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+        SELECT DISTINCT ?rank ?rLabel ?nextLower ?nextHigher
+      WHERE {
+        ?rank rdfs:label "${rank_name}"@en .
+        ?rank rdfs:label ?rLabel .
+        ?rank kgo:nextLowerRank [ rdfs:label ?nextLower] . 
+        ?rank kgo:nextHigherRank [rdfs:label ?nextHigher ].
+            
+      }
+        ORDER BY ?yLabel`
+          var endpoint = d3.select("#endpoint4").property("value")
+          var sparql = d3.select("#sparql4").property("value")
+          var url = endpoint + "?query=" + encodeURIComponent(sparql)
+          return url
+        
+    }
+
     /*convert_to_cytoscape will return an object
     that stores the nodes, the edges, the positions of all
     the nodes, and the ranks for each of the nodes*/
@@ -330,30 +354,43 @@
         //going to be an object where the keys are parents and the values are a list of all children
 
         
+	      console.log("json data is", data);
 
         bindings = data.results.bindings;
         len = bindings.length;
 
         if (len > 0){
-            if (bindings [0].root_name != undefined &&
+          //we can assume that the first parent is the root for now?
+            if (bindings [0].parent_name != undefined &&
+                bindings [0].root_rank != undefined &&
+                bindings [0].root_def != undefined){
+                  root = bindings [0].parent_name.value;
+                  root_rank = bindings [0].root_rank.value;
+                  root_def = bindings [0].root_def.value;
+                }
+
+                root_qval = bindings [0].parent.value;
+                if (root_qval.length >= 40){
+                  root_qval = root_qval.slice(40, root_qval.length);
+                }
+                names_to_qvals[root] = root_qval
+                def_for_taxons[root_qval] = root_def;
+                qvals_to_names[root_qval] = root;
+           /* if (bindings [0].root_name != undefined &&
                 bindings [0].root_rank != undefined &&
                 bindings [0].root_def != undefined){
                   root = bindings [0].root_name.value;
                   root_rank = bindings [0].root_rank.value;
                   root_def = bindings [0].root_def.value;
                 }
-                if (root != "Animalia"){
-                  root_qval = bindings [0].child.value;
-                  root_prefLabel = bindings [0].child_prefLabel.value;
-                }else{
-                  root_qval = bindings [0].parent.value;
-                  root_prefLabel = bindings [0].parent_prefLabel.value;
-                }
+
+                root_qval = bindings [0].root.value;
                 if (root_qval.length >= 40){
-                      root_qval = root_qval.slice(40, root_qval.length);
+                  root_qval = root_qval.slice(40, root_qval.length);
                 }
+                names_to_qvals[root] = root_qval
                 def_for_taxons[root_qval] = root_def;
-                qvals_to_names[root_qval] = root;
+                qvals_to_names[root_qval] = root;*/
             
         }
 
@@ -375,13 +412,14 @@
         }
 
         node_names.push({name: root, qval: root_qval});
-       
+
         for (let i = 0; i < len; i++){
             child_rank = bindings [i].rank_name.value;
             child_def = bindings [i].def.value;
             child_qval = bindings [i].child.value;
             parent_qval = bindings [i].parent.value;
             child_prefLabel = bindings [i].child_prefLabel.value;
+            parent_prefLabel = bindings [i].parent_prefLabel.value;
             parent = bindings [i].parent_name.value;
             rank = bindings [i].rank_name.value;
             child = bindings [i].child_name.value;
@@ -393,11 +431,27 @@
               parent_qval = parent_qval.slice(40, parent_qval.length);
             }
 
+            if (child_qval == root_qval){
+              var root_prefLabel = capitalize(child_prefLabel);
+              
+                        if (pref_labels[root_prefLabel] == undefined){
+                          pref_labels[root_prefLabel] = root;
+                        }
+            }
+            if (parent_qval == root_qval){
+
+               var root_prefLabel = capitalize(parent_prefLabel);
+                        if (pref_labels[root_prefLabel] == undefined){
+                          pref_labels[root_prefLabel] = root;
+                        }
+            }
+
             //only want to continue if parent and child qvals are diff and if 
             //we haven't seen the child yet
             if (child_qval != parent_qval && qvals_to_names[child_qval] == undefined){
-                      
+
                       node_names.push({name: child, qval: child_qval});
+
                       def_for_taxons[child_qval] = child_def;
                       qvals_to_names[child_qval] = child;
 
@@ -430,7 +484,8 @@
             var result = keyA.localeCompare(keyB);
             return result;
           });
-
+        
+        console.log('node names', node_names);
 
         for (let idx = 0; idx < node_names.length; idx ++){
           curr_name = node_names[idx].name;
@@ -461,20 +516,24 @@
                       parent_and_all_children[parent_qval].push(curr_qval);
                     }
                             
+                    //console.log('source', curr_qval, 'target', parent_qval);
 
                   pc_edge = {data: {id: `${curr_qval} - ${parent_qval}`, 
                       source: curr_qval, target: parent_qval, label:'subTaxonOf'}};
                     
                     edges_lst.push(pc_edge); 
 
-                  if (rank_node_edges[curr_qval] == "Species"){
+                  /*if (rank_node_edges[curr_qval] == "Species"){
+                    
                     var temp_id = `temporary node ${idx}`
+                    rank_node_edges[temp_id] = 'no_rank';
+                    qvals_to_names[temp_id] = temp_id
                     node_obj = {
                         data: {id: temp_id, 
                         name: temp_id,
                         color: 'black', 
-                        width: 250, 
-                        height: 250,
+                        width: 0, 
+                        height: 0,
                         type: 'taxon'
                       }};
                       nodes_lst.push(node_obj);
@@ -483,7 +542,7 @@
                     
                       edges_lst.push(pc_edge); 
                       
-                  }  
+                  } */
 
                       
                     
@@ -652,6 +711,13 @@
                 source_node_name = `${source_node_name} boltz:${source_node_qval}`;
                 target_node_name = `${target_node_name} boltz:${target_node_qval}`;
                 
+                if (source_node_qval[0] != `Q`){
+                  var node_width = 0;
+                  var node_height = 0;
+                }else{
+                  var node_width = 250;
+                  var node_height = 250;
+                }
                 //need this because we are only adding the source nodes because the target
                 //nodes will eventually be taken care of except for Animalia which doesn't have a target node
                 new_nodes.push({
@@ -659,8 +725,8 @@
                     id: source_node_qval, 
                     name: source_node_name, 
                     color: '#ADD8E6', 
-                    width: 250, 
-                    height: 250,
+                    width: node_width, 
+                    height: node_height,
                     type: 'taxon'
                 }});
                 if (target_node_qval == "Q729"){ //Q2382443 is the Biota Qval
@@ -1147,7 +1213,7 @@
       function add_subtax_rank_nodes(subtax_rank, cy_graph, node_qval, radius, 
             mult_constant, prop_node_diam, pos, graphType_pc_edges,                 
             given_taxon, all_ranks, pc_edges, taxon_qvals, 
-            parent_and_all_children, nodes_we_came_from){
+            parent_and_all_children, nodes_we_came_from, degree_movement){
               
             var subtax_node_id= subtax_rank['subTaxonOf'];
             var rank_node_name = subtax_rank['taxonRank'];
@@ -1156,6 +1222,7 @@
             var subTaxonOf_degree = 0;
             var taxon_x_pos = pos.x;
             var taxon_y_pos = pos.y;
+            var degree_movement = degree_movement;
         
 
             if (subtax_node_id != undefined){
@@ -1234,19 +1301,30 @@
                 return subTaxonOf_degree;
             }
             
-            var rank_pos = {x: taxon_x_pos - radius * mult_constant, y: taxon_y_pos};
-            var node_id = `prop ${rank_node_name}`;
+
+            console.log('subtaxonof degree', subTaxonOf_degree * (180/Math.PI));
+            if (Math.abs(subTaxonOf_degree - Math.PI)* (180/Math.PI) <= 15){
+                var next_x_pos = taxon_x_pos + (radius*mult_constant)*(Math.cos(degree_movement + subTaxonOf_degree));
+                var next_y_pos = taxon_y_pos - (radius*mult_constant)*(Math.sin(degree_movement + subTaxonOf_degree));
+                var rank_pos = {x: next_x_pos, y: next_y_pos};
+                var subTaxonOf_degree = degree_movement + subTaxonOf_degree;
+
+            }else{
+                var rank_pos = {x: taxon_x_pos - radius * mult_constant, y: taxon_y_pos};
+            }
+
+            var rank_node_id = `prop ${rank_node_name}`;
             var new_rank_node = 
                     {
                         group: 'nodes',
                         data: {
-                          id: node_id,
+                          id: rank_node_id,
                           color: '#90EE90',
                           name: rank_node_name,
                           opacity: 1,
                           width: 150,
                           height: 150,
-                          type: 'rankProp'
+                          type: 'overlayRank'
                         },
                         position: rank_pos
                     };
@@ -1256,14 +1334,32 @@
                       group: 'edges',
                       data: 
                           {
-                              id: node_id.concat(rank_node_name),
+                              id: rank_node_id.concat(node_qval),
                               source: node_qval, 
-                              target: node_id,
+                              target: rank_node_id,
                               label: 'taxonRank'
                           }
                     };
 
             cy_graph.add([new_rank_edge]);
+
+            //add a click event to the rank node being displayed
+            var rank_parity_tap = 'even';
+            cy_graph.nodes(`[id = "${rank_node_id}"]`).on('tap', function(evt){
+
+              if (rank_parity_tap == 'even'){
+                get_rank_property_query(rank_node_name, rank_node_id, cy_graph);
+                rank_parity_tap = 'odd';
+              }else{
+                //otherwise remove the property nodes of the current rank
+                cy_graph.remove(`node[type = "rank property"]`);
+                rank_parity_tap = 'even';
+              }
+              
+            })
+
+
+
             cy_graph.nodes(`node[type = "subTaxProp"]`).style({
                       'text-wrap': 'wrap',
                       'text-max-width': 230,
@@ -1274,7 +1370,7 @@
                       'font-family': 'Garamond',
                       'line-height': 1.15
                     });
-            cy_graph.nodes(`node[type = "rankProp"]`).style({
+            cy_graph.nodes(`node[type = "overlayRank"]`).style({
               'text-wrap': 'wrap',
               'text-max-width': 150,
               'border-width': 5,
@@ -1415,6 +1511,7 @@
             var curr_degree = 0;
             var degree_movement = (2 * Math.PI) / (num_property_nodes + 2);
 
+
             var new_degree = 0;
             var box_nodes = {};
 
@@ -1428,7 +1525,7 @@
             var start_degree = add_subtax_rank_nodes(new_prop_data.subtax_rank, 
                 cy_graph, node_qval, radius, mult_constant, prop_node_diam, pos, graphType_pc_edges,
                 given_taxon, all_ranks, pc_edges, taxon_qvals, 
-                parent_and_all_children, nodes_we_came_from);
+                parent_and_all_children, nodes_we_came_from, degree_movement);
 
             curr_degree = start_degree;
 
@@ -1827,7 +1924,7 @@
             cy_graph.elements().nodes().style({'border-width': '0'});
                         
             cy_graph.remove(`node[type = "subTaxProp"]`);
-            cy_graph.remove(`node[type = "rankProp"]`);
+            cy_graph.remove(`node[type = "overlayRank"]`);
             cy_graph.remove(`node[type = "property"]`);
             cy_graph.remove(`node[type = "concept"]`);
             cy_graph.remove(`node[type = "literal"]`);
@@ -2027,7 +2124,7 @@
             var node_name = taxon_qvals[node_qval];
 
             cy_graph.remove(`node[type = "subTaxProp"]`);
-            cy_graph.remove(`node[type = "rankProp"]`);
+            cy_graph.remove(`node[type = "overlayRank"]`);
             cy_graph.remove(`node[type = "property"]`);
             cy_graph.remove(`node[type = "concept"]`);
             cy_graph.remove(`node[type = "literal"]`);
@@ -2277,6 +2374,39 @@
      }
 
 
+    function display_rank_properties(json_result, rank_name, rank_id, cy_graph){
+      console.log('json for rank properties', json_result);
+      var next_higher_rank = "null";
+      var next_lower_rank = "null";
+      if (json_result.results.bindings.length > 0
+       && json_result.results.bindings[0].nextHigher != undefined
+       && json_result.results.bindings[0].nextHigher.value != undefined){
+          next_higher_rank = json_result.results.bindings[0].nextHigher.value;
+      }
+      if (json_result.results.bindings.length > 0
+       && json_result.results.bindings[0].nextLower != undefined
+       && json_result.results.bindings[0].nextLower.value != undefined){
+          next_lower_rank = json_result.results.bindings[0].nextLower.value;
+      }
+
+      //getting position of curr rank node to know relatively where to place the new prop nodes
+      var curr_rank_node_pos = cy_graph.nodes(`[id = "${rank_id}"]`).position()
+
+      console.log('next_higher rank', next_higher_rank, 'next lower rank', next_lower_rank);
+      //So now  next_higher_rank and next_lower_rank should be the node names
+      //need to make sure the id's are unique since there will be repeats of these
+      //the variable names are null otherwise
+    }
+
+
+    function get_rank_property_query(rank_name, rank_id, cy_graph){
+        var url = rank_property_query(rank_name);
+        d3.json(url).then(function(json_result){
+        display_rank_properties(json_result, rank_name, rank_id, cy_graph);
+      });
+    }
+
+
 
     function exec(graphType){
       var cy_container = document.getElementById("cy");
@@ -2298,14 +2428,12 @@
     //givenData is an object {given_data: 'null'} if we're not going to be given anything, otherwise
     //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
     function display_hierarchy(data, graphType, givenData, given_taxon) {
-	      console.log("json data is", data);
 
         var user_entered_taxon = givenData.taxon_value;
 
         if (givenData.given_data != 'null'){ 
           //this implies we are already given what convert_to_cytoscape would produce
             var converted_data = givenData.given_data;
-            console.log('given data', givenData);
         }else{
             var converted_data = convert_to_cytoscape(data);
         }
@@ -2335,7 +2463,7 @@
         
         var concise_ranks = [root_rank,
          'Phylum', 'Class', 'Order', 'Family', 
-         'Genus', 'Species', 'Tribe', 'Kingdom'];
+         'Genus', 'Species', 'Tribe', 'Kingdom', 'no_rank'];
 
         if (graphType == ('Concise')){
             new_data = create_graphType(converted_data, concise_ranks, user_entered_taxon);
@@ -2547,61 +2675,10 @@
         var rank_edges = converted_data.rn_edges;
 
 
-        var nodes = cy.elements().nodes();
-
-        var rank_node_id;
-
-        var add_eles = [];
         
-        for (let x = 0; x < nodes.length; x++){
-            node_pos = nodes[x]._private.position;
-            node_id = nodes[x]._private.data.id;
-            var x_pos = node_pos.x ;
-            var y_pos = node_pos.y;
-            var rank_node = rank_edges[node_id];
-            var rank_node_id = rank_node;
-
-            if (rank_node_id == undefined){
-              rank_node_id = `noRank ${x.toString()}`;
-            }else{
-              rank_node_id = `${rank_node}: ${x.toString()}`
-            }
-            
-            //rank_node_id is undefined in some places
-
-            new_node = 
-            {
-              group: 'nodes',
-              data: {
-                id: rank_node_id,
-                color: '#90EE90',
-                name: rank_node,
-                width: 100,
-                height: 100,
-                type: 'rank'
-              },
-              position: {x: x_pos - 400, y: y_pos}
-            };
-
-            add_eles.push(new_node);
-
-            new_edge = 
-                {
-                  group: 'edges',
-                  data: 
-                      {
-                          id: node_id.concat(rank_node),
-                          source: node_id, 
-                          target: rank_node_id,
-                          label: 'taxonRank'
-                      }
-                };
-            add_eles.push(new_edge);
-        }
         //adding ranks to the graph along with edges
 
-          var eles = cy.add(add_eles);
-          cy.elements().edges().style( { 'font-size' : '27' });
+          cy.elements().edges().style({ 'font-size' : '27' });
           cy.elements().nodes().style({
             'font-family': 'Garamond'
           });
@@ -2652,9 +2729,9 @@
             position: {x: farthest_second_left_child_pos.x, y: 0}
           });
 
-         // cy.nodes(`[id = "${root}"]`).style({ 'width': 10000, 'height': 10000});
 
           var prev_nodes_clicked = [];
+          var rank_parity_tap = 'even';
           
           cy.on('tap', function(evt){
                           
@@ -2678,43 +2755,59 @@
                     prev_nodes_clicked = [];
                   }
                 } else {
+                      //OTHERWISE WE CLICKED A NODE
+                        if (data.type == "taxon"){
 
-                    if (data.type == 'taxon'){
-                      var name = data.name;
-                      if (!(all_ranks.includes(name))) {
-                          cy.nodes(`node[id = "${data.id}"]`).style({
-                                      'width': 250,
-                                      'height': 250
-                          });
-
-                          
-                          
-                          //only want to add it to prev nodes clicked if we are moving up not to a sibling or down
-                          if (id_lastclicked_node != ""){
-                            var curr_pos_y = evtTarget._private.position.y
-                            var prev_pos_y = cy.nodes(`[id = "${id_lastclicked_node}"]`).position().y
-                            if (curr_pos_y < prev_pos_y){
-                                prev_nodes_clicked.push(id_lastclicked_node);
-                            }else{
-                              prev_nodes_clicked = [];
-                            }
-                          }
-
-                          get_properties(given_taxon, data.id, cy, all_ranks, 
-                                  pc_edges, prop_node_diam, graphType_pc_edges, 
-                                  id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
-
-                          zoomedInOnNode = true;
-                          id_lastclicked_node = data.id;
-                          
-
-                      }else {
-                          cy.nodes(`node[id = "${data.id}"]`).style({
-                                      'width': 100,
-                                      'height': 100
-                          });
-                      }
+                          var name = data.name;
+                          if (!(all_ranks.includes(name))) {
+                              cy.nodes(`node[id = "${data.id}"]`).style({
+                                          'width': 250,
+                                          'height': 250
+                              });
+    
+                              
+                              
+                              //only want to add it to prev nodes clicked if we are moving up not to a sibling or down
+                              if (id_lastclicked_node != ""){
+                                var curr_pos_y = evtTarget._private.position.y
+                                var prev_pos_y = cy.nodes(`[id = "${id_lastclicked_node}"]`).position().y
+                                if (curr_pos_y < prev_pos_y){
+                                    prev_nodes_clicked.push(id_lastclicked_node);
+                                }else{
+                                  prev_nodes_clicked = [];
+                                }
+                              }
+    
+                              get_properties(given_taxon, data.id, cy, all_ranks, 
+                                      pc_edges, prop_node_diam, graphType_pc_edges, 
+                                      id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
+    
+                              zoomedInOnNode = true;
+                              id_lastclicked_node = data.id;
+                              
+                        }
                     }
+                    if (data.type == "rank"){
+                        
+                        //IF A USER CLICKS A RANK WE WANT TO DISPLAY IT'S PROPERTIES
+                        //ALSO WANT A WAY TO HIDE THE RANK PROPERTIES WHEN A USER CLICKS ON THE RANK NODE AGAIN
+                        //otherwise we clicked a rank node so we want to display the nextHigherRank and nextLowerRank properties
+                        var rank_name = data.name;
+                        var rank_id = data.id;
+                        if (rank_parity_tap == 'even'){
+                          get_rank_property_query(rank_name, rank_id, cy);
+                          rank_parity_tap = 'odd';
+                        }else{
+                          cy.remove(`node[type = "rank property"]`);
+                          rank_parity_tap = 'even';
+                        }
+                       
+
+                      }
+
+                     
+                    
+                    
 
                 }
 
@@ -2722,49 +2815,125 @@
         
           
           // MOUSEOVER STUFF
-          // HOVER NODE: reveal definition 
+
+
+          //FOR THE FISHEYE EXTENSION we want to try to add a fisheye effect for when mousing over nodes:
+          var nodes = cy.nodes(); 
+          var nodePositions = {};
+          for (let i = 0; i < nodes.length; i++) {
+              nodePositions[nodes[i].id()] = nodes[i].position();
+          }
+          console.log('node positions', nodePositions);
+
           cy.nodes().on("mouseover",function(evt){
                 var name = this._private.data.name;
-                var style = evt.target._private.style;
-                var enlarged_node_size = 275;
-                var border_color = '#00008B';
-                if ((all_ranks.includes(name))){
-                  enlarged_node_size = 125;
-                  border_color = '#013220';
-                }
+                var node = evt.target._private;
+                var parent = pc_edges[node.data.id];
+                if (parent != undefined){
 
-                if (style != undefined){
-                    if (style.opacity == undefined || style.opacity.value == 1){
-                      if (!(all_ranks.includes(name) || name == "Clade")){
-                          get_definition(this.id(), cy, all_ranks, definitions, definition_node_size);
-                      }
+                    var siblings = parent_and_all_children[parent];
+                    //siblings of the current node we are hovering over
+
+                    if (siblings != undefined && siblings.length >= 5){
+                            var original_sibling_node_positions = {};
+                            //going to keep track of the original node positions for the fisheye algorithm
+                            for (let i = 0; i < siblings.length; i ++){
+                              var curr_kid_pos = cy.nodes(`[id = "${siblings[i]}"]`)[0].position();
+                              original_sibling_node_positions[siblings[i]] = curr_kid_pos;
+                            }
+    
+                            var largest_y_shift = 400;
+                            var leftmost_x_pos = original_sibling_node_positions[siblings[0]].x //x position of the leftmost child
+                            var rightmost_x_pos = original_sibling_node_positions[siblings[siblings.length - 1]].x //x pos of rightmost child
+                            var total_decrease_in_size = 300; //it's 2000 - 200 (200 being the original node size)
+                            var new_x = 0;
+
+                            var curr_node_pos = node.position;
+                            var idx_in_siblings = siblings.indexOf(node.data.id); //idx of the current node in the siblings list
+
+                            var num_nodes_on_left = idx_in_siblings;
+                            var num_nodes_on_right = siblings.length - idx_in_siblings - 1;
+                            var left_size_decrease = (total_decrease_in_size/num_nodes_on_left)*5;
+                            var right_size_decrease = (total_decrease_in_size/num_nodes_on_right)*5;
+
+
+                            //these are relative to the current node
+                            var left_x_length = Math.abs(curr_node_pos.x - leftmost_x_pos);
+                            var right_x_length = Math.abs(curr_node_pos.x - rightmost_x_pos);
+
+
+                            for (let i = 0; i < siblings.length; i++){
+
+                                        var node_idx = i;
+                                        var curr_node_x = original_sibling_node_positions[siblings[i]].x;
+                                        var curr_node_y = original_sibling_node_positions[siblings[i]].y;
+
+                                        if (node_idx > idx_in_siblings){
+                                            var new_x_length = Math.abs(curr_node_x - rightmost_x_pos);
+                                            var new_y = (new_x_length / right_x_length) * (largest_y_shift);
+                                            var curr_size_decrease = Math.abs(node_idx - idx_in_siblings)*left_size_decrease
+
+                                        }else{
+                                            var new_x_length = Math.abs(curr_node_x - leftmost_x_pos);
+                                            var new_y = (new_x_length / left_x_length) * (largest_y_shift);
+                                            var curr_size_decrease = Math.abs(node_idx - idx_in_siblings)*right_size_decrease
+
+                                        }
+                                        if (i == idx_in_siblings){
+                                            new_x = 0;
+                                        }
+                                        //Math.abs(node_idx - idx) is the number of size decreases
+                                        cy.nodes(`[id = "${siblings[i]}"]`)[0]._private.position = {x: curr_node_x, y: curr_node_y - new_y};
+                                        new_width = 2000 - curr_size_decrease;
+                                        new_height = new_width;
+                                        if (new_width < 200){
+                                            new_width = 200;
+                                            new_height = 200;
+                                        }
+
+                                        var font_size = .1* new_width;
+
+                                        cy.nodes(`[id = "${siblings[i]}"]`).style({
+                                            'width': new_width,
+                                            'height': new_height,
+                                            'font-size':font_size
+                                        });
+                                        //nodes_of_graph[i]._private.data.width = 2000 - curr_size_decrease;
+                                       // nodes_of_graph[i]._private.data.width = 1500 - curr_size_decrease;
+                                    
+                                    
+                                }
+
+    
+                            
                     }
-                }   
-                cy.nodes(`node[id = "${this.id()}"]`).style({
-                        'width': enlarged_node_size,
-                        'height': enlarged_node_size,
-                        'border-width': 1,
-                        'border-color': border_color
-                });               
+                }
+                
             })
           
           .on("mouseout", function(evt){
-            var id_selector = `node[type = "definition"]`;
-            cy.remove(id_selector);
+                var node = evt.target._private;
+                var parent = pc_edges[node.data.id];
+                if (parent != undefined){
+                    var siblings = parent_and_all_children[parent];
+                }
 
-            var reg_node_size = 250;
-            var name = this._private.data.name;
-            if ((all_ranks.includes(name))){
-                reg_node_size = 100
-            }
-            cy.nodes(`node[id = "${this.id()}"]`).style({
-                        'width': reg_node_size,
-                        'height': reg_node_size,
-                        'border-width': 0,
-            });
+                for (let i = 0; i < siblings.length; i++){
+                   console.log('pos', cy.nodes(`[id = "${siblings[i]}"]`));
+                   cy.nodes(`[id = "${siblings[i]}"]`)[0]._private.position = nodePositions[siblings[i]];
 
+                }
+
+              
+                  cy.nodes().style({
+                      'width': 250,
+                      'height': 250,
+                      'font-size': 30
+                  });
           });
         
+
+
         let tips = document.createElement("div");
         cy.on('mouseover', 'node[type = "image"]', function(event) {
             let target = event.target;
@@ -2828,28 +2997,35 @@
     function transform_data(full_data, full_json, short_json, taxonVal, taxon_qval){
           
           var short_data = convert_to_cytoscape(short_json);
-          var old_pc_edges = short_data.pc_edges;
-
-
+          var short_pc_edges = short_data.pc_edges;
 
           var pref_labels = full_data.pref_labels;
           var pc_edges = full_data.pc_edges; //grabs the source-target edges so that we can form new edges and add new nodes
           var root = full_data.root;  //in the form of a qval
           var old_nodes = short_data.nodes;
           var names_to_qvals = full_data.names_to_qvals;
-          var qvals_to_names = full_data.taxon_qvals;
+          var qvals_to_names = {...full_data.taxon_qvals};
           
+          var keeping_track_of_new_edges = short_pc_edges;
 
-          
+
           var old_edges = short_data.edges;
           var curr_node = taxon_qval; //in the form of a qval 
           var next_node;
-          
-          while (curr_node != root){
-            
-            next_node = pc_edges[curr_node];
 
-            next_node_name = qvals_to_names[next_node];
+          var old_edges_copy = {...old_edges};
+          console.log('short edges', old_edges_copy);
+
+
+          const MAX_ITER = 1000;
+          var iterations = 0;
+          
+          while (curr_node != root && iterations != MAX_ITER ){
+            iterations += 1;
+            next_node = pc_edges[curr_node];
+           // console.log('curr node name', qvals_to_names[curr_node], 'next node', qvals_to_names[next_node]);
+
+            next_node_name = `${qvals_to_names[next_node]} boltz: ${next_node}`;
             //add this node and a new edge
 
             var new_node = {
@@ -2865,9 +3041,13 @@
             
             //only add a new edge if it hasn't already been added
             if ((curr_node!= undefined && next_node != undefined)){
-              var new_edge = {data: {id: curr_node.concat(next_node), 
-                source: curr_node, target: next_node, label: 'subTaxonOf'}};
-                old_edges.push(new_edge);
+              if (short_pc_edges[curr_node] == undefined || short_pc_edges[curr_node] == "root"){
+
+                var new_edge = {data: {id: curr_node.concat(next_node), 
+                  source: curr_node, target: next_node, label: 'subTaxonOf'}};
+                  old_edges.push(new_edge);
+
+              }
             }
 
             curr_node = next_node;
@@ -2880,8 +3060,9 @@
           
           //so we've updated our edges and nodes to include the ones above the root we queried, so 
           //now we want to display the graph.
+
+          console.log('new data', new_data);
           
-          console.log('taxon qval', taxon_qval);
           change_buttons(new_data, full_json, taxon_qval);
           display_hierarchy(full_json, 'Concise', {given_data: new_data, taxon_value: taxon_qval}, taxon_qval);
           document.getElementById("Concise").style.background='green';
@@ -2930,11 +3111,15 @@
           var full_data = convert_to_cytoscape(full_data_json);
 
           var pref_labels = full_data.pref_labels;
+          console.log('pref labels', pref_labels, 'taxonval', taxonVal);
           var pc_edges = full_data.pc_edges; //grabs the source-target edges so that we can form new edges and add new nodes
           var names_to_qvals = full_data.names_to_qvals;
           var qvals_to_names = full_data.taxon_qvals;
-          
+
+          console.log('names to qvals', names_to_qvals);
+
           var pref_label_of_taxonVal = pref_labels[taxonVal];
+          console.log('pref label', pref_label_of_taxonVal);
 
           var taxon_qval = names_to_qvals[taxonVal];
 
@@ -3069,13 +3254,16 @@
       <input id="endpoint3" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
       <textarea id="sparql3" class="spans10" style="display:none;"></textarea>
 
+      <input id="endpoint4" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
+      <textarea id="sparql4" class="spans10" style="display:none;"></textarea>
+
       
     </div>
       <div id="cy"></div>
     </div>
 
     <script>
-      window.onload = exec('Full');
+      window.onload = exec('Concise');
       let fullButton = document.querySelector('#Full');
       let conciseButton = document.querySelector('#Concise');
       let moderateButton = document.querySelector('#Moderate');

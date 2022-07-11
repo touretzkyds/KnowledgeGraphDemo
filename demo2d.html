@@ -789,6 +789,8 @@
         let bnode_obj;
         let obj2_value;
 
+        console.log('properties', property_array);
+
         //also don't want to count a bnode as multiple nodes
         let bnodes = {};
         let bnode_obj_values = [];
@@ -1000,6 +1002,7 @@
                       label: 'rest'
                   }}
                 ]);
+                
               let id_selector = `node[type = "b5 property"]`;
               cy_graph.nodes(id_selector).style({
                       'shape': 'hexagon',
@@ -1597,7 +1600,8 @@
             let next_y_pos;
             let bnode_props;
             let collapse_diam = prop_node_diam;
-            let collapse_height = prop_node_height
+            let collapse_height = prop_node_height;
+
 
 
             //going to apply the over_lay property to the subtax and rank nodes
@@ -1972,7 +1976,7 @@
 
       //returns the hierarchy back to it's original state
       //after the user unselects a node
-      function return_to_normal(node_name, cy_graph, given_taxon, click_of_subtax, farthest_second_left_child_pos) {
+      function return_to_normal(id_last_clicked_node, cy_graph, given_taxon, click_of_subtax, farthest_second_left_child_pos) {
 
             let navDisplayParent = document.getElementById("navigation-history");
             navDisplayParent.innerHTML = "";
@@ -2011,13 +2015,15 @@
 
 
             
-            let id_label = `[id = '${node_name}']`;
+            let id_label = `[id = '${id_last_clicked_node}']`;
             cy_graph.nodes(id_label).style("background-color", "#ADD8E6");
 
             if (click_of_subtax) {
               cy_graph.nodes(id_label).style("opacity", ".2");
 
             }
+
+
             
             id_label = `[id = '${given_taxon}']`;
             cy_graph.nodes(id_label).style("background-color", "red");
@@ -2037,13 +2043,32 @@
                     padding: 19
                   });
                 
-                cy_graph.animate({
-                  zoom: {
-                    level: .02,
-                    position: {x: farthest_second_left_child_pos.x, y: 0}
-                  }
-                });
+            let clientWidth = document.getElementById('cy').clientWidth;
+            let clientHeight = document.getElementById('cy').clientHeight;
+            let smaller_space = Math.min(clientWidth, clientHeight);
+
+            //for num_property_nodes = 9, want clientHeight / 2.17
+            //for num_property_nodes = 6, want clientHeight / 2.4;
+            let padding_amount = Math.floor(clientHeight / 2.3);
+            if (num_property_nodes >= 8) {
+              padding_amount = Math.floor(clientHeight/2.17);
             }
+
+            //zoom on the selected node enough to display all of the properties
+            cy_graph.animate({
+              fit: {
+                eles: id_label, 
+                padding: padding_amount
+              }
+            }); 
+              /*     
+              cy_graph.animate({
+                zoom: {
+                  level: .02,
+                  position: {x: farthest_second_left_child_pos.x, y: 0}
+                }
+              });*/
+          }
             
       }
 
@@ -2418,7 +2443,6 @@
                   button.innerHTML =
                   `<span style="font-size:14px; font-family: Arial">${taxon_name}</span>
                    <span style="font-size:14px; font-family: Arial">\u25C0</span>`;
-
                   
                 } else {
                   button.innerHTML = `<span style="font-size:14px; font-family: Arial">${taxon_name}</span>`
