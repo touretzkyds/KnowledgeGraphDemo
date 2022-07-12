@@ -805,6 +805,7 @@
             //first check if we have a bnode, if we do automatically add it to our array
             if (curr_data_val.obj != undefined &&
                 curr_data_val.obj.type == 'bnode') {
+
                     
                     bnode_num = curr_data_val.obj.value;
                     if (bnode_num != curr_bnode_num) {
@@ -886,160 +887,161 @@
 
       }
       
-      //takes care of the functionality after clicking the b4 node
-      function add_b5_node(b4_node_id, b4_node_pos, rest_of_prefs, cy_graph, diam) {
-          let b4_x = b4_node_pos.x;
-          let b4_y = b4_node_pos.y;
-          let first_node_id = 'b4 first prop';
-          let b5_node_id = 'b5';
-          let b5_x = b4_x - 175
-          let b5_y = b4_y - 150
-          //let first_comp = rest_of_prefs.shift();
-          let first_comp = rest_of_prefs[0];
-          let first_node = 
-                    {
-                        group: 'nodes',
-                        data: {
-                          id: first_node_id,
-                          color: '#FFD580',
-                          name: first_comp,
-                          opacity: 1,
-                          width: diam,
-                          height: diam,
-                          type: `b4 property`
-                        },
-                        position: {x: b4_x - 175, y: b4_y + 150}
-                    };
-          cy_graph.add([first_node]);
-          let new_edge = 
-                    {
-                      group: 'edges',
-                      data: 
-                          {
-                              id: b4_node_id.concat(first_node_id),
-                              source: b4_node_id, 
-                              target: first_node_id,
-                              label: 'first'
-                          }
-                        };
-          cy_graph.add([new_edge]);
-          
-          //let b5_node_name = `b5: [${rest_of_prefs.shift()}]`;
-          let last_val = rest_of_prefs[1]
-          let b5_node_name = `b5: [${last_val}]`;
 
-          let b5_node = 
+      function add_mouse_over_to_nodes(cy_graph, node_id){
+
+        cy_graph.nodes(`[id = "${node_id}"]`).on('mouseover', function(evt){
+
+          const node = evt.target._private.data;
+          const node_width = node.width;
+          const node_height = node.height;
+          cy_graph.nodes(`[id = "${node.id}"]`).style({
+
+              'width': node_width + 25,
+              'height': node_height + 25
+
+          });
+
+        });
+
+        cy_graph.nodes(`[id = "${node_id}"]`).on('mouseout', function(evt){
+
+          const node = evt.target._private.data;
+          const node_width = node.width
+          const node_height = node.height
+          cy_graph.nodes(`[id = "${node.id}"]`).style({
+
+              'width': node_width,
+              'height': node_height
+
+          });
+
+        });
+      }
+
+      /*
+        This is going to be a general function that will keep adding bnodes to the graph
+        until we've reached the end of the list of bnode nodes that are going to be added,
+        for each bnode we can label it's type as 'chain bnode' and then it's other nodes
+        as 'chain bnode property'
+      */
+
+      function add_new_bnodes(curr_bnode_id, curr_bnode_position, all_bnodes, 
+      cy_graph, diam, next_bnode_num, curr_bnodes_idx){
+
+          let curr_bnode_x = curr_bnode_position.x;
+          let curr_bnode_y = curr_bnode_position.y;
+          
+          let new_nodes_to_add = all_bnodes[curr_bnodes_idx]; 
+          let curr_prefComp_list = new_nodes_to_add['rest'];
+          //this will give us access to first, type, and rest list
+          let new_bnode_prop_name;
+          let new_bnode_id;
+          let node_color;
+          let new_bnode_name;
+          const bnode_keys = Object.keys(new_nodes_to_add);
+
+          const idx_to_node_pos = 
+          {
+              0: {x: curr_bnode_x - 230, y: curr_bnode_y - 150},
+              1: {x: curr_bnode_x - 230, y: curr_bnode_y },
+              2: {x: curr_bnode_x - 230, y: curr_bnode_y + 150}
+
+          }
+
+          bnode_keys.forEach((key, idx) => {
+            //key is the edge label, new_bnode_prop_name is the node name
+
+            new_bnode_prop_name = new_nodes_to_add[key];
+            let new_node_id = `${key} - b${next_bnode_num - 1}`; //ex: first - b4
+
+            if (key == 'rest'){
+              new_bnode_prop_name = `b${next_bnode_num}: [${curr_prefComp_list.join(', ')}]`;
+              new_bnode_id = new_node_id;
+              node_color = '#fdfa72';
+              new_bnode_name = new_bnode_prop_name;
+            }else{
+              node_color = '#CBC3E3'
+            }
+            let new_node = 
                     {
                         group: 'nodes',
                         data: {
-                          id: b5_node_id,
-                          color: '#FFD580',
-                          name: b5_node_name,
+                          id: new_node_id, 
+                          color: node_color,
+                          name: new_bnode_prop_name,
                           opacity: 1,
                           width: diam,
                           height: diam,
-                          type: `b4 property`
+                          type: `b${next_bnode_num - 1} property` //ex b4 property
                         },
-                        position: {x: b5_x, y: b5_y}
+                        position: idx_to_node_pos[idx]
                     };
-          cy_graph.add([b5_node]);
-          new_edge = 
+            cy_graph.add([new_node]);
+
+            let new_edge = 
                     {
                       group: 'edges',
                       data: 
                           {
-                              id: b4_node_id.concat(b5_node_id),
-                              source: b4_node_id, 
-                              target: b5_node_id,
-                              label: 'rest'
+                              id: curr_bnode_id.concat(new_node_id),
+                              source: curr_bnode_id, 
+                              target: new_node_id,
+                              label: key
                           }
-                        };
-          cy_graph.add([new_edge]);
-          let id_selector = `node[type = 'b4 property']`;
-              cy_graph.nodes(id_selector).style({
-                      'shape': 'hexagon',
-                      'background-color': '	#fdfa72',
+                    };
+            cy_graph.add([new_edge]);
+
+          });
+          let id_selector = `node[type = 'b${next_bnode_num - 1} property']`;
+          cy_graph.nodes(id_selector).style({
+                      'shape': 'ellipse',
                       'text-wrap': 'wrap',
                       'border-width': 3,
-                      'border-color': '#F6BE00',
+                      'border-color': '#301934',
                       'border-style': 'solid',
                       'font-size': 35,
                       'font-family': 'Garamond',
                       'line-height': 1.15,
-                      'text-max-width': diam - 10,
-                      
-              });
+                      'text-max-width': diam - 10,        
+          });
+          
+          cy_graph.nodes(`[id = '${new_bnode_id}']`).style({'shape': 'hexagon', 'border-color': '#F6BE00'});
+
+          if (curr_bnodes_idx != all_bnodes.length - 1) {
+            
+            add_mouse_over_to_nodes(cy_graph, new_bnode_id);
+
+          }
+
           cy_graph.elements().edges().style({'font-size': '30'});
-          
-          
-          let id_label = `[id = '${b5_node_id}']`;
-          let parity_of_tap = 'even'
-          cy_graph.nodes(id_label).on('click', function(evt) {
 
+          let id_label = `[id = '${new_bnode_id}']`;
+          let parity_of_tap = 'even';
+
+          if (curr_bnodes_idx != all_bnodes.length - 1){
+
+            cy_graph.nodes(id_label).on('click', function(evt) {
+  
               let data = evt.target._private.data;
-              if (parity_of_tap == 'even') {
-                cy_graph.add([
-                  {group: 'nodes', data: {id: 'b5 first prop', color:'#FFD580',
-                  name: last_val, width: diam, height: diam, type: 'b5 property'},
-                  position: {x: b5_x -175, y: b5_y + 175}}]);
-                cy_graph.add([
-                  {group: 'nodes', data: {id: 'empty list', color:'#FFD580',
-                  name: '[]', width: diam, height: diam, type: 'b5 property'},
-                  position: {x: b5_x -175, y: b5_y - 175}}]);
-                cy_graph.add([
-                  {group: 'edges',data: {
-                              id: b5_node_id.concat('b5 first prop'),
-                              source: b5_node_id, 
-                              target: 'b5 first prop',
-                              label: 'first'
-                          }}
-                        ]);
-                cy_graph.add([
-                  {group: 'edges',data: {
-                      id: b5_node_id.concat('empty list'),
-                      source: b5_node_id, 
-                      target: 'empty list',
-                      label: 'rest'
-                  }}
-                ]);
-                
-              let id_selector = `node[type = "b5 property"]`;
-              cy_graph.nodes(id_selector).style({
-                      'shape': 'hexagon',
-                      'background-color': '	#fdfa72',
-                      'text-wrap': 'wrap',
-                      'border-width': 3,
-                      'border-color': '#F6BE00',
-                      'border-style': 'solid',
-                      'font-size': 35,
-                      'font-family': 'Garamond',
-                      'line-height': 1.15,
-                      'text-max-width': diam - 10,
-              });
 
-                cy_graph.elements().edges().style({'font-size': '30'});
+              let node_pos = cy_graph.nodes(id_label).position();
+              if (parity_of_tap == 'even'){
+                add_new_bnodes(data.id, node_pos, all_bnodes, cy_graph, diam, next_bnode_num + 1, curr_bnodes_idx + 1);
                 parity_of_tap = 'odd';
-                cy_graph.nodes(`[id = "${data.id}"]`).style({
-                  'label': 'b5',
-                  'shape': 'hexagon',
-                  'background-color': '	#fdfa72',
-                  'border-color': '#F6BE00'
-                                      
-                  });
+              }else{
 
-              } else {
+                cy_graph.remove(`node[type = "b${next_bnode_num} property"]`);
 
-                cy_graph.remove('node[type = "b5 property"]');
-                
                 cy_graph.nodes(`[id = "${data.id}"]`).style({
-                  'label': `b5: [${last_val}]`,
-                  'shape': 'hexagon',
-                  'background-color': '	#fdfa72',
-                  'border-color': '#F6BE00'
+                  'label': `${new_bnode_name}`,
                 });
                 parity_of_tap = 'even';
               }
-          })
+              
+            });
+
+          }
 
       }
 
@@ -1048,7 +1050,7 @@
       //bnode_properties is thee object with a list of property nodes
       //bnode_name is going to be the name of the bnode
       function add_values_to_bnode(bnode_name, box_nodes, bnode_properties, cy_graph, 
-             padding_amt, taxon_x_pos, taxon_y_pos, b4node_names) {
+             padding_amt, taxon_x_pos, taxon_y_pos, all_bnodes, prop_node_diam) {
               
               let diam = 120;
               let bnode_data = box_nodes[bnode_name];
@@ -1082,7 +1084,8 @@
               let bnode_vals = [];
 
               let curr_bnode_props = bnode_properties[bnode_name];
-              let add_b5 = false;
+
+              let add_more_bnodes = false;
 
               let next_x_pos;
               let next_y_pos;
@@ -1092,6 +1095,8 @@
               let node_id;
               let new_property_node;
               let new_edge;
+              let assigned_node_type;
+              let new_bnode_id;
 
               for (let i = 0; i < num_bnode_props; i++) {
 
@@ -1114,14 +1119,22 @@
                       curr_bnode_prop = curr_bnode_props[i].obj2Label.value;
                     }
 
+                    assigned_node_type = `${bnode_name} property`;
+                    node_id = `${curr_bnode_prop} - ${bnode_name}`;
+
                     if (curr_bnode_prop == 'b4') {
-                      rest_list = b4node_names.full_list.slice(1, b4node_names.full_list.length);
+                      //now we want to grab the next bnode available
+                      rest_list = (all_bnodes[0])['rest'];
+
                       curr_bnode_prop = `b4: [${rest_list.join(', ')}]`;
-                      add_b5 = true;
-                      b4_node_id = `${curr_bnode_prop} - ${bnode_name}`
+                      add_more_bnodes = true;
+                      b4_node_id = `${curr_bnode_prop} - ${bnode_name}`;
+
+                      assigned_node_type = `${bnode_name} property`;
+                      new_bnode_id = node_id;
                       //so only want to add an onclick function 
                     }
-                    node_id = `${curr_bnode_prop} - ${bnode_name}`;
+
                     if (curr_bnode_prop != undefined) {  
           
                                   new_property_node = 
@@ -1134,13 +1147,13 @@
                                                   opacity: 1,
                                                   width: diam,
                                                   height: diam,
-                                                  type: `${bnode_name} property`
+                                                  type: assigned_node_type
                                                 },
                                                 position: {x: next_x_pos, y: next_y_pos}
                                             };
                                     
                                     
-                                    added_els.push(new_property_node);
+                                   added_els.push(new_property_node);
 
                                    new_edge = 
                                             {
@@ -1161,13 +1174,13 @@
               }
 
               cy_graph.add(added_els);
-              let id_selector = `node[width = ${diam}]`;
+              let id_selector = `node[type = "${bnode_name} property"]`;
               cy_graph.nodes(id_selector).style({
-                      'shape': 'hexagon',
-                      'background-color': '	#fdfa72',
+                      'shape': 'ellipse',
+                      'background-color': '#CBC3E3',
                       'text-wrap': 'wrap',
                       'border-width': 3,
-                      'border-color': '#F6BE00',
+                      'border-color': '#301934',
                       'border-style': 'solid',
                       'font-size': 35,
                       'font-family': 'Garamond',
@@ -1176,59 +1189,50 @@
                  
               });
 
+              cy_graph.nodes(`[id = "${new_bnode_id}"]`).style({
+                      'shape': 'hexagon',
+                      'background-color': '	#fdfa72',
+                      'text-wrap': 'wrap',
+                      'text-max-width': prop_node_diam - 20,
+                      'border-width': 5,
+                      'border-color': '#F6BE00',
+              });
+
+
               cy_graph.elements().edges().style({'font-size': '30'});
-              cy_graph.nodes().on('mouseover', function(evt){
 
-                  const node = evt.target._private.data;
-                  const node_width = node.width;
-                  const node_height = node.height;
-                  cy_graph.nodes(`[id = "${node.id}"]`).style({
+              add_mouse_over_to_nodes(cy_graph, new_bnode_id);
 
-                      'width': node_width + 25,
-                      'height': node_height + 25
+              if (add_more_bnodes) {
 
-                  });
-
-              });
-
-              cy_graph.nodes().on('mouseout', function(evt){
-
-                  const node = evt.target._private.data;
-                  const node_width = node.width
-                  const node_height = node.height
-                  cy_graph.nodes(`[id = "${node.id}"]`).style({
-
-                      'width': node_width,
-                      'height': node_height
-
-                  });
-
-              });
-
-
-              if (add_b5) {
-                let id_label = `[id = "${b4_node_id}"]`;
+                let id_label = `[id = "${new_bnode_id}"]`;
                 let parity_of_tap = 'even';
-                let len = b4node_names.full_list.length;
-                let rest_names = b4node_names.full_list.slice(1,len).join(', ');
+
+                let rest_names = (all_bnodes[0])['rest'].join(', ');
                 cy_graph.nodes(id_label).on('click', function(evt) {
+
                       let data = evt.target._private.data;
                       let pos = evt.target._private.position;
+
                       if (parity_of_tap == 'even') {
-                        add_b5_node(data.id, pos, b4node_names.full_list, cy_graph, diam);
+                        //5 indicates the current bnode we want to add
+                        //and 1 indicates the current list idx we want to display on the node
+                        add_new_bnodes(data.id, pos, all_bnodes, cy_graph, diam, 5, 1);
+
                         parity_of_tap = 'odd';
                         cy_graph.nodes(`[id = '${data.id}']`).style({
                            'label': `b4`,
-                           
-                         })
+                        });
+
                       } else {
+                        //still want to find a way to generalize this
                          cy_graph.remove(`node[type = "b4 property"]`);
                          cy_graph.remove(`node[type = "b5 property"]`);
 
                          cy_graph.nodes(`[id = '${data.id}']`).style({
                            'label': `b4: [${rest_names}]`,
-                          
                          });
+
                          parity_of_tap = 'even';
                       }
                 });
@@ -1506,27 +1510,77 @@
               });
       }
 
-      function box_4_query(json, node_qval, data, cy_graph, 
-          pos, pc_edges, prop_node_diam, graphType_pc_edges,
-           taxon_qvals, all_ranks, given_taxon, 
-           parent_and_all_children, nodes_we_came_from) {
-        let prefComparisonList = [];
+
+      /*the purpose of the fetch_all_bnode_data function is to grab all bnodes
+      that expand the prefComparison list and assign objects to them that contain
+      these properties: {type: ___, first: ____, rest: [...]}
+      */
+      function fetch_all_bnode_data(json, node_qval, data, cy_graph, 
+      pos, pc_edges, prop_node_diam, graphType_pc_edges, taxon_qvals, 
+      all_ranks, given_taxon, parent_and_all_children, nodes_we_came_from) {
+
         let bindings = json.results.bindings;
 
-        //assigning node values to b3 and b4
-        //let prefComp_bnode_name = `[`;
-       // let rest_prefComp_bnode_name = `[`
-        for (let i = 0; i < bindings.length; i++) {
-          let comp_value = bindings[i].v2Label;
-          if (comp_value != undefined && comp_value.value != 'List' && comp_value.value != 'nil') {
-            prefComparisonList.push(comp_value.value); 
+        //maybe instead make an object that stores all bnodes that we are going to add
+        //with three attributes: a first, a type, and a rest property
+                
+        let idx = 0;
+        let v2 = '';
+        let bnode_list = [{}];
+        let curr_bnode;
+        let curr_bnode_prop_label;
+        let curr_bnode_prop_name;
+        let prev_bnode = '';
+        let curr_bnode_list_idx = 0;
+
+        //this will be of the form {type: List, first: ___, rest: [...]}
+        //where the last bnode rest type will be the empty list
+
+        while (curr_bnode_prop_name != 'nil' && idx < bindings.length){
+
+          if (curr_bnode == prev_bnode) {
+            curr_bnode_list_idx += 1;
+            bnode_list.push({});
+            //increase the idx if we've moved on to the next bnode
           }
+          curr_bnode = bindings[idx].b2.value;
+
+          curr_bnode_prop_label = bindings[idx].r2Label.value;
+          if (bindings[idx].v2Label != undefined){
+            curr_bnode_prop_name = bindings[idx].v2Label.value;
+          }
+
+          
+          if (curr_bnode_prop_label == 'rest') {
+            (bnode_list[curr_bnode_list_idx])['rest'] = []; //start the list of rest values as an empty list
+            prev_bnode = curr_bnode; 
+          } 
+
+          else if (curr_bnode_prop_label == 'first') {
+
+            (bnode_list[curr_bnode_list_idx])['first'] = curr_bnode_prop_name;
+
+              //now we want to add the current bnode name to the rest of the lists
+            for (let i = 0; i < curr_bnode_list_idx; i++){
+
+                (bnode_list[i])['rest'].push(curr_bnode_prop_name);
+
+            }
+
+
+          } else {
+            (bnode_list[curr_bnode_list_idx])[curr_bnode_prop_label] = curr_bnode_prop_name;
+          }
+
+          idx+=1;
+
         }
 
-        let b4node_names = {full_list: prefComparisonList};
+        console.log('bnode list', bnode_list);
+
         create_property_nodes(node_qval, data, cy_graph, 
           pos, pc_edges, prop_node_diam, graphType_pc_edges, 
-          b4node_names, taxon_qvals, all_ranks, 
+          bnode_list, taxon_qvals, all_ranks, 
           given_taxon, parent_and_all_children, nodes_we_came_from)
       }
 
@@ -1538,7 +1592,7 @@
             let node_name = taxon_qvals[node_qval];
             let url = box_node_query(node_name, true);
               d3.json(url).then(function(json_result) {
-                box_4_query(json_result, node_qval, data, cy_graph, 
+                fetch_all_bnode_data(json_result, node_qval, data, cy_graph, 
                    pos, pc_edges, prop_node_diam, graphType_pc_edges, 
                    taxon_qvals, all_ranks, given_taxon,
                     parent_and_all_children, nodes_we_came_from);
@@ -1549,9 +1603,10 @@
       //adds the nodes and edges that resemble the properties for the
       //node with id node_name
       function create_property_nodes(node_qval, data, cy_graph, pos, pc_edges, 
-            prop_node_diam, graphType_pc_edges, b4node_names, taxon_qvals, all_ranks,
+            prop_node_diam, graphType_pc_edges, all_bnodes, taxon_qvals, all_ranks,
              given_taxon, parent_and_all_children, nodes_we_came_from) {
             
+
             let node_name = taxon_qvals[node_qval]
             let prop_node_height = prop_node_diam;
             let taxon_x_pos = pos.x;
@@ -1718,7 +1773,10 @@
                                               prop_node_val = `${prop_node_val}: ${number} ${units}`;
                                           } else {
                                             let prefcomparison = bnode_props[0].obj2Label.value;
-                                            prop_node_val = `${prop_node_val}: [${(b4node_names.full_list).join(', ')}]`;
+                                            let first_bnode_list = `${(all_bnodes[0])['first']}, ${all_bnodes[0]['rest'].join(', ')}`;
+                                            prop_node_val = `b3: ${first_bnode_list}`; 
+                                            //so it grabs the first property and rest property and combines them to form
+                                            //a list for the node name
                                           }
                                         }
                                     }
@@ -1734,8 +1792,7 @@
                                 
                               }
                               curr_degree = new_degree;
-                              // position: {x: next_x_pos, y: next_y_pos}
-                              // consoloe.log(next_x_pos,next_y_pos)
+                              
                               let new_property_node = 
                                 {
                                     group: 'nodes',
@@ -1785,7 +1842,6 @@
                     cy_graph.add(added_els);
 
                     let id_label = `[id = '${node_qval}']`
-
 
                     let clientWidth = document.getElementById('cy').clientWidth;
                     let clientHeight = document.getElementById('cy').clientHeight;
@@ -1907,27 +1963,26 @@
 
                             let id_label = `node[id = "${key}"]`;
                             parity_dictionary[`parity_of_tap_${key}`] = 'even';  //a way of creating a "new" let for each bnode
-                            let all_names = (b4node_names.full_list).join(', ');
+
+                            let all_names = `${(all_bnodes[0])['first']}, ${all_bnodes[0]['rest'].join(', ')}`;
+                            //all_names should be the same as the prop node val we assigned to b3
+
                             cy_graph.nodes(id_label).on('tap', function(evt) {
                                   let data = evt.target._private.data;
                                   if (parity_dictionary[`parity_of_tap_${data.id}`] == 'even') {
                                       //bnode_name, box_nodes, bnode_properties, cy_graph
-                                      cy_graph.nodes(`[id = "${data.id}"]`).style({
-                                        'shape': 'hexagon',
-                                        'background-color': '	#fdfa72',
-                                        'border-color': '#F6BE00'
-                                      });
 
+                                      //could make checking for the key more general but for now
+                                      //we are assuming we can expand box nodes for the node b3
                                       if (key == 'b3') {
                                             cy_graph.nodes(id_label).style({
                                             'label': `b3`
                                             });
                                       }
                                       add_values_to_bnode(data.id, box_nodes, bnode_properties, 
-                                      cy_graph, padding_amount, taxon_x_pos, taxon_y_pos, b4node_names);
+                                      cy_graph, padding_amount, taxon_x_pos, taxon_y_pos, all_bnodes,prop_node_diam);
+
                                       parity_dictionary[`parity_of_tap_${data.id}`] = 'odd';
-                                      
-                                      
 
                                   } else {
                                       parity_dictionary[`parity_of_tap_${data.id}`] = 'even';
@@ -1935,7 +1990,10 @@
                                       cy_graph.remove(`node[type = "${data.id} property"]`);
                                       
                                       if (key == 'b3') {
-                                          cy_graph.remove( `node[type = "b4 property"]`);
+
+                                          //might need to change this here
+                                          cy_graph.remove(`node[type = "b3 property"]`);
+                                          cy_graph.remove(`node[type = "b4 property"]`);
                                           cy_graph.remove(`node[type = "b5 property"]`);
                                             cy_graph.nodes(id_label).style({
                                             'label': `b3: [${all_names}]`
@@ -2043,7 +2101,7 @@
                     padding: 19
                   });
                 
-            let clientWidth = document.getElementById('cy').clientWidth;
+           /* let clientWidth = document.getElementById('cy').clientWidth;
             let clientHeight = document.getElementById('cy').clientHeight;
             let smaller_space = Math.min(clientWidth, clientHeight);
 
@@ -2060,14 +2118,14 @@
                 eles: id_label, 
                 padding: padding_amount
               }
-            }); 
-              /*     
+            }); */
+                
               cy_graph.animate({
                 zoom: {
                   level: .02,
                   position: {x: farthest_second_left_child_pos.x, y: 0}
                 }
-              });*/
+              });
           }
             
       }
