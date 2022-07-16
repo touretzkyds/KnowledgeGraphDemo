@@ -11,6 +11,7 @@
     <script src="external/cytoscape-popper/cytoscape-popper.js"></script>
     <script src="external/cytoscape-context-menus/cytoscape-context-menus.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/copy-image-clipboard/dist/index.browser.js"></script>
+    <script src="newDagre.js"></script>
 
 
 
@@ -170,6 +171,7 @@
 
       const ROOT_QVAL = "Q729";
       const ROOT_NAME = "Animalia";
+      const CONCISE_NODES_LENGTH = 1481;
 
     //takes a string and capitalizes all first letters of the word;
     function capitalize(str) {
@@ -2096,36 +2098,18 @@
             cy_graph.remove(`node[type = "property definition"]`);
             cy_graph.remove(`node[type = "image"]`);       
             cy_graph.remove("node[width = 120]"); //removing box nodes
+            let node_pos = cy_graph.nodes(`[id = "${id_last_clicked_node}"]`).position()
             if (!click_of_subtax) {
                   cy_graph.fit({
                     padding: 19
                   });
                 
-           /* let clientWidth = document.getElementById('cy').clientWidth;
-            let clientHeight = document.getElementById('cy').clientHeight;
-            let smaller_space = Math.min(clientWidth, clientHeight);
-
-            //for num_property_nodes = 9, want clientHeight / 2.17
-            //for num_property_nodes = 6, want clientHeight / 2.4;
-            let padding_amount = Math.floor(clientHeight / 2.3);
-            if (num_property_nodes >= 8) {
-              padding_amount = Math.floor(clientHeight/2.17);
-            }
-
-            //zoom on the selected node enough to display all of the properties
-            cy_graph.animate({
-              fit: {
-                eles: id_label, 
-                padding: padding_amount
-              }
-            }); */
-                
-              cy_graph.animate({
-                zoom: {
-                  level: .02,
-                  position: {x: farthest_second_left_child_pos.x, y: 0}
-                }
-              });
+                cy_graph.animate({
+                  zoom: {
+                    level: .02,
+                    position: node_pos
+                  }
+                });
           }
             
       }
@@ -2750,12 +2734,6 @@
               nodes: nodes_lst,
               edges: edge_lst
             },
-            layout: {
-              name: 'dagre', 
-              spacingFactor: 4,
-              rankDir: 'BT',
-              avoidOverlap: true,
-            },
             wheelSensitivity: 0.4,
             style: [
                     {
@@ -2808,6 +2786,12 @@
                   }
                 ]
         });
+        console.log('pc edges', graphType_pc_edges);
+        console.log('parent to children', parent_and_all_children);
+        console.log('nodes lst', nodes_lst);
+        console.log('edges', edge_lst);
+        assign_node_positions(root, cy.nodes(), graphType_pc_edges, parent_and_all_children);
+  
 
         // CONTEXT MENU
         let contextMenu = cy.contextMenus({
@@ -3035,12 +3019,8 @@
           let zoomedInOnNode = false;
           let id_lastclicked_node = "";
 
-         
-          cy.zoom({
-            level: .02, // the zoom level
-            position: {x: farthest_second_left_child_pos.x, y: 0}
-          });
 
+          
 
           let prev_nodes_clicked = [];
           let rank_parity_tap = 'even';
@@ -3074,6 +3054,26 @@
               }
               idx +=1;
           });
+         // let given_taxon_pos = cy.nodes(`[id = "${given_taxon}"]`).position()
+         let taxon_label = `[id = '${given_taxon}']`
+         let clientWidth = document.getElementById('cy').clientWidth;
+         let clientHeight = document.getElementById('cy').clientHeight;
+         let smaller_space = Math.min(clientWidth, clientHeight);
+        // let padding_amount_factor = (Math.floor(clientHeight / 1.95)) / (CONCISE_NODES_LENGTH);
+        // let padding_amount = (nodes_lst.length) * padding_amount_factor;
+         let padding_amount = (Math.floor(clientHeight / 2.1));
+
+         //padding amount 151 for 1481
+         //
+
+          console.log('padding amount', padding_amount, 'nodes lst', nodes_lst.length)
+          cy.animate({
+                      fit: {
+                        eles: taxon_label, 
+                        padding: padding_amount
+                      }
+                    });
+        
           
           cy.on('tap', function(evt) {
                           
