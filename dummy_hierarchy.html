@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<html>
+<head>
+    <title>Tutorial 1: Getting Started</title>
+    <script src="external/d3.v7.min.js"></script>
+    <script src="external/cytoscape.min.js"></script>
+
+
+    <style type="text/css">
+
+        .body{
+            margin: 0;
+        }
+         #cy {
+            display: none;
+            height: 95vh;
+            margin-top:10px;
+            width: 100%;
+            border-style: solid;
+      }
+      </style>
+
+            <script>
+
+            const NODE_SEP = 300;
+            const start_y_pos = 40;
+            const LEVEL_DEPTH = 200;
+            const root = 'O';
+            const node_size = 80
+
+            const nodes_lst = 
+            [
+                {data: {id: 'A', name: 'A', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'B', name: 'B', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'C', name: 'C', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'D', name: 'D', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'E', name: 'E', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'F', name: 'F', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'G', name: 'G', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'H', name: 'H', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'I', name: 'I', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'J', name: 'J', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'K', name: 'K', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'L', name: 'L', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'M', name: 'M', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'N', name: 'N', width: node_size, height: node_size, color: 'black'}},
+                {data: {id: 'O', name: 'O', width: node_size, height: node_size, color: 'black'}},
+
+            ];
+
+            const edges_lst = 
+            [
+                {data: {id: 'E-O', source: 'E', target: 'O'}},
+                {data: {id: 'F-O', source: 'F', target: 'O'}},
+                {data: {id: 'N-O', source: 'N', target: 'O'}},
+                {data: {id: 'A-E', source: 'A', target: 'E'}},
+                {data: {id: 'D-E', source: 'D', target: 'E'}},
+                {data: {id: 'B-D', source: 'B', target: 'D'}},
+                {data: {id: 'C-D', source: 'C', target: 'D'}},
+                {data: {id: 'G-N', source: 'G', target: 'N'}},
+                {data: {id: 'M-N', source: 'M', target: 'N'}},
+                {data: {id: 'H-M', source: 'H', target: 'M'}},
+                {data: {id: 'I-M', source: 'I', target: 'M'}},
+                {data: {id: 'J-M', source: 'J', target: 'M'}},
+                {data: {id: 'K-M', source: 'K', target: 'M'}},
+                {data: {id: 'L-M', source: 'L', target: 'M'}},
+
+
+            ];
+            
+
+            //pc_edges i.e. parent-child edges is an object 
+            //where the keys are the source node and the value is the target node
+            const graph_pc_edges = 
+            {
+                'E': 'O',
+                'F': 'O',
+                'N': 'O',
+                'A': 'E',
+                'D': 'E',
+                'B': 'D',
+                'C': 'D',
+                'G': 'N',
+                'M': 'N',
+                'H': 'M',
+                'I': 'M',
+                'J': 'M',
+                'K': 'M',
+                'L': 'M'
+            }
+
+            //an object that maps a node to a list of all children in order of them displayed
+            //if a node is a leaf node then it has no entry in this object
+            const graph_parent_to_children_obj = 
+            {
+                'O': ['E', 'F', 'N'],
+                'E': ['A', 'D'],
+                'D': ['B', 'C'],
+                'N': ['G', 'M'],
+                'M': ['H', 'I', 'J', 'K', 'L']
+            }
+
+
+            function first_pass(curr_node, first_x_obj, modifier_obj, pc_edges, parent_to_children_obj ) {
+
+                const curr_children = parent_to_children_obj[curr_node];
+                if (curr_children != undefined ) {
+                    for (let i = 0; i < curr_children.length; i++ ) {
+                        first_pass(curr_children[i], first_x_obj, modifier_obj, pc_edges, parent_to_children_obj);
+                    }
+                }
+                let has_left_siblings = false;
+
+                //now check to see if the current node has a previous sibling
+                const curr_node_parent = pc_edges[curr_node];
+
+                if (curr_node_parent != undefined && curr_node_parent != 'root' ) {
+
+                    const curr_node_siblings = parent_to_children_obj[curr_node_parent];
+
+
+                    var idx_of_curr_node = curr_node_siblings.indexOf(curr_node)
+                    if ( idx_of_curr_node != 0 ) {
+                        first_x_obj[curr_node] = first_x_obj[(curr_node_siblings[idx_of_curr_node - 1])] + NODE_SEP;
+                        has_left_siblings = true;
+                    }else{
+                        first_x_obj[curr_node] = 0;
+                    }
+
+                } else {
+                    //curr_node is the root
+                    first_x_obj[curr_node] = 0;
+                }
+
+                if (curr_children != undefined ) {
+                        if (curr_children.length == 1 ) {
+                            modifier_obj[curr_node] = first_x_obj[curr_node];
+                        } else {
+                            desired_x = (first_x_obj[curr_children[curr_children.length -1]] - first_x_obj[curr_children[0]])/2;
+                            modifier_obj[curr_node] = first_x_obj[curr_node] - desired_x;
+                            
+                        }
+                    }
+                }   
+
+                function secondPass (curr_node, modSum, final_x_obj, first_x_obj, modifier_obj, pc_edges, parent_to_children_obj ) {
+
+                    final_x_obj[curr_node] = first_x_obj[curr_node] + modSum + (1.5*NODE_SEP); //1.5 is the farthest child to the left of the graph
+                    const curr_children = parent_to_children_obj[curr_node];
+
+                    if (curr_children != undefined ) {
+                        for (let i = 0; i < curr_children.length; i++ ) {
+                            curr_node_modifier = modifier_obj[curr_node];
+                            secondPass(curr_children[i],curr_node_modifier + modSum, final_x_obj, first_x_obj, modifier_obj, pc_edges, parent_to_children_obj);
+                        }
+                    }
+                }
+
+                //simple function that assigns levels to nodes and returns the corresponding object
+                function assignNodeLevels(curr_node, node_to_level, curr_level, pc_edges, parent_to_children_obj) {
+
+                    const curr_children = parent_to_children_obj[curr_node];
+
+                    //assign the node level to the current node
+                    node_to_level[curr_node] = curr_level;
+                    if (curr_children != undefined) {
+                        for (let i = 0; i < curr_children.length; i++) {
+                            let curr_child = curr_children[i];
+                            let new_level = curr_level + 1;
+                            assignNodeLevels(curr_child, node_to_level, new_level, pc_edges, parent_to_children_obj);
+                        }
+                    }
+
+                }
+
+
+                function shiftChildren(curr_node, shiftValue, final_x_obj, pc_edges, parent_to_children_obj) {
+
+
+                    const curr_children = parent_to_children_obj[curr_node];
+                    if (curr_children != undefined ) {
+                        //first adjust all children positions
+                        for (let i = 0; i < curr_children.length; i++) {
+                            let curr_child = curr_children[i];
+                            final_x_obj[curr_child] += shiftValue;
+
+
+                            shiftChildren(curr_child, shiftValue, final_x_obj, pc_edges, parent_to_children_obj);
+
+                        }
+
+                    }
+
+                }
+
+
+                function fixParentPositions(curr_node, final_x_positions, pc_edges, parent_to_children_obj) {
+
+                    let curr_parent = pc_edges[curr_node];
+                    let first_child_pos;
+                    let last_child_pos;
+                    let new_parent_pos;
+
+                    //first check if the node is an only child, then adjust it so
+                    //it's directly under the parent
+
+                    if (curr_parent != undefined && curr_parent != 'root') {
+                        let curr_siblings = parent_to_children_obj[curr_parent];
+                        if (curr_siblings.length == 1) {
+                            if (final_x_positions[curr_parent] != final_x_positions[curr_node]) {
+                                final_x_positions[curr_node] = final_x_positions[curr_parent];
+                            }
+                        }
+                    }
+
+                    let curr_children = parent_to_children_obj[curr_node];
+                    if (curr_children != undefined) {
+                        for (let i = 0; i < curr_children.length; i++) {
+                            fixParentPositions(curr_children[i], final_x_positions, pc_edges, parent_to_children_obj)
+                        }
+                        first_child_pos = final_x_positions[curr_children[0]];
+                        last_child_pos = final_x_positions[curr_children[curr_children.length - 1]];
+                        new_parent_pos = (first_child_pos + last_child_pos)/2;
+                        final_x_positions[curr_node] = new_parent_pos;
+                        
+                    }
+
+                }
+
+
+                //finds the largest overlap of the children of the curr node
+                function findLargestOverlap(curr_node, final_x_obj, max_x_positions_at_each_level, largest_overlap_val, curr_level, pc_edges, parent_to_children_obj) {
+
+                    let curr_children = parent_to_children_obj[curr_node];
+
+                    if (curr_children != undefined) {
+
+                        for (let i = 0; i < curr_children.length; i++) {
+                            
+                            let new_overlap_val = findLargestOverlap(curr_children[i], final_x_obj, max_x_positions_at_each_level, largest_overlap_val, curr_level + 1, pc_edges, parent_to_children_obj);
+                            if (new_overlap_val > largest_overlap_val || largest_overlap_val == undefined) {
+                                largest_overlap_val = new_overlap_val
+                            }
+                        }
+                        
+                    }
+
+
+                    let curr_max_x_at_node_level_data = max_x_positions_at_each_level[curr_level];
+
+
+                    if (curr_max_x_at_node_level_data != undefined) {
+
+                        let curr_max_x_at_node_level_x = curr_max_x_at_node_level_data.x_val;
+                        let curr_max_x_at_node_level_node = curr_max_x_at_node_level_data.node;
+
+                        let x_of_curr_node = final_x_obj[curr_node];
+
+
+                        if ((curr_max_x_at_node_level_x - x_of_curr_node) < NODE_SEP) {
+
+                            largest_overlap = 0;
+
+                        }
+
+                        if (x_of_curr_node <= curr_max_x_at_node_level_x) {
+                            let new_largest_overlap_val = (curr_max_x_at_node_level_x - x_of_curr_node);
+
+                            if (new_largest_overlap_val > largest_overlap_val) {
+                                largest_overlap_val = new_largest_overlap_val;
+                            }
+
+                        }
+                    }
+
+                    return largest_overlap_val;
+
+
+                }
+
+
+                function fixNodeConflicts(curr_node, final_x_obj, node_to_level, max_x_positions_at_each_level, pc_edges, parent_to_children_obj) {
+
+
+                        //first adjust the position of the current node if need be
+                        let largest_overlap = findLargestOverlap(curr_node, final_x_obj, max_x_positions_at_each_level, -Infinity, node_to_level[curr_node], pc_edges, parent_to_children_obj);
+                        if (largest_overlap >= 0) {
+
+                            let shift_amount = largest_overlap + NODE_SEP;
+                                final_x_obj[curr_node] += shift_amount;
+
+
+                                //if we shift a parent but it's child isn't overlapping any nodes, it also needs to get shifted
+                                //but it won't get accounted for in the next iteration
+
+                                let curr_children = parent_to_children_obj[curr_node];
+
+                            shiftChildren(curr_node, shift_amount, final_x_obj, pc_edges, parent_to_children_obj);
+                                
+                        }
+
+                        //then we want to adjust the max x position
+                        let current_level = node_to_level[curr_node];
+
+                        max_x_positions_at_each_level[current_level] = {x_val: final_x_obj[curr_node], node: curr_node};
+
+
+                        const curr_children = parent_to_children_obj[curr_node];
+                        if (curr_children != undefined) {
+                            for (let i = 0; i < curr_children.length; i++) {
+                                let curr_child = curr_children[i];
+
+                                fixNodeConflicts(curr_child, final_x_obj, node_to_level, max_x_positions_at_each_level, pc_edges, parent_to_children_obj);
+                            }
+                        }
+
+                }
+
+
+                function assign_node_positions(root, cy_nodes, pc_edges, parent_to_children_obj) {
+                    let intitial_x_positions = {};
+                    let modifier_obj = {};
+                    let node_to_level = {};
+                    let max_x_positions_at_each_level = {};
+
+                    first_pass(root, intitial_x_positions, modifier_obj, pc_edges, parent_to_children_obj);
+                    let final_x_positions = {};
+                    secondPass(root, 0, final_x_positions, intitial_x_positions, modifier_obj, pc_edges, parent_to_children_obj);
+                    assignNodeLevels(root, node_to_level, 0, pc_edges, parent_to_children_obj);
+
+                    let new_final_x_positions = {...final_x_positions}
+                    fixNodeConflicts(root, new_final_x_positions, node_to_level, max_x_positions_at_each_level, pc_edges, parent_to_children_obj);
+                    fixParentPositions(root, new_final_x_positions, pc_edges, parent_to_children_obj);
+                    
+                    console.log('new final x positions', new_final_x_positions);
+                    
+                    for (let i = 0; i < cy_nodes.length; i++) {
+                        let curr_node_id = cy_nodes[i][0]._private.data.id;
+                        let new_y = start_y_pos + (node_to_level[curr_node_id])*LEVEL_DEPTH;
+                        console.log('curr node id', curr_node_id, 'new position', {x: new_final_x_positions[curr_node_id], y: new_y})
+                        cy_nodes[i][0]._private.position = {x: new_final_x_positions[curr_node_id], y: new_y}
+                    }
+
+                    
+
+                }
+               
+             
+                function exec(){
+
+                        let intitial_x_positions = {};
+                        let modifier_obj = {};
+                        let node_to_level = {};
+                        let max_x_positions_at_each_level = {};
+
+                        first_pass(root, intitial_x_positions, modifier_obj, graph_pc_edges, graph_parent_to_children_obj);
+                        let final_x_positions = {};
+                        secondPass(root, 0, final_x_positions, intitial_x_positions, modifier_obj, graph_pc_edges, graph_parent_to_children_obj);
+                        assignNodeLevels(root, node_to_level, 0, graph_pc_edges, graph_parent_to_children_obj);
+
+                        let new_final_x_positions = {...final_x_positions}
+                        fixNodeConflicts(root, new_final_x_positions, node_to_level, max_x_positions_at_each_level, graph_pc_edges, graph_parent_to_children_obj);
+                        fixParentPositions(root, new_final_x_positions, graph_pc_edges, graph_parent_to_children_obj);
+
+                        const cyDiv = document.querySelector('#cy');
+                        cyDiv.style.display = 'block';
+                        var cy = cytoscape({
+
+                            container: document.getElementById('cy'),
+                            
+                            elements: {
+                                        nodes: nodes_lst,
+                                        edges: edges_lst
+                                    },
+                            style: [
+                                {
+                                    selector: 'node[name]',
+                                    style: {
+                                        'content': 'data(name)',
+                                        'text-valign': 'center',
+
+                                    }
+                                },
+                                {
+                                selector: 'node',
+                                style: {
+                                    'width': 'data(width)',
+                                    'height': 'data(height)',
+                                    'font-size': 30,
+                                    'background-color': 'data(color)'
+                                }
+
+                                },
+                                {
+                                selector: 'edge',
+                                style: {
+                                    'curve-style': 'bezier',
+                                    'target-arrow-shape': 'triangle',
+                                    'width': 4
+
+                                    }
+                                },
+                                {
+                                selector: '.eh-handle',
+                                    style: {
+                                    'background-color': 'red',
+                                    'width': 12,
+                                    'height': 12,
+                                    'shape': 'ellipse',
+                                    'overlay-opacity': 0,
+                                    'border-width': 12, // makes the handle easier to hit
+                                    'border-opacity': 0
+                                    }
+                                }
+                            ]
+                            });
+                        cy.nodes().style({'shape': 'square', 'font-size': '30px', 
+                        'color': 'white', 'font-weight': '900', 'text-max-width': 200, 'text-wrap': 'wrap'});
+
+                        //assign_node_positions(root, cy.nodes(), graph_pc_edges, graph_parent_to_children_obj)
+
+                        cy.nodes().style({'font-size': 22, 'background-color': '#00008b'});
+
+                        for (let i = 0; i < cy.nodes().length; i++) {
+                            let curr_node_id = cy.nodes()[i][0]._private.data.id;
+                            let new_y = start_y_pos + (node_to_level[curr_node_id])*LEVEL_DEPTH;
+                            console.log('curr node id', curr_node_id, 'new position', {x: new_final_x_positions[curr_node_id], y: new_y})
+                            cy.nodes()[i][0]._private.position = {x: new_final_x_positions[curr_node_id], y: new_y}
+                        };
+
+                        console.log('cy nodes', cy.nodes())
+
+                }                 
+            </script>
+            </head>
+            <body>
+                </div>
+                <div id="cy"></div>
+            </div>
+            <script>
+                window.onload=exec();
+            </script>
+            </body>
+
+
+</html>
