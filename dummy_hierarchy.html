@@ -23,10 +23,10 @@
 
             <script>
 
-            const NODE_SEP = 300;
-            const start_y_pos = 40;
-            const LEVEL_DEPTH = 200;
-            const root = 'O';
+            const NODE_SEP = 200; //how far apart horizontally the nodes are
+            const start_y_pos = 40; //the y position that the graph is rendered on the canvas
+            const LEVEL_DEPTH = 200; //how far part vertically the nodes are
+            const root = 'O'; //the id of the root node
             const node_size = 80
 
             const nodes_lst = 
@@ -102,9 +102,14 @@
             }
 
 
+            //START OF DAGRE ALGORITHM
+
+            //This function assigns an index to each node indicating which number child it is, starting at 0
+
             function first_pass(curr_node, first_x_obj, modifier_obj, pc_edges, parent_to_children_obj ) {
 
                 const curr_children = parent_to_children_obj[curr_node];
+
                 if (curr_children != undefined ) {
                     for (let i = 0; i < curr_children.length; i++ ) {
                         first_pass(curr_children[i], first_x_obj, modifier_obj, pc_edges, parent_to_children_obj);
@@ -119,8 +124,11 @@
 
                     const curr_node_siblings = parent_to_children_obj[curr_node_parent];
 
+                    var idx_of_curr_node = curr_node_siblings.indexOf(curr_node);
 
-                    var idx_of_curr_node = curr_node_siblings.indexOf(curr_node)
+                    //Assigning horizontal positioning of siblings relative to each other,
+                    //if its the leftmost sibling, assign it's x as 0, if not look at the previous siblings x
+                    //and add the node separation value to assign the x position
                     if ( idx_of_curr_node != 0 ) {
                         first_x_obj[curr_node] = first_x_obj[(curr_node_siblings[idx_of_curr_node - 1])] + NODE_SEP;
                         has_left_siblings = true;
@@ -174,7 +182,7 @@
 
                 }
 
-
+                //with a given shiftValue, this shifts all nodes under the current node that same amount
                 function shiftChildren(curr_node, shiftValue, final_x_obj, pc_edges, parent_to_children_obj) {
 
 
@@ -194,7 +202,7 @@
 
                 }
 
-
+                //function that adjusts the parents so that they are directly halfway above all of their children
                 function fixParentPositions(curr_node, final_x_positions, pc_edges, parent_to_children_obj) {
 
                     let curr_parent = pc_edges[curr_node];
@@ -257,7 +265,6 @@
 
                         let x_of_curr_node = final_x_obj[curr_node];
 
-
                         if ((curr_max_x_at_node_level_x - x_of_curr_node) < NODE_SEP) {
 
                             largest_overlap = 0;
@@ -294,7 +301,7 @@
                                 //if we shift a parent but it's child isn't overlapping any nodes, it also needs to get shifted
                                 //but it won't get accounted for in the next iteration
 
-                                let curr_children = parent_to_children_obj[curr_node];
+                            let curr_children = parent_to_children_obj[curr_node];
 
                             shiftChildren(curr_node, shift_amount, final_x_obj, pc_edges, parent_to_children_obj);
                                 
@@ -317,7 +324,10 @@
 
                 }
 
+                //END OF DAGRE ALGORITHM
 
+                //a function that takes the dagre algorithm and just assigns the newly calculated x and y positions
+                //to all the cytoscape nodes
                 function assign_node_positions(root, cy_nodes, pc_edges, parent_to_children_obj) {
                     let intitial_x_positions = {};
                     let modifier_obj = {};
@@ -338,7 +348,7 @@
                     for (let i = 0; i < cy_nodes.length; i++) {
                         let curr_node_id = cy_nodes[i][0]._private.data.id;
                         let new_y = start_y_pos + (node_to_level[curr_node_id])*LEVEL_DEPTH;
-                        console.log('curr node id', curr_node_id, 'new position', {x: new_final_x_positions[curr_node_id], y: new_y})
+                        
                         cy_nodes[i][0]._private.position = {x: new_final_x_positions[curr_node_id], y: new_y}
                     }
 
@@ -348,20 +358,6 @@
                
              
                 function exec(){
-
-                        let intitial_x_positions = {};
-                        let modifier_obj = {};
-                        let node_to_level = {};
-                        let max_x_positions_at_each_level = {};
-
-                        first_pass(root, intitial_x_positions, modifier_obj, graph_pc_edges, graph_parent_to_children_obj);
-                        let final_x_positions = {};
-                        secondPass(root, 0, final_x_positions, intitial_x_positions, modifier_obj, graph_pc_edges, graph_parent_to_children_obj);
-                        assignNodeLevels(root, node_to_level, 0, graph_pc_edges, graph_parent_to_children_obj);
-
-                        let new_final_x_positions = {...final_x_positions}
-                        fixNodeConflicts(root, new_final_x_positions, node_to_level, max_x_positions_at_each_level, graph_pc_edges, graph_parent_to_children_obj);
-                        fixParentPositions(root, new_final_x_positions, graph_pc_edges, graph_parent_to_children_obj);
 
                         const cyDiv = document.querySelector('#cy');
                         cyDiv.style.display = 'block';
@@ -381,7 +377,7 @@
                                         'text-valign': 'center',
 
                                     }
-                                },
+                        },
                                 {
                                 selector: 'node',
                                 style: {
@@ -418,18 +414,9 @@
                         cy.nodes().style({'shape': 'square', 'font-size': '30px', 
                         'color': 'white', 'font-weight': '900', 'text-max-width': 200, 'text-wrap': 'wrap'});
 
-                        //assign_node_positions(root, cy.nodes(), graph_pc_edges, graph_parent_to_children_obj)
+                        assign_node_positions(root, cy.nodes(), graph_pc_edges, graph_parent_to_children_obj)
 
-                        cy.nodes().style({'font-size': 22, 'background-color': '#00008b'});
-
-                        for (let i = 0; i < cy.nodes().length; i++) {
-                            let curr_node_id = cy.nodes()[i][0]._private.data.id;
-                            let new_y = start_y_pos + (node_to_level[curr_node_id])*LEVEL_DEPTH;
-                            console.log('curr node id', curr_node_id, 'new position', {x: new_final_x_positions[curr_node_id], y: new_y})
-                            cy.nodes()[i][0]._private.position = {x: new_final_x_positions[curr_node_id], y: new_y}
-                        };
-
-                        console.log('cy nodes', cy.nodes())
+                        cy.nodes().style({'font-size': 22, 'background-color': '#00008b'})
 
                 }                 
             </script>
