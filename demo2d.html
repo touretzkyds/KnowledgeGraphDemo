@@ -2917,6 +2917,7 @@
 
         let rank_node_id;
 
+        
         let add_eles = [];
         
         for (let x = 0; x < nodes.length; x++) {
@@ -2970,6 +2971,9 @@
         //adding ranks to the graph along with edges
 
           let eles = cy.add(add_eles);
+
+        
+
           cy.elements().edges().style({ 'font-size' : '27' });
           cy.elements().nodes().style({
             'font-family': 'Calibri'
@@ -3064,6 +3068,7 @@
          let padding_amount = (Math.floor(clientHeight / 2.1));
 
          //padding amount 151 for 1481
+         //padding amount 140 for 8 nodes
          //
 
           console.log('padding amount', padding_amount, 'nodes lst', nodes_lst.length)
