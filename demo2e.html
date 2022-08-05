@@ -19,6 +19,8 @@
     <script src="https://unpkg.com/webcola/WebCola/cola.min.js"></script>
     <script src="external/cytoscape-cola/cytoscape-cola.js"></script>
 
+    <script src="external/cytoscape-automove.js"></script>
+
 
 
     <style type="text/css">
@@ -83,6 +85,11 @@
         color: white;
         padding: 10px;
         width: 100px;
+      }
+
+      #Collapse {
+        background-color: grey;
+        visibility: hidden;
       }
 
       .input-species {
@@ -167,6 +174,7 @@
     </style>
 
     <script> 
+      // Early definitions: used throughout the code
       let my_result;
       let bindings;
       let len;
@@ -180,6 +188,14 @@
 
       const ROOT_QVAL = "Q729";
       const ROOT_NAME = "Animalia";
+
+      // For return to normal
+      var rank_removal;
+      var rank_removed = false;
+      // Implement dictionary to keep track of positioning. Fisheye is unreliable
+      var positions = {};
+      var to_remove = []
+
 
       const prefixes = {
         "http://solid.boltz.cs.cmu.edu:3030/data/": "boltz:",
@@ -492,47 +508,41 @@
 
             if (child_qval == root_qval) {
               let root_prefLabel = capitalize(child_prefLabel);
-              
-                        if (pref_labels[root_prefLabel] == undefined) {
-                          pref_labels[root_prefLabel] = root;
-                        }
+              if (pref_labels[root_prefLabel] == undefined) {
+                pref_labels[root_prefLabel] = root;
+              }
             }
             if (parent_qval == root_qval) {
-
-               let root_prefLabel = capitalize(parent_prefLabel);
-                        if (pref_labels[root_prefLabel] == undefined) {
-                          pref_labels[root_prefLabel] = root;
-                        }
+              let root_prefLabel = capitalize(parent_prefLabel);
+              if (pref_labels[root_prefLabel] == undefined) {
+                pref_labels[root_prefLabel] = root;
+              }
             }
 
             //only want to continue if parent and child qvals are diff and if 
             //we haven't seen the child yet
             if (child_qval != parent_qval && qvals_to_names[child_qval] == undefined) {
+              node_names.push({name: child, qval: child_qval});
 
-                      node_names.push({name: child, qval: child_qval});
+              def_for_taxons[child_qval] = child_def;
+              qvals_to_names[child_qval] = child;
 
-                      def_for_taxons[child_qval] = child_def;
-                      qvals_to_names[child_qval] = child;
-
-                      if (names_to_qvals[child] != undefined) {
-                        names_to_qvals[`${child}: ${rank}`] = child_qval;
-                      } else {
-                        names_to_qvals[child] = child_qval;
-                      }
-                      //because the child name can be repeated
+              if (names_to_qvals[child] != undefined) {
+                names_to_qvals[`${child}: ${rank}`] = child_qval;
+              } else {
+                names_to_qvals[child] = child_qval;
+              }
+              //because the child name can be repeated
 
 
-                      if (child_prefLabel != undefined) {
-                        child_prefLabel = capitalize(child_prefLabel);
-                        if (pref_labels[child_prefLabel] == undefined) {
-                          pref_labels[child_prefLabel] = child;
-                        }
-                      }
-                      pc_edges[child_qval] = parent_qval; //source is the key and target is the value
-                      rank_node_edges[child_qval] = rank;
-
-                      
-                      
+              if (child_prefLabel != undefined) {
+                child_prefLabel = capitalize(child_prefLabel);
+                if (pref_labels[child_prefLabel] == undefined) {
+                  pref_labels[child_prefLabel] = child;
+                }
+              }
+              pc_edges[child_qval] = parent_qval; //source is the key and target is the value
+              rank_node_edges[child_qval] = rank;       
             }
 
         }
@@ -833,16 +843,16 @@
           let id_label = `[id = '${node_qval}']`;
     
           cy_graph.nodes(id_label).style({
-                      'border-color': '#FFB6C1',
-                      'text-opacity': '1',
-                      'opacity': '1',
-                      'text-wrap': 'wrap',
-                      'text-max-width': 125,
-                      'border-width': 5,
-                      'border-style': 'solid',
-                      'font-size': 30,
-                      'font-family': 'Calibri',
-                      'line-height': 1.15
+            'border-color': '#FFB6C1',
+            'text-opacity': '1',
+            'opacity': '1',
+            'text-wrap': 'wrap',
+            'text-max-width': 125,
+            'border-width': 5,
+            'border-style': 'solid',
+            'font-size': 30,
+            'font-family': 'Calibri',
+            'line-height': 1.15
           });
           
       }
@@ -928,12 +938,11 @@
                         subtax_rank['subTaxonOf'] = obj_label;
 
                         let qval_url = curr_data_val.obj.value;
-
-                            if (qval_url.length >= 40
-                                && (qval_url.slice(0, 40)) == 'http://solid.boltz.cs.cmu.edu:3030/data/') {
-                                subtax_name = `${obj_label}    boltz: ${qval_url.slice(40, qval_url.length)}`;
-                                subtax_rank['subtax_identifier'] = subtax_name;
-                            }
+                        if (qval_url.length >= 40
+                            && (qval_url.slice(0, 40)) == 'http://solid.boltz.cs.cmu.edu:3030/data/') {
+                            subtax_name = `${obj_label}    boltz: ${qval_url.slice(40, qval_url.length)}`;
+                            subtax_rank['subtax_identifier'] = subtax_name;
+                        }
                       }
                       else if (curr_data_val.predLabel.value == 'taxonRank') {
                         subtax_rank['taxonRank'] = obj_label;
@@ -1043,7 +1052,7 @@
           let parity_of_tap = 'even'
           cy_graph.nodes(id_label).on('click', function(evt) {
 
-              let data = evt.target._private.data;
+              let data = evt.target.data();
               if (parity_of_tap == 'even') {
                 cy_graph.add([
                   {group: 'nodes', data: {id: 'b5 first prop', color:'#FFD580',
@@ -1229,8 +1238,8 @@
                 let len = b4node_names.full_list.length;
                 let rest_names = b4node_names.full_list.slice(1,len).join(', ');
                 cy_graph.nodes(id_label).on('click', function(evt) {
-                      let data = evt.target._private.data;
-                      let pos = evt.target._private.position;
+                      let data = evt.target.data();
+                      let pos = evt.target.position();
                       if (parity_of_tap == 'even') {
                         add_b5_node(data.id, pos, b4node_names.full_list, cy_graph, diam);
                         parity_of_tap = 'odd';
@@ -1274,6 +1283,19 @@
           properties[i] = curr_node;
         }
         return properties;
+      }
+
+
+      function extend_nodes(source_pos, child_pos){
+        // Calculate distance between the two points
+        let x_diff = child_pos['x'] - source_pos['x'];
+        let y_diff = child_pos['y'] - source_pos['y'];
+
+        // Elongate
+        let x = child_pos['x'] + 1.8*x_diff;
+        let y = child_pos['y'] + 1.8*y_diff;
+        return {'x': x, 'y':y};
+
       }
       
       function add_subtax_rank_nodes(api, subtax_rank, cy_graph, node_qval, radius, 
@@ -1349,7 +1371,7 @@
                     subtax_node_id_label = `[id = "${node_id}"]`;
                     cy_graph.nodes(subtax_node_id_label).on('click', function(evt) {
                         let evtTarget = evt.target;
-                        let data = evtTarget._private.data;
+                        let data = evtTarget.data();
 
                         let navDisplayParent = document.getElementById("navigation-history");
                         navDisplayParent.innerHTML = "";
@@ -1364,7 +1386,7 @@
 
                     cy_graph.nodes(subtax_node_id_label).on('mouseover', function(evt) {
                         let evtTarget = evt.target;
-                        let data = evtTarget._private.data;
+                        let data = evtTarget.data();
                         let enlarged_node_size = 275;
                         let border_color = '#00008B';
                         cy_graph.nodes(`node[id = "${this.id()}"]`).style({
@@ -1411,7 +1433,7 @@
                     opacity: 1,
                     width: 150,
                     height: 150,
-                    type: 'overlayRank',
+                    type: 'overlay hierarchy',
                   },
                   position: rank_pos
               };
@@ -1656,6 +1678,7 @@
                    // assigned_node_type = 'literall';
                     //If a definition has >=3 lines then we want to implement the collapsable
                     //box feature and change the propnodeval to be something shorter.
+                    // This seems to be hardcoded: how is prop_node_height retrieved at all? 
                         if (num_lines > 3) {
                           collapse_full_def = prop_node_val;
                           collapse_node_id = node_id;
@@ -1752,16 +1775,16 @@
                                 // IF it's an image: add href property (most important identifier of the node). add to class of image nodes too
                                 
                                 let new_edge = 
-                                        {
-                                          group: 'edges',
-                                          data: 
-                                              {
-                                                  id: node_id.concat(node_qval),
-                                                  source: node_qval, 
-                                                  target: node_id,
-                                                  label: pred_val
-                                              }
-                                        };
+                                  {
+                                  group: 'edges',
+                                  data: 
+                                      {
+                                        id: node_id.concat(node_qval),
+                                        source: node_qval, 
+                                        target: node_id,
+                                        label: pred_val
+                                      }
+                                  };
 
                                   added_els.push(new_edge);
                                   
@@ -1799,7 +1822,7 @@
                             parity_dictionary[`parity_of_tap_${key}`] = 'even';  //a way of creating a "new" let for each bnode
                             let all_names = (b4node_names.full_list).join(', ');
                             cy_graph.nodes(id_label).on('tap', function(evt) {
-                                  let data = evt.target._private.data;
+                                  let data = evt.target.data();
                                   if (parity_dictionary[`parity_of_tap_${data.id}`] == 'even') {
                                       //bnode_name, box_nodes, bnode_properties, cy_graph
                                       cy_graph.nodes(`[id = "${data.id}"]`).style({
@@ -1858,34 +1881,66 @@
                 // Open NEW subgraph with browser ranks information 
                 display_ranks(api, cy_graph, node_qval, ranks_id, rank_position);
                 cy_graph.$id(ranks_id).data('originalPosition', rank_position);
-                cy_graph.nodes(`node[type = 'overlayRank']`).on("expandcollapse.afterexpand", function(event) {
+
+                // Event listeners 
+                cy_graph.nodes().on("expandcollapse.afterexpand", function(event) {
+                  document.getElementById("Collapse").style.visibility='visible';
+
                   let evtTarget = event.target;
-                  let object = evtTarget.data()
+                  let object = evtTarget.data();
                   let expanded_id = object['id'];
+                  let expanded_type = object['type'];
                   let original_position = {
                     'x': object['x-before-fisheye'] - 1000, 
                     'y': object['y-before-fisheye']
                   };
-                  shift_nodes(api, cy_graph, names_to_qvals[rank_name], original_position);
-                
-                  // Remove old edge + add new edge
-                  cy_graph.remove(`[label = 'taxonRank']`);
-                  var rank_edge = {
-                    group: 'edges',
-                    data: 
-                      {id: `${node_qval} - ${names_to_qvals[rank_name]}`, 
-                      source: node_qval, 
-                      target: names_to_qvals[rank_name], 
-                      label: 'taxonRank',
-                      },
+
+                  if (expanded_type == "overlay hierarchy") {
+                    // Ideally, shift nodes should work for all. Figure out why it doesn't. 
+                    console.log('nodes r shifting!')
+                    shift_nodes(api, cy_graph, names_to_qvals[rank_name], original_position);
+                    
+                    // Remove old edge + add new edge
+                    cy_graph.remove(`[label = 'taxonRank']`);
+                    var rank_edge = {
+                      group: 'edges',
+                      data: 
+                        {id: `${node_qval} - ${names_to_qvals[rank_name]}`, 
+                        source: node_qval, 
+                        target: names_to_qvals[rank_name], 
+                        label: 'taxonRank',
+                        },
+                    }
+                    cy_graph.add(rank_edge)
                   }
-                  cy_graph.add(rank_edge)
                 });
 
-                cy_graph.nodes().on("expandcollapse.aftercollapse", function(event) { 
-                  revert_position(cy_graph, event)
-                }
-                )
+                // General Processing: handles ALL collapses, since some reason the cy event listener doens't respond at the bottom
+                cy_graph.nodes().on("expandcollapse.aftercollapse", function(event) {
+                  let evtTarget = event.target;
+                  let object = evtTarget.data()
+                  let expanded_id = object['id'];
+                  let expanded_type = object['type'];
+
+                  // Revert positions
+                  console.log('after collapse: position is going to be reverted.')
+                  revert_position(cy_graph, event);
+                });
+
+                cy_graph.nodes().on("expandcollapse.beforecollapse", function(event) {
+                  let evtTarget = event.target;
+                  let object = evtTarget.data()
+                  let expanded_id = object['id'];
+                  let expanded_type = object['type'];
+
+                  // Applies to the outer nodes that contain all the mini expand/collapse stuff
+                  if (expanded_type == "overlay hierarchy") {
+                  cy_graph.remove(`[class = "property"]`);
+                  cy_graph.remove(`[class = "property-edge"]`);
+                  document.getElementById("Collapse").style.visibility='hidden';
+                  }
+                })
+       
             }
 
               
@@ -1902,8 +1957,6 @@
 
       }
 
-      var rank_removal;
-      var rank_removed = false;
       //returns the hierarchy back to it's original state
       //after the user unselects a node
       function return_to_normal(node_name, cy_graph, given_taxon, click_of_subtax, farthest_second_left_child_pos) {
@@ -1953,8 +2006,8 @@
                   
             cy_graph.remove(`node[type = "subTaxProp"]`);
             // Rank stuff
-            cy_graph.remove(`node[type = "overlayRank"]`);
-            cy_graph.remove(`node[type = "displayed rank"]`);
+            cy_graph.remove(`node[type = "overlay hierarchy"]`);
+            cy_graph.remove(`node[type = "display"]`);
             cy_graph.remove(`node[type = "property"]`);
             cy_graph.remove(`node[class = "property"]`);
             cy_graph.remove(`node[class = "property-edge"]`);
@@ -1975,7 +2028,7 @@
                   zoom: {
                     level: .02,
                     position: {x: farthest_second_left_child_pos.x, y: 0}
-                  }
+                  },
                 });
             }
             rank_removal.restore();
@@ -2153,21 +2206,20 @@
             
 
             let curr_parent = graphType_pc_edges[node_qval];
-            
             let navDisplayParent = document.getElementById("navigation-history");
             navDisplayParent.innerHTML = "";
             
             let id_label =`[id = '${given_taxon}']`;
-              cy_graph.nodes(id_label).style({
-                "background-color": "red",
-                'border-width': 0
-              });
+            cy_graph.nodes(id_label).style({
+              "background-color": "red",
+              'border-width': 0
+            });
             
             let node_name = taxon_qvals[node_qval];
 
             cy_graph.remove(`node[type = "subTaxProp"]`);
-            cy_graph.remove(`node[type = "overlayRank"]`);
-            cy_graph.remove(`node[type = "displayed rank"]`);
+            cy_graph.remove(`node[type = "overlay hierarchy"]`);
+            cy_graph.remove(`node[type = "display"]`);
             cy_graph.remove(`node[type = "property"]`);
             cy_graph.remove(`node[class = "property"]`);
             cy_graph.remove(`node[class = "property-edge"]`);
@@ -2461,10 +2513,18 @@
       let evtTarget = event.target;
       let object = evtTarget.data();
       let id = object['id'];
-      let original_position = {
+      if (id in positions) {
+        var original_position = {
+          'x': positions[id]['x'],
+          'y': positions[id]['y'],
+        };
+      }
+      else {
+        var original_position = {
         'x': object['x-before-fisheye'], 
-        'y': object['y-before-fisheye']
+        'y': object['y-before-fisheye'],
       };
+      }
       if (original_position['x'] != undefined && original_position['y'] != undefined ){
         // Revert to node original position before collapse. 
         cy_graph.$id(id).data('position-before-collapse', original_position);
@@ -2473,7 +2533,6 @@
 
     function extract_q(str) {
       let beginning = str.indexOf('Q');
-      console.log(beginning)
       if (beginning == -1) {
         return str
       }
@@ -2489,42 +2548,98 @@
       return q_val
     }
 
-    function get_node_properties(api, cy_graph, event, node_position, expandable) {
+
+    // Dynamically resize node definitons given how long the string is 
+    function node_padding(text, max_width) {
+      // Some types have already a set width and height; these settings will bypass whatever width/height this function returns. Thus, this function is mainly helpful for labels that nodes will need to dynamically resize to. 
+      // Given a string, this function will return a necessary width and height to cover the entire blurb. 
+      // Font size is 35, which is approximately the width per line. 
+      let padding = 30;
+      let font_size = 35;
+      let pixels_per_character = 19;
+      let characters_per_line = max_width/pixels_per_character;
+      let num_lines = Math.floor(text.length/characters_per_line) + 1;
+      if (num_lines == 1) {
+        max_width = text.length*pixels_per_character;
+      }
+      return {'width': max_width + 2*padding, 'height': num_lines*font_size + 2*padding};
+    }
+
+    function get_node_properties(api, cy_graph, event, node_parent, expandable) {
       let evtTarget = event.target;
-      let original_id = evtTarget.data('id');
-      let node_qval = extract_q(original_id);
-      let parent_id = evtTarget.data('parent');
+      let node_id = evtTarget.data('id');
+      let node_qval = extract_q(node_id);
       let node_name = evtTarget.data('name');
-      let type = evtTarget.data('type')
+      let type = evtTarget.data('type');
+      const node_position = evtTarget.position();
+      let desired_position = node_position; 
+
+      let url = all_properties(node_qval);
       // Must fix this later: we want to keep all expanded properties of the relvant node, and close only other ranks
       // cy_graph.remove(`[class = "property"]`);
       // cy_graph.remove(`[class = "property-edge"]`);
-      url = all_properties(node_qval);
       d3.json(url).then(function(json_result) {
         var data = json_result.results.bindings;
         let all_nodes = [];
         let all_edges = [];
-        // If nonexpandable version, create repetetive node of original, with the parent as what it would originally be. 
-        // var original_node = 
-        // {
-        //   group: 'nodes',
-        //   data:
-        //     {id: node_id + '2', 
-        //     clickable: is_clickable,
-        //     name:`${property_value}`,
-        //     color: '#90EE90', 
-        //     width: 150, 
-        //     height: 150,
-        //     type: property_type,
-        //     parent: node_parent,
-        //     class: 'property',
-        //     isExpandable: expandable,
-        //     },
-        //   }
+
+        // If expandable version, create repetetive node of original, with the parent as what it would originally be. 
+        if (expandable == "true"){
+          // Add the current position of the node to the dictionary, so we can access it in the future. For some reason, cytoscape expand collapse is unreliable with keeping the positions of nested nodes. 
+          positions[node_id] = {'x': node_position['x'], 'y': node_position['y']}
+
+          cy_graph.$id(node_id).data({
+            clickable: 'false',
+          })
+          // Change arrow's target to be the new node, not the old parent. Keep the source ID to pass into extend nodes (needs it in relation to this node to calculate new position).
+          let arrow = cy_graph.edges(`[target = "${node_id}"]`);
+          let source = arrow.sources();
+          let source_pos = source.position();
+          console.log('position of the property is extended.')
+          desired_position = extend_nodes(source_pos, node_position);
+
+          // NEW node created
+          node_id = `V2: ${node_id}`;
+          var original_node = 
+          {
+            group: 'nodes',
+            data:
+              {id: node_id, 
+              clickable: 'false',
+              name: node_name,
+              color: '#90EE90', 
+              width: 150, 
+              height: 150,
+              type: type,
+              parent: node_parent,
+              class: 'property',
+              isExpandable: expandable,
+              },
+            position: {'x': desired_position['x'], 'y': desired_position['y']},
+            }
+          // When creating the edge, it'll attach to this new node. 
+          cy_graph.add(original_node);
+        
+          // Create new edge between the original source and new V2 target. 
+          let edge_data = arrow.data();
+          edge_data['target'] = node_id;
+          var new_edge = {
+            group: 'edges',
+            data: edge_data,
+          };
+          cy_graph.remove(arrow);
+          all_edges.push(new_edge)
+        }
+
+
+        // 'x' represents the property name (such as type, subClassOf)
+        // 'xLabel' represnts the LABEL of the 'x'. for example, type's value is actually  'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
+        // 'y' represents the corresponding value (class, taxonomic rank). it can appear in a variety of formats, such as boltz:, rdfs:, skos:
+        // 'yLabel' represnts the LABEL of the 'y'. for example, rdfs:class's value is actually 'http://www.w3.org/2000/01/rdf-schema#Class'
         for (index_key in data) {
           let property_object = data[index_key];
-          console.log(property_object)
           let property = property_object['x']['value'];
+          // Extract property name 
           if ('xLabel' in property_object) {
             property = property_object['xLabel']['value'];
           }
@@ -2532,12 +2647,25 @@
             property = property.replace('http://solid.boltz.cs.cmu.edu:3030/ontology/', '')
           }
 
+          // Extract property value 
           let property_value = property_object['y']['value'];
-          let id = `${property_value} property: ${node_qval}`;
+          let id = `${property_value} ${property} ${node_qval}`;
           let property_type = property_object['y']['type'];
           let is_clickable = 'false';
 
-          // Many values have different prefixes
+          // If type is a literal, it's width/height must be resized to fit the entire text.
+          if (property_type == 'literal') {
+            property_value = `"${property_value}"`
+            let data = node_padding(property_value, 350, 24);
+            var width = data['width'];
+            var height = data['height'];
+          } 
+          else {
+            var width = 150;
+            var height = 150;
+          }
+
+          // Extract the property value label (making it readable in a human format)
           if ('yLabel' in property_object) {
               property_value_label = property_object['yLabel']['value'];
               let prefix_link = ''
@@ -2548,18 +2676,22 @@
                   property_prefix = prefixes[prefix];
                 }
               }
-              id = `${property_value.replace(prefix_link, '')} property: ${node_qval}`;
-              property_value = `${property_value_label} ${property_prefix}${property_value.replace(prefix_link, '')}`;
+              // Example ID: rdfs:Class, type Q2752679
+              property_value = property_value.replace(prefix_link, '');
+              id = `${property_prefix}${property_value} ,${property} ${node_qval}`;
+              property_value = `${property_value_label} ${property_prefix}${property_value}`;
               is_clickable = 'true';
 
-              // As of right now: boltz concepts are green
-              if (prefix_link != "http://solid.boltz.cs.cmu.edu:3030/data/") {
+              // As of right now: boltz concepts are green – this code right now is horribly redundant
+              if (property_prefix != "boltz:") {
                 property_type = "concept";
+                is_clickable = "false";
+                property_value = property_value_label;
               }
             }
 
+
           // Concepts must be set as concepts to indicate clickability: perhaps import some widely accepted dictionary for what a property constitutes? Idk if that is good parctice: what's the difference between class ==> taxonomic rank versus apple ==> fruit. Our color scheme would define the first example as "knowledge about knowledge", when that doesn't really make sense? BUT: everything is truly hard-coded at the moment
-          console.log(property)
           if (property == "nextHigherRank" || property == "nextLowerRank") {
             continue
           }
@@ -2571,36 +2703,48 @@
               clickable: is_clickable,
               name:`${property_value}`,
               color: '#90EE90', 
-              width: 150, 
-              height: 150,
+              width: width, 
+              height: height,
               type: property_type,
-              parent: parent_id,
+              parent: node_parent,
               class: 'property',
               isExpandable: expandable,
               },
             };
-          console.log(id, node_qval, property)
           var property_edge = 
           {
             group: 'edges',
             data: 
               {id: `${node_qval} to property ${property}`, 
-              source: original_id, 
+              source: node_id, 
               target: id, 
               label: property,
               class: 'property-edge',
               },
-          }
+          };
           all_nodes.push(property_node);
           all_edges.push(property_edge);
         }
           // Update positioning for all properties
-          var updated_nodes = calculate_positions(all_nodes, node_position, 1000);
+          var updated_nodes = calculate_positions(all_nodes, desired_position, 1000);
           // Add to graph
           cy_graph.add(updated_nodes);
-          console.log(all_edges)
           cy_graph.add(all_edges);
-          console.log(cy_graph.edges(`[source = "${node_qval}"]`))
+
+          // Add layout to graph
+          // var rank_layout = cy_graph.nodes(`[class = 'property']`).layout({
+          //   name: 'cola',
+          //   avoidOverlap: true,
+          //   nodeDimensionsIncludeLabels: true,
+          //   flow: undefined, // use DAG/tree flow layout if specified, e.g. { axis: 'y', minSeparation: 30 }
+          //   handleDisconnected: false,
+          //   centerGraph: false,
+          //   fit: false,
+          //   nodeSpacing: 100,
+          // })
+          // rank_layout.run();
+
+          // Change zoom: unsure how to change in a reliable way. 
 
       })
 
@@ -2608,7 +2752,6 @@
 
 
     function display_ranks(api, cy_graph, id, rank, position) {
-      console.log(position)
       let url = all_ranks_query();
       var taxonomic_rank_nodes = [];
       var taxonomic_rank_edges = [];
@@ -2628,7 +2771,6 @@
           ranks_to_object[rank] = object;
           return ([rank, nextHigher]);
         })
-        console.log(ranks_and_nexthigher)
         // Sorting function: returns array, where key (rank qval) and value (the order in the hierarchy)
         var nodes = {};
         let done = false;
@@ -2650,13 +2792,15 @@
           )
         }
         // Create final array, ordered in the correct rank hierarchy.
-        console.log(nodes);
         var length = Object.keys(nodes).length;
         var ordered_rank_hierarchy = Array.from(Array(length).keys());
         for (var rank_key in nodes) {
           let rank_index = nodes[rank_key]
           ordered_rank_hierarchy[rank_index] = rank_key
         }
+
+        // Add position to dictionary for future access
+        positions[rank] = {'x': position['x'], 'y': position['y']};
 
         // Goal: automate this process, for all nodes, call a query that returns all of its properties. You make the node with the properties expandable. 
         for (rank_qval of ordered_rank_hierarchy) {
@@ -2675,14 +2819,13 @@
               width: 150, 
               height: 150,
               label: name,
-              type: 'displayed rank',
+              type: 'display',
               clickable: "true",
               isExpandable: "true",
-              parent: `${rank}`,
+              parent: rank,
               },
             position: {x: position['x'], y: position['y']},
             };
-          // Change corresponding rank position to be the rank right next to the taxon.
           cy_graph.add(node_obj);
           taxonomic_rank_nodes.push({node: cy_graph.$id(rank_qval), offset: 0});
 
@@ -2695,14 +2838,9 @@
                 {id: `${rank_qval} to ${nextHigher_qval}`, 
                 source: rank_qval, 
                 target: nextHigher_qval,
-                type: 'displayed rank edge',
+                type: 'hierarchy: up',
                 label: '',
                 },
-              style: {
-                'target-label': 'nextHigherRank',
-                'target-text-offset': 120,
-                'opacity': 0.8,
-              }
             }
             taxonomic_rank_edges.push(connecting_edge);
           }
@@ -2714,14 +2852,9 @@
                 {id: `${rank_qval} to ${nextLower_qval}`, 
                 source: rank_qval, 
                 target: nextLower_qval,
-                type: 'displayed rank edge',
+                type: 'hierarchy: down',
                 label: '',
                 },
-              style: {
-                'target-label': 'nextLowerRank',
-                'target-text-offset': 120,
-                'opacity': 0.8,
-              }
             }
             taxonomic_rank_edges.push(connecting_edge)
           }
@@ -2730,7 +2863,7 @@
         cy_graph.add(taxonomic_rank_edges);
 
         // Change rank layout to cola 
-        var rank_layout = cy_graph.nodes(`[type = 'displayed rank']`).layout({
+        var rank_layout = cy_graph.nodes(`[type = 'display']`).layout({
           name: 'cola',
           edgeLength: 200,
           avoidOverlap: true,
@@ -2869,7 +3002,10 @@
             {
               selector: ":parent",
               style: {
-                "background-opacity": 0.2
+                "background-color": "#D4D260",
+                "background-opacity": 0.5,
+                "border-width": 4,
+                "border-color": 'black',
               }
             },
             {
@@ -2882,6 +3018,26 @@
                   'width': 10
 
                 }
+            },
+            {
+              selector: `edge[type = "hierarchy: up"]`,
+              style: {
+                'curve-style': 'straight',
+                'target-label': 'nextHigherRank',
+                'target-text-offset': 145,
+                'opacity': 0.8,
+              },
+            },
+            {
+              selector: `edge[type = "hierarchy: down"]`,
+              style: {
+                'curve-style': 'unbundled-bezier',
+                'control-point-distances': -200,
+                'control-point-weights': 0.5,
+                'target-label': 'nextLowerRank',
+                'target-text-offset': 155,
+                'opacity': 0.8,
+              },
             },
             {
               selector: '.eh-handle',
@@ -2909,7 +3065,7 @@
                 'shape': 'square',
                 'background-color': '#FFD580',
                 'text-wrap': 'wrap',
-                'text-max-width': 280,
+                'text-max-width': 343,
                 'border-width': 5,
                 'border-color': '#FFA500',
                 'border-style': 'solid',
@@ -2961,7 +3117,7 @@
                 'height': 250,
                 'background-color': '	#FFB52E',
                 'text-wrap': 'wrap',
-                'text-max-width': 280,
+                'text-max-width': 100,
                 'border-width': 5,
                 'border-color': '#F6BE00',
                 'border-style': 'solid',
@@ -2985,10 +3141,10 @@
                 'line-height': 1.15
               }
             },
-            { selector: `node[type = "overlayRank"]`,
+            { selector: `node[type = "overlay hierarchy"]`,
               style: {
               'text-wrap': 'wrap',
-              'text-max-width': 150,
+              'text-max-width': 100,
               'border-width': 5,
               'border-color': '#228B22',
               'border-style': 'solid',
@@ -2996,9 +3152,34 @@
               'font-family': 'Calibri',
               'line-height': 1.15
               }
+            },
+            { selector: `node[type = "uri"]`,
+              style: {
+              'text-wrap': 'wrap',
+              'text-max-width': 100,
+              'font-size': 35,
+              'font-family': 'Calibri',
+              'line-height': 1.15,
+              'width': 150,
+              'height': 150
+              }
+            },
+            {
+              selector: `node[type = 'display']`,
+              style: {
+                'text-wrap': 'wrap',
+                'text-max-width': 100,
+                'font-size': 35,
+                'font-family': 'Calibri',
+                'line-height': 1.15
+              }
             }
           ]
         });
+
+        // Initilize automove extension 
+        let rule = cy.automove();
+
 
         // Initializing the expansaion of frames 
         cy.expandCollapse({
@@ -3016,6 +3197,22 @@
           collapseCueImage: "external/icon-minus.png"
         });
         var api = cy.expandCollapse('get');
+
+        // Handle the close all button
+        document.getElementById("Collapse").addEventListener("click", function () {
+          console.log('huh u sus');
+          api.collapseAll();
+        });
+
+        // cy.nodes().on("expandcollapse.afterexpand", function(event) { 
+        //   console.log('epandndddd button!');
+        //   document.getElementById("Collapse").style.visibility='visible';
+        // }) 
+
+        // cy.nodes().on("expandcollapse.aftercollapse", function(event) {  
+        //   console.log('why arent u working')
+        //   document.getElementById("Collapse").style.visibility='hidden';
+        //  }) 
 
         // CONTEXT MENU
         let contextMenu = cy.contextMenus({
@@ -3140,8 +3337,8 @@
         let add_eles = [];
         
         for (let x = 0; x < nodes.length; x++) {
-            node_pos = nodes[x]._private.position;
-            node_id = nodes[x]._private.data.id;
+            node_pos = nodes[x].position();
+            node_id = nodes[x].data('id');
             let x_pos = node_pos.x ;
             let y_pos = node_pos.y;
             let rank_node = rank_edges[node_id];
@@ -3187,11 +3384,7 @@
         }
         //adding ranks to the graph along with edges
           let eles = cy.add(add_eles);
-          cy.elements().edges().style({ 'font-size' : '27' });
-          cy.elements().nodes().style({
-            'font-family': 'Calibri'
-          });
-
+  
           let prop_node_diam = 300
           let definition_node_size = 600
           cy.zoomingEnabled( true );
@@ -3278,8 +3471,9 @@
           cy.on('tap', function(evt) {
             let evtTarget = evt.target;
             let data = evtTarget.data();
-            console.log(data, data.isExpandable);
             var id = data.id;
+            console.log('the clicked on node has position and data of:', evtTarget.position(), data);
+
             
             if (Object.keys(data).length == 0) {
               if (zoomedInOnNode) {
@@ -3303,7 +3497,7 @@
                       });
                   //only want to add it to prev nodes clicked if we are moving up not to a sibling or down
                   if (id_lastclicked_node != "") {
-                    let curr_pos_y = evtTarget._private.position.y
+                    let curr_pos_y = evtTarget.position()['y']
                     let prev_pos_y = cy.nodes(`[id = "${id_lastclicked_node}"]`).position().y
                     if (curr_pos_y < prev_pos_y) {
                         prev_nodes_clicked.push(id_lastclicked_node);
@@ -3317,18 +3511,11 @@
                 }
               }
                 else if (data.clickable == "true") {
-                  console.log(data.isExpandable)
-                  let name = evtTarget.data('name');
-                  // Change naming system... gotta fix this! 
-                  let beginning = name.indexOf('Q');
-                  let q_val = '';
-                  for (i = beginning; i < name.length; i++) {
-                    if (id[i] != ' ') {
-                      q_val = q_val.concat(name[i]);
-                    }
-                    else{
-                      break;
-                    }
+                  // If we click on a node that is a display property (one of the nodes part of a ranked subgraph hierarchy), we must make sure that the existing properties and edges are removed.
+                  if (data.type == "display") {
+                    console.log('other properties and edges are removed NOW.')
+                    cy.remove(`[class = "property"]`);
+                    cy.remove(`[class = "property-edge"]`);
                   }
 
                   let position = evtTarget.position();
@@ -3341,23 +3528,19 @@
                   let parent;
                   let edge = cy.edges(`[target = "${id}"]`);
                   let source = edge.sources();
-                  console.log(source);
-                  console.log(source.length);
-                  console.log(source.data())
 
                   if (source.length == 1) {
-                    parent = source.data('id');
-                    isExpandable = "false";
+                    parent = id;
+                    isExpandable = "true";
                   }
                   else{
                     parent = cy.$id(id).data('parent');
-                    isExpandable = "true";
+                    isExpandable = "false";
                   }
 
-                  console.log(parent, isExpandable)
                   // Call expand function
                   try {
-                    get_node_properties(api, cy, evt, position, isExpandable);
+                    get_node_properties(api, cy, evt, parent, isExpandable);
                   }
                   catch(err){
                     console.log(err)
@@ -3721,6 +3904,8 @@
             <button id="Full" class="btn" type="button" onclick="exec('Full')">Full</button>
             <button id="Moderate" class="btn" type="button" onclick = "exec('Moderate')">Moderate</button>
             <button id="Concise" class="btn2" type="button" onclick = "exec('Concise')">Concise</button>  
+            <button id="Collapse" class="btn2" type="button">Collapse All</button>  
+
           </div>
          
           <div id ="hierarchy-entry">
