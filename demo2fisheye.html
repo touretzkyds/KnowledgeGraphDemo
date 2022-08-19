@@ -15,6 +15,7 @@
 
 
 
+
     <style type="text/css">
       .body{
         margin: 0;
@@ -191,12 +192,14 @@
       const TAXON_NODE_SIZE = 250;
       const FISHEYE_NODE_PLACEMENT_FACTOR = 1/5;
       const CONCISE_NODES_LENGTH = 1481;
-      const FISHEYE_NODE_SEP = 150;
       const FISHEYE_TEXT_ROTATION = (Math.PI)*.5;
       const FISHEYE_NODE_DEPTH = 700;
       const MAX_FISHEYE_FONT_SIZE = 100;
       const FISHEYE_PARENT_COLOR = 'red';
-      const FISHEYE_NODE_SIZE = 30;
+
+      const FISHEYE_NODE_SIZE = 100;
+      const FISHEYE_NODE_SEP = 200;
+
       const NORMAL_FISHEYE_FONT_SIZE = 10;
       const NORMAL_FONT_SIZE = 35;
       const FISHEYE_PARENT_SIZE = 800;
@@ -2749,200 +2752,175 @@
       return factor_list;
     }
 
-    function add_fisheye_effect(cy_graph, siblings) {
 
-      var nodes = cy_graph.nodes(); 
-      var nodePositions = {};
-      for (let i = 0; i < nodes.length; i++) {
-          nodePositions[siblings[i]] = cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).position();
-      }
+//COPIED DIRECTLY FROM THE NY TIMES SOURCE
+function fisheye() {
+    var min = 0,
+        max = 1,
+        distortion = 3,
+        focus = 0;
 
-      console.log('node Positions', nodePositions);
-
-      //need to not only change node size but also node positioning away from the current focus node     
-
-      cy_graph.nodes(`[type = "fisheye-child"]`).on("mouseover",function(evt){
-                let name = this._private.data.name;
-                let node = evt.target._private;
-                console.log('node', node)
-                    //siblings of the current node we are hovering over && siblings.length >= 5
-                    if (siblings != undefined ){        
-                      //0.28985507246377x2 + 6.8115942028986x + 226.95652173913
-                      let x = siblings.length;
-                      let curr_max_fisheye_node_size = 0.28985507246377*(x)*(x) + 6.8115942028986*x + 226.95652173913;
-
-                      //WANT THE FARTHEST LEFT X AND RIGHT X TO STAY THE SAME
-                      let farthest_left_x_pos = nodePositions[siblings[0]].x;
-                      let farthest_right_x_pos = nodePositions[siblings[siblings.length - 1]].x;
-                      
-                      console.log('farthest left x pos', farthest_left_x_pos, 'farthest right x pos', farthest_right_x_pos)
-
-                      let total_decrease_in_size = MAX_FISHEYE_NODE_SIZE - MIN_FISHEYE_NODE_SIZE; 
-                      console.log('total decrease in size', total_decrease_in_size);
-                      //right now should be 190
-                     
-                      //currently the node id is Q...-fisheye so we want to take of the last 8 characters
-                      //of the node id to get the proper idx in siblings of the node
-                      let node_qval = node.data.id.replace('-fisheye', '');
-                      let curr_focus_node_x = nodePositions[node_qval].x;
-                      console.log('curr x pos', curr_focus_node_x)
-                      //curr x = 596475
-                      //farthest right = 596925
-                      //farthest left = 595875
-                      let curr_focus_node_y = nodePositions[node_qval].y;
-                      let idx_in_siblings = siblings.indexOf(node_qval); //idx of the current node in the siblings list
-
-                      let num_nodes_to_left = idx_in_siblings;
-                      let num_nodes_to_right = siblings.length - idx_in_siblings - 1;
-                      let i = num_nodes_to_left;
-                      let num_left_increments = 0;
-                      while (i >= 0) {
-                        num_left_increments +=i;
-                        i--;
-                      }
-                      i = num_nodes_to_right;
-                      let num_right_increments = 0;
-                      while (i >= 0) {
-                        num_right_increments +=i;
-                        i--;
-                      }
-
-                      //produces something like [1,3,5,10] to know how much to multiply
-                      //the left/right increments to figure out the size decrease of the curr node
-                      let left_factor_list = create_factor_list(num_nodes_to_left);
-                      left_factor_list.reverse();
-                      let right_factor_list = create_factor_list(num_nodes_to_right);
-
-                      let left_multiplication_factor = 6;
-                      let left_increment = 0;
-                      let right_multiplication_factor = 1;
-
-                      let left_incremental_size_decrease = total_decrease_in_size/num_left_increments;
-                      let right_incremental_size_decrease = total_decrease_in_size/num_right_increments;
-                      
-                      let left_node_placement = find_new_x_positions(num_nodes_to_left, Math.abs(farthest_left_x_pos - curr_focus_node_x));
-                      let right_node_placement = find_new_x_positions(num_nodes_to_right, Math.abs(farthest_right_x_pos - curr_focus_node_x));
-                      //So now we have two objects that determine how far from the max left/right positions
-                      //the new nodes should go
-                      console.log('left node placement', left_node_placement, 'curr_node', node_qval);
-                      console.log('right node placement', right_node_placement, 'curr_node', node_qval);
-                      console.log('right incremental size decrease', right_incremental_size_decrease, 'left incremental size decrease', left_incremental_size_decrease)
-                      
-                      let curr_size_decrease;
-                      let new_distance;
-                      let new_x = 0;
-                      let curr_left_x_total = 0;
-                      let curr_right_x_total = 0;
-                      let new_width = 0;
-                      //First half including the curr focus node and then do the second half
-                      
-                      for (let node_idx = 0; node_idx < idx_in_siblings; node_idx++){
-                                  
-                                  let multiplication_factor = 0;
-                                  if (node_idx == idx_in_siblings) {
-                                    curr_size_decrease = 0;
-                                    new_x = curr_focus_node_x;
-
-                                  } else {
-
-                                   //Looking at nodes to the left of the current focus node
-                                    multiplication_factor = left_factor_list[node_idx]
-                                    curr_size_decrease = multiplication_factor * left_incremental_size_decrease;
-                                    new_width = curr_max_fisheye_node_size - curr_size_decrease;
-                                    if (new_width < MIN_FISHEYE_NODE_SIZE) {
-                                      new_width = MIN_FISHEYE_NODE_SIZE;
-                                    }
-                                    //now determining the new x position
-                                    if (node_idx == 0) {
-                                      new_x = farthest_left_x_pos;
-                                    } else {
-                                      curr_left_x_total += left_node_placement[node_idx-1];
-                                      new_x = farthest_left_x_pos + curr_left_x_total;
-                                    }
-                                
-                                  } 
-                                  new_height = new_width;
-                                  
-                                  let font_size = .2* new_width;
-
-                                  cy_graph.nodes(`[id = "${siblings[node_idx]}-fisheye"]`).style({
-                                      'width': new_width,
-                                      'height': new_height,
-                                      'font-size':font_size,
-                                      'text-rotation': FISHEYE_TEXT_ROTATION,
-                                      'border-width': 5,
-                                      'border-color': FISHEYE_PARENT_COLOR,
-                                  }); 
-
-                                  cy_graph.nodes(`[id = "${siblings[node_idx]}-fisheye"]`)[0]._private.position
-                                  = {x: new_x, y: curr_focus_node_y }
-                      }
-
-                      for (let node_idx = siblings.length - 1; node_idx > idx_in_siblings; node_idx--) {
-                          //so starting at the end of the list and ending at the node right after the curr focus node
-                          let right_node_position = Math.abs(node_idx - idx_in_siblings) - 1;
-                          multiplication_factor = right_factor_list[right_node_position];
-                          curr_size_decrease = multiplication_factor * right_incremental_size_decrease;
-                          new_width = curr_max_fisheye_node_size - curr_size_decrease;
-
-                          if (new_width < MIN_FISHEYE_NODE_SIZE) {
-                            new_width = MIN_FISHEYE_NODE_SIZE;
-                          }
-                          if (node_idx == siblings.length - 1) {
-                            new_x = farthest_right_x_pos;
-                          } else {
-                            curr_right_x_total += right_node_placement[siblings.length-1-node_idx - 1];
-                            new_x = farthest_right_x_pos - curr_right_x_total;
-                            console.log('curr sibling', siblings[node_idx], 'curr right x total', curr_right_x_total)
-                            console.log('new x',new_x);
-                            //curr_right_x_total += new_width;
-                          }
-
-                          new_height = new_width;
-                                  
-                          let font_size = .2* new_width;
-
-                          cy_graph.nodes(`[id = "${siblings[node_idx]}-fisheye"]`).style({
-                              'width': new_width,
-                              'height': new_height,
-                              'font-size':font_size,
-                              'text-rotation': FISHEYE_TEXT_ROTATION,
-                              'border-width': 5,
-                              'border-color': FISHEYE_PARENT_COLOR,
-                          }); 
-
-                          cy_graph.nodes(`[id = "${siblings[node_idx]}-fisheye"]`)[0]._private.position
-                          = {x: new_x, y: curr_focus_node_y };
-                      }
-                              
-                      cy_graph.nodes(`[id = "${node.data.id}"]`).style({
-                                      'width': curr_max_fisheye_node_size,
-                                      'height': curr_max_fisheye_node_size,
-                                      'font-size': .2*curr_max_fisheye_node_size,
-                                      'text-rotation': FISHEYE_TEXT_ROTATION,
-                                      'border-width': 5,
-                                      'border-color': FISHEYE_PARENT_COLOR,
-                      }); 
-                            
-                           
-                    }
-                
-                
-            })
-          
-          .on("mouseout", function(evt){
-                  cy_graph.nodes(`[type = "fisheye-child"]`).style({
-                      'width': FISHEYE_NODE_SIZE,
-                      'height': FISHEYE_NODE_SIZE,
-                      'font-size': NORMAL_FONT_SIZE,
-                      'text-rotation': 0
-                  });
-                  for (let i = 0; i < siblings.length; i++){
-                   cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`)[0]._private.position = nodePositions[siblings[i]];
-
-                }
-          });
+    function G(x) {
+      return (distortion + 1) * x / (distortion * x + 1);
     }
+
+    function inner_fisheye(x) {
+      var Dmax_x = (x < focus ? min : max) - focus,
+          Dnorm_x = x - focus;
+      return G(Dnorm_x / Dmax_x) * Dmax_x + focus;
+    }
+
+    inner_fisheye.extent = function(_) {
+      if (!arguments.length) return [min, max];
+      min = +_[0], max = +_[1];
+      return inner_fisheye;
+    };
+
+    inner_fisheye.distortion = function(_) {
+      if (!arguments.length) return distortion;
+      distortion = +_;
+      return inner_fisheye;
+    };
+
+    inner_fisheye.focus = function(_) {
+      if (!arguments.length) return focus;
+      focus = +_;
+      return inner_fisheye;
+    };
+
+    return inner_fisheye;
+
+
+}
+
+//copying the render() function from the NYTIMES fisheye algorithm 
+function render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth) {
+
+  
+          for (let i = 0; i < siblings.length; i++) {
+              let curr_node = siblings[i];
+              let x0 = fisheye_fn_instance(i * normalWidth),
+              x1 = fisheye_fn_instance((i + 1) * normalWidth),
+              new_node_width = Math.min(nodeWidth, x1 - x0);
+              //console.log('new node width', new_node_width)
+              cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).style({
+                    'width': new_node_width
+              }); 
+              cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).style({
+                    'font-size': .1 * new_node_width
+              }); 
+          }
+
+}
+
+    //NEW ADD_FISHEYE_EFFECT FUNCTION USING THE NY TIMES ALGORITHM
+function add_fisheye_effect(cy_graph, siblings, first_x_pos) {
+
+      let that = this;
+     // first_x_pos -= (FISHEYE_NODE_SIZE/2); //should start out at x = 0
+
+      let canvas_width = (FISHEYE_NODE_SIZE*(siblings.length));
+      let canvas_height = FISHEYE_NODE_SEP;
+
+      let normalWidth = canvas_width/(siblings.length);
+
+      //normalWidth * 6 should be nodeWidth in order 
+      //to match the proportions of the NYTIMES fisheye alg
+
+      let nodeWidth = normalWidth*6;
+      let nodeHeight = 225;
+      let desiredDistortion = 0,
+          desiredFocus,
+          idle = true;
+
+      let fisheye_fn_instance = fisheye().distortion(0).extent([0, canvas_width]);
+
+      let curr_place = 'background';
+      
+      cy_graph.on('mouseover', function (evt) {
+
+        let x_pos_on_canvas;
+        let evtTarget = evt.target;
+        let data = evtTarget._private.data;
+
+        if (data.type == "fisheye-child") {
+            if (curr_place == 'canvas') {
+              //we are already on the fisheye child so we don't want to change anything
+              console.log('already in the canvas')
+            } else {
+              //we just moved over to the canvas
+              desiredDistortion = nodeWidth / normalWidth - 1;
+
+              //replacing mousemove() function in NYTIMES fisheye algorithm
+              console.log('desired Distortion', desiredDistortion);
+
+              x_pos_on_canvas = (evt.position.x - first_x_pos);
+              //desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
+              //desiredFocus = x_pos_on_canvas;
+              desiredFocus = Math.max(0, x_pos_on_canvas)
+              console.log('canvas width', canvas_width)
+              console.log('desired Focus', desiredFocus, 'x pos on canvas', x_pos_on_canvas);
+
+              move();
+            }
+            curr_place = 'canvas';
+        } else {
+          //we've moved out of the canvas so it's mimicking the mouseout function
+          curr_place = 'background';
+          desiredDistortion = 0;
+          //mousemove() function
+          x_pos_on_canvas = (evt.position.x - first_x_pos);
+          //desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
+          desiredFocus = Math.max(0, x_pos_on_canvas)
+          move();
+
+        }
+      });
+
+
+      cy_graph.on('mousemove', function(evt) {
+
+        if (curr_place == 'canvas') {
+          let x_pos_on_canvas = (evt.position.x - first_x_pos);
+          //desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
+          desiredFocus = Math.max(0, x_pos_on_canvas);
+          console.log('desired Focus', desiredFocus, 'x pos on canvas', x_pos_on_canvas);
+          move();
+        }
+        
+      })
+      
+      
+      function move() {
+
+          let render_func = function() {
+
+            if (curr_place != 'background') {
+              var currentDistortion = fisheye_fn_instance.distortion(),
+                  currentFocus = currentDistortion ? fisheye_fn_instance.focus() : desiredFocus;
+              
+              idle = Math.abs(desiredDistortion - currentDistortion) < .01 && Math.abs(desiredFocus - currentFocus) < .5;
+
+              fisheye_fn_instance.distortion(idle ? desiredDistortion : currentDistortion + (desiredDistortion - currentDistortion) * .14);
+              fisheye_fn_instance.focus(idle ? desiredFocus : currentFocus + (desiredFocus - currentFocus) * .14);
+              render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth);
+              return idle;
+            } else {
+              timer.stop();
+            }
+          }
+
+          var timer = d3.timer(render_func)
+
+      }
+      
+      
+      //this render_nodes function basically needs to redraw the nodes
+      //giving them their appropriate canvas_width to create the fisheye effect
+      
+  }
+
+
 
 
     function create_fisheye_nodes(node_qval, parent_and_all_children, cy_graph, qvals_to_names) {
@@ -2992,9 +2970,10 @@
                 data: {
                         id: `${curr_child_qval}-fisheye`, 
                         name: `${qvals_to_names[curr_child_qval]}`, 
+                        //name: '',
                         color: FISHEYE_CHILD_COLOR, 
                         width: FISHEYE_NODE_SIZE, 
-                        height: FISHEYE_NODE_SIZE,
+                        height: FISHEYE_NODE_SIZE*3,
                         type: 'fisheye-child'
                       },
                 position: {x: first_x + (i*FISHEYE_NODE_SEP), y: y_pos}
@@ -3014,6 +2993,7 @@
       }
 
       cy_graph.nodes(`[type = "fisheye-child"]`).style({
+        'shape': 'square',
         'font-size': NORMAL_FONT_SIZE,
         'border-color': FISHEYE_PARENT_COLOR,
         'border-width': 5,
@@ -3040,7 +3020,7 @@
         }
       });
 
-      add_fisheye_effect(cy_graph, curr_children);
+      add_fisheye_effect(cy_graph, curr_children, first_x);
       
     }
 
@@ -3168,9 +3148,8 @@
                 ]
         });
        
+        //USES THE NEW DAGRE ALGORITHM TO ASSIGN THE NODE POSITIONS
         assign_node_positions(root, cy.nodes(), graphType_pc_edges, parent_and_all_children);
-  
-
        
 
           cy.elements().edges().style({ 'font-size' : '27' });
@@ -3215,7 +3194,7 @@
                       'text-max-width': 150,
                       'font-size': 35,
                       'font-family': 'Calibri',
-                      'line-height': 1.15
+                      'line-height': 1.15,
                     });
       
           
@@ -3243,7 +3222,8 @@
                       }
                     });
         
-          
+         
+
           cy.on('tap', function(evt) {
                           
                 let evtTarget = evt.target;
