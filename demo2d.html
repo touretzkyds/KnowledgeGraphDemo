@@ -49,6 +49,16 @@
         text-align: center;
         margin: 2px;
       }
+      #southwest-arrow,
+      #southeast-arrow{
+        background-color: white;
+        font-weight: 600;
+        border-width: 0px;
+        width: 40px;
+        height: 40px;
+        text-align: center;
+        margin: 2px;
+      }
 
       #middle-nav{
         border-radius: 50px;
@@ -350,6 +360,7 @@
         let node_names = [];
 
         let qvals_to_names = {};
+        let qvals_to_ranks = {};
         let names_to_qvals = {};
         let root_def = "No def";
         let pref_labels = {}; //key is preflable and value is taxon_name
@@ -2147,6 +2158,8 @@
         let right_sibling = " ";
         let first_child = " ";
         let idx_of_curr_node;
+        let southwest_arrow_color = 'white';
+        let southeast_arrow_color = 'white';
 
 
 
@@ -2156,7 +2169,7 @@
           if (idx_of_curr_node > 0) {
               left_sibling = all_siblings[idx_of_curr_node - 1];
               left_sibling_name = taxon_qvals[left_sibling];
-              left_arrow_head_color = 'rgb(0, 170, 255)'
+              left_arrow_head_color = 'rgb(0, 170, 255)';
           }
           if (idx_of_curr_node < (all_siblings.length - 1)) {
             right_sibling = all_siblings[idx_of_curr_node + 1];
@@ -2167,6 +2180,7 @@
 
         if (children != undefined && children.length > 0) {
           first_child = children[0];
+          southeast_arrow_color = 'black';
           first_child_name = taxon_qvals[first_child];
           down_arrow_head_color = 'rgb(0, 170, 255)';
         }
@@ -2674,10 +2688,12 @@
 
         let user_entered_taxon = givenData.taxon_value;
         let converted_data;
+        let full_parent_and_all_children;
 
         if (givenData.given_data != 'null') { 
           //this implies we are already given what convert_to_cytoscape would produce
              converted_data = givenData.given_data;
+             full_parent_and_all_children = givenData.full_parent_and_all_children;
         } else {
              converted_data = convert_to_cytoscape(data);
         }
@@ -2688,6 +2704,9 @@
         let definitions = converted_data.definitions;
         let taxon_qvals = converted_data.taxon_qvals;
         let parent_and_all_children = {...(converted_data.parent_and_all_children)};
+
+        console.log('full parent and all children', full_parent_and_all_children);
+
         //of the form where keys are qvals and values are the taxon names
         let graphType_pc_edges = {...pc_edges};
 
@@ -3024,8 +3043,6 @@
           let id_lastclicked_node = "";
 
 
-          
-
           let prev_nodes_clicked = [];
           let rank_parity_tap = 'even';
 
@@ -3041,7 +3058,12 @@
 
           //so we want the functionality of the nav buttons to be different from the one when we are in
           //property display mode
-          let four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children);
+          let four_relationships_qvals;
+          if (full_parent_and_all_children != undefined) {
+            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, full_parent_and_all_children);
+          } else {
+            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children);
+          }
           let relationships = ["nav-down", "nav-left", "nav-right", "nav-up"];
           //relationships needs to be in the same order as is returned by the function display nav buttons
           let idx = 0;
@@ -3268,6 +3290,7 @@
           
           let short_data = convert_to_cytoscape(short_json);
           let short_pc_edges = short_data.pc_edges;
+          let full_parent_and_all_children = full_data.parent_and_all_children;
           let pref_labels = full_data.pref_labels;
           let pc_edges = full_data.pc_edges; //grabs the source-target edges so that we can form new edges and add new nodes
           let root = full_data.root;  //in the form of a qval
@@ -3338,7 +3361,8 @@
 
           
           change_buttons(new_data, full_json, taxon_qval);
-          display_hierarchy(full_json, 'Concise', {given_data: new_data, taxon_value: taxon_qval}, taxon_qval);
+          display_hierarchy(full_json, 'Concise', {given_data: new_data, taxon_value: taxon_qval, 
+              full_parent_and_all_children: full_parent_and_all_children}, taxon_qval);
           document.getElementById("Concise").style.background='green';
           document.getElementById("Full").style.background='black';
           document.getElementById("Moderate").style.background='black';
@@ -3432,6 +3456,7 @@
       }
 
 
+
       function gethierarchy(given_taxon) {
         let navDisplayParent = document.getElementById("navigation-history");
         navDisplayParent.innerHTML = "";
@@ -3491,13 +3516,13 @@
         let endpoint = d3.select("#endpoint").property("value");
         let sparql = d3.select("#sparql").property("value");
         let full_data_url = endpoint + "?query=" + encodeURIComponent(sparql); 
-        
-          prevquery.innerHTML = old_prevquery;
-          document.getElementById("hierarchySpecies").value = "";
+      
+        prevquery.innerHTML = old_prevquery;
+        document.getElementById("hierarchySpecies").value = "";
 
-          d3.json(full_data_url).then(function(full_data_json) {
-            gethierarchy_intermediate(full_data_json, hierarchyVal)
-          });
+        d3.json(full_data_url).then(function(full_data_json) {
+          gethierarchy_intermediate(full_data_json, hierarchyVal)
+        });
       }
 
 

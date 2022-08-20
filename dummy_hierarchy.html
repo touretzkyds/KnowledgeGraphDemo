@@ -26,80 +26,38 @@
             const NODE_SEP = 200; //how far apart horizontally the nodes are
             const start_y_pos = 40; //the y position that the graph is rendered on the canvas
             const LEVEL_DEPTH = 200; //how far part vertically the nodes are
-            const root = 'O'; //the id of the root node
+            const root = 'A'; //the id of the root node
             const node_size = 80
-
-            const nodes_lst = 
-            [
-                {data: {id: 'A', name: 'A', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'B', name: 'B', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'C', name: 'C', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'D', name: 'D', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'E', name: 'E', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'F', name: 'F', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'G', name: 'G', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'H', name: 'H', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'I', name: 'I', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'J', name: 'J', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'K', name: 'K', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'L', name: 'L', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'M', name: 'M', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'N', name: 'N', width: node_size, height: node_size, color: 'black'}},
-                {data: {id: 'O', name: 'O', width: node_size, height: node_size, color: 'black'}},
-
-            ];
-
-            const edges_lst = 
-            [
-                {data: {id: 'E-O', source: 'E', target: 'O'}},
-                {data: {id: 'F-O', source: 'F', target: 'O'}},
-                {data: {id: 'N-O', source: 'N', target: 'O'}},
-                {data: {id: 'A-E', source: 'A', target: 'E'}},
-                {data: {id: 'D-E', source: 'D', target: 'E'}},
-                {data: {id: 'B-D', source: 'B', target: 'D'}},
-                {data: {id: 'C-D', source: 'C', target: 'D'}},
-                {data: {id: 'G-N', source: 'G', target: 'N'}},
-                {data: {id: 'M-N', source: 'M', target: 'N'}},
-                {data: {id: 'H-M', source: 'H', target: 'M'}},
-                {data: {id: 'I-M', source: 'I', target: 'M'}},
-                {data: {id: 'J-M', source: 'J', target: 'M'}},
-                {data: {id: 'K-M', source: 'K', target: 'M'}},
-                {data: {id: 'L-M', source: 'L', target: 'M'}},
-
-
-            ];
-            
-
-            //pc_edges i.e. parent-child edges is an object 
-            //where the keys are the source node and the value is the target node
-            const graph_pc_edges = 
-            {
-                'E': 'O',
-                'F': 'O',
-                'N': 'O',
-                'A': 'E',
-                'D': 'E',
-                'B': 'D',
-                'C': 'D',
-                'G': 'N',
-                'M': 'N',
-                'H': 'M',
-                'I': 'M',
-                'J': 'M',
-                'K': 'M',
-                'L': 'M'
-            }
 
             //an object that maps a node to a list of all children in order of them displayed
             //if a node is a leaf node then it has no entry in this object
             const graph_parent_to_children_obj = 
             {
-                'O': ['E', 'F', 'N'],
-                'E': ['A', 'D'],
-                'D': ['B', 'C'],
-                'N': ['G', 'M'],
-                'M': ['H', 'I', 'J', 'K', 'L']
+                'A': ['B', 'H', 'Q'],
+                'B': ['C', 'F'],
+                'C': ['D', 'E'],
+		'F': ['G','G0'],
+		'H': ['I','K'],
+		'I': ['J','J0'],
+		//'Q': ['Q0','Q1'],
+		'K': ['L', 'M', 'N', 'O', 'P', 'R', 'S'],
             }
+
+           var nodes_lst = [];
+           var edges_lst = [];
+           var graph_pc_edges = {};
+           for (var parent in graph_parent_to_children_obj) {
+             let children = graph_parent_to_children_obj[parent];
+             for (const z of children.concat([parent])) {
+               nodes_lst.unshift({data: {id: z, name: z,
+					 width: node_size, height: node_size,
+					 color: 'black'}});
+	     }
+             for (const child of children) {
+	       edges_lst.unshift({data: {id: parent+'-'+child, source: parent, target: child}});
+	       graph_pc_edges[child] = parent;
+	     }
+	   }
 
 
             //START OF DAGRE ALGORITHM
@@ -191,10 +149,11 @@
                         //first adjust all children positions
                         for (let i = 0; i < curr_children.length; i++) {
                             let curr_child = curr_children[i];
-                            final_x_obj[curr_child] += shiftValue;
 
-
-                            shiftChildren(curr_child, shiftValue, final_x_obj, pc_edges, parent_to_children_obj);
+                            if (parent_to_children_obj[curr_child] == undefined) {
+                                final_x_obj[curr_child] += shiftValue;
+                            }
+                            //shiftChildren(curr_child, shiftValue, final_x_obj, pc_edges, parent_to_children_obj);
 
                         }
 
@@ -213,14 +172,14 @@
                     //first check if the node is an only child, then adjust it so
                     //it's directly under the parent
 
-                    if (curr_parent != undefined && curr_parent != 'root') {
+                   /* if (curr_parent != undefined && curr_parent != 'root') {
                         let curr_siblings = parent_to_children_obj[curr_parent];
                         if (curr_siblings.length == 1) {
                             if (final_x_positions[curr_parent] != final_x_positions[curr_node]) {
                                 final_x_positions[curr_node] = final_x_positions[curr_parent];
                             }
                         }
-                    }
+                    }*/
 
                     let curr_children = parent_to_children_obj[curr_node];
                     if (curr_children != undefined) {
@@ -263,22 +222,26 @@
                         let curr_max_x_at_node_level_x = curr_max_x_at_node_level_data.x_val;
                         let curr_max_x_at_node_level_node = curr_max_x_at_node_level_data.node;
 
-                        let x_of_curr_node = final_x_obj[curr_node];
+                        if (curr_max_x_at_node_level_node != curr_node) {
 
-                        if ((curr_max_x_at_node_level_x - x_of_curr_node) < NODE_SEP) {
-
-                            largest_overlap = 0;
-
-                        }
-
-                        if (x_of_curr_node <= curr_max_x_at_node_level_x) {
-                            let new_largest_overlap_val = (curr_max_x_at_node_level_x - x_of_curr_node);
-
-                            if (new_largest_overlap_val > largest_overlap_val) {
-                                largest_overlap_val = new_largest_overlap_val;
+                            let x_of_curr_node = final_x_obj[curr_node];
+                            let dist_for_curr_node = x_of_curr_node - curr_max_x_at_node_level_x
+    
+                            if ((dist_for_curr_node) < NODE_SEP) {
+                                largest_overlap_val = dist_for_curr_node - NODE_SEP;
+    
                             }
-
+    
+                            if (x_of_curr_node <= curr_max_x_at_node_level_x) {
+                                let new_largest_overlap_val = (curr_max_x_at_node_level_x - x_of_curr_node);
+    
+                                if (new_largest_overlap_val > largest_overlap_val) {
+                                    largest_overlap_val = new_largest_overlap_val;
+                                }
+    
+                            }
                         }
+
                     }
 
                     return largest_overlap_val;
@@ -292,15 +255,15 @@
 
                         //first adjust the position of the current node if need be
                         let largest_overlap = findLargestOverlap(curr_node, final_x_obj, max_x_positions_at_each_level, -Infinity, node_to_level[curr_node], pc_edges, parent_to_children_obj);
-                        if (largest_overlap >= 0) {
+
+                        if (largest_overlap > -NODE_SEP) {
 
                             let shift_amount = largest_overlap + NODE_SEP;
-                                final_x_obj[curr_node] += shift_amount;
-
+                            final_x_obj[curr_node] += shift_amount;
+                            console.log('shifting', curr_node, 'by', shift_amount)
 
                                 //if we shift a parent but it's child isn't overlapping any nodes, it also needs to get shifted
                                 //but it won't get accounted for in the next iteration
-
                             let curr_children = parent_to_children_obj[curr_node];
 
                             shiftChildren(curr_node, shift_amount, final_x_obj, pc_edges, parent_to_children_obj);
@@ -312,17 +275,23 @@
 
                         max_x_positions_at_each_level[current_level] = {x_val: final_x_obj[curr_node], node: curr_node};
 
-
                         const curr_children = parent_to_children_obj[curr_node];
                         if (curr_children != undefined) {
                             for (let i = 0; i < curr_children.length; i++) {
                                 let curr_child = curr_children[i];
-
                                 fixNodeConflicts(curr_child, final_x_obj, node_to_level, max_x_positions_at_each_level, pc_edges, parent_to_children_obj);
                             }
                         }
-
-                }
+                        console.log('curr node', curr_node, 'fixing parent positions');
+                        if (curr_children != undefined) {
+                            first_child_pos = final_x_obj[curr_children[0]];
+                            last_child_pos = final_x_obj[curr_children[curr_children.length - 1]];
+                            new_parent_pos = (first_child_pos + last_child_pos)/2;
+                            final_x_obj[curr_node] = new_parent_pos;
+                            max_x_positions_at_each_level[current_level] = {x_val: final_x_obj[curr_node], node: curr_node};
+                        }
+                       //fixParentPositions(curr_node, final_x_obj, pc_edges, parent_to_children_obj);
+                } 
 
                 //END OF DAGRE ALGORITHM
 
@@ -341,7 +310,7 @@
 
                     let new_final_x_positions = {...final_x_positions}
                     fixNodeConflicts(root, new_final_x_positions, node_to_level, max_x_positions_at_each_level, pc_edges, parent_to_children_obj);
-                    fixParentPositions(root, new_final_x_positions, pc_edges, parent_to_children_obj);
+                    //fixParentPositions(root, new_final_x_positions, pc_edges, parent_to_children_obj);
                     
                     console.log('new final x positions', new_final_x_positions);
                     

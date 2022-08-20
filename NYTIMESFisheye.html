@@ -925,8 +925,8 @@ function enableFisheye(d) {
       var x0 = x(i * normalWidth),
           x1 = x((i + 1) * normalWidth),
           dx = Math.min(imageWidth, x1 - x0);
-      //context.drawImage(image, Math.round((i * imageWidth + (imageWidth - dx) / 2) * pixelRatio), 0, dx * pixelRatio, imageHeight * pixelRatio, x0, 0, dx, height);
-      context.drawImage(image, 0, 0, dx * pixelRatio, imageHeight * pixelRatio, x0, 0, dx, height);
+      context.drawImage(image, Math.round((i * imageWidth + (imageWidth - dx) / 2) * pixelRatio), 0, dx * pixelRatio, imageHeight * pixelRatio, x0, 0, dx, height);
+      //context.drawImage(image, 0, 0, dx * pixelRatio, imageHeight * pixelRatio, x0, 0, dx, height);
       
 
       context.beginPath();

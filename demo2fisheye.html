@@ -198,7 +198,7 @@
       const FISHEYE_PARENT_COLOR = 'red';
 
       const FISHEYE_NODE_SIZE = 100;
-      const FISHEYE_NODE_SEP = 200;
+      const FISHEYE_NODE_SEP = 100;
 
       const NORMAL_FISHEYE_FONT_SIZE = 10;
       const NORMAL_FONT_SIZE = 35;
@@ -2757,17 +2757,17 @@
 function fisheye() {
     var min = 0,
         max = 1,
-        distortion = 3,
+        distortion = 2,
         focus = 0;
 
     function G(x) {
-      return (distortion + 1) * x / (distortion * x + 1);
+      return (distortion + .01) * x / (distortion * x + 1);
     }
 
     function inner_fisheye(x) {
       var Dmax_x = (x < focus ? min : max) - focus,
           Dnorm_x = x - focus;
-      return G(Dnorm_x / Dmax_x) * Dmax_x + focus;
+      return G(Dnorm_x / Dmax_x) * Dmax_x + focus + 1;
     }
 
     inner_fisheye.extent = function(_) {
@@ -2793,22 +2793,33 @@ function fisheye() {
 
 }
 
-//copying the render() function from the NYTIMES fisheye algorithm 
-function render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth) {
 
-  
+//FINDING THE NEW_NODE_WIDTH DIVIDEND
+//new_node_width/4 for 26 children 
+//new_node_width/2.5 for 8 children
+//new_node_width/1.8 for 4 children
+//creating a quadratic approximation to determine the appropriate node width
+//using the three set of points from above was able to create a second-degree
+//quadratic regression equation: -0.004 X^2 +0.225 X +0.967
+
+//copying the render() function from the NYTIMES fisheye algorithm 
+function render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth, first_x_pos) {
+
+          let x = siblings.length; //number of children of the current taxon node that was clicked
+          let new_node_width_dividend = -0.004*(x)*(x) +0.225*x +0.967;
+
           for (let i = 0; i < siblings.length; i++) {
               let curr_node = siblings[i];
               let x0 = fisheye_fn_instance(i * normalWidth),
               x1 = fisheye_fn_instance((i + 1) * normalWidth),
-              new_node_width = Math.min(nodeWidth, x1 - x0);
+              new_node_width = (Math.min(nodeWidth, x1 - x0))/new_node_width_dividend;
+
               //console.log('new node width', new_node_width)
               cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).style({
-                    'width': new_node_width
-              }); 
-              cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).style({
-                    'font-size': .1 * new_node_width
-              }); 
+                    'width': new_node_width,
+                    'font-size': .2 * new_node_width
+              });
+              
           }
 
 }
@@ -2827,7 +2838,7 @@ function add_fisheye_effect(cy_graph, siblings, first_x_pos) {
       //normalWidth * 6 should be nodeWidth in order 
       //to match the proportions of the NYTIMES fisheye alg
 
-      let nodeWidth = normalWidth*6;
+      let nodeWidth = normalWidth*7;
       let nodeHeight = 225;
       let desiredDistortion = 0,
           desiredFocus,
@@ -2898,19 +2909,19 @@ function add_fisheye_effect(cy_graph, siblings, first_x_pos) {
             if (curr_place != 'background') {
               var currentDistortion = fisheye_fn_instance.distortion(),
                   currentFocus = currentDistortion ? fisheye_fn_instance.focus() : desiredFocus;
-              
+              console.log('curr distortion', currentDistortion, 'curr focus', currentFocus)
               idle = Math.abs(desiredDistortion - currentDistortion) < .01 && Math.abs(desiredFocus - currentFocus) < .5;
 
               fisheye_fn_instance.distortion(idle ? desiredDistortion : currentDistortion + (desiredDistortion - currentDistortion) * .14);
               fisheye_fn_instance.focus(idle ? desiredFocus : currentFocus + (desiredFocus - currentFocus) * .14);
-              render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth);
+              render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth, first_x_pos);
               return idle;
             } else {
               timer.stop();
             }
           }
 
-          var timer = d3.timer(render_func)
+          var timer = d3.timer(render_func, 40);
 
       }
       
@@ -2999,7 +3010,8 @@ function add_fisheye_effect(cy_graph, siblings, first_x_pos) {
         'border-width': 5,
         'text-wrap': 'wrap',
         'text-max-width': TAXON_NODE_SIZE,
-        'opacity': 0.5
+        'opacity': 0.5,
+        'text-rotation': FISHEYE_TEXT_ROTATION
       });
 
       let id_label = `[id = '${node_qval}']`;
