@@ -1894,9 +1894,7 @@
                       }                    
                       else {
                         // Case 2: there's an arrow connecting inwards (the node/property is still attached to another node); when collapsed, it must revert BACK to a child of its parent node.    
-                        console.log(inner);
                         let og_parent = inner.data('originalParent');
-                        console.log(og_parent);
                         collapse(inner, og_parent, outer, incomers);
                       }
                     }
@@ -2600,12 +2598,10 @@
           node.data('clickable', 'false');
           let expanded_width = node.width();
           let expanded_height = node.height();
-          console.log(node.style('width'), node.style('height'));
           node.style({
             'width': expanded_width/1.1,
             'height': expanded_height/1.1,
           }); 
-          console.log(node.style('width'), node.style('height'));
 
           // Change arrow's target to be the new node, not the old parent (will do this at the end, but access it now).
           let arrow = cy.edges(`[target = "${node_id}"]`);
@@ -3049,18 +3045,6 @@
                 "color": '#33640D'
               }
             },
-            // {
-            //   selector: ".compound",
-            //   style: {
-            //     'text-valign': 'center',
-            //     // the next line moves the parents label up to the top of the node and 5px down to create a padding 
-            //     'text-margin-y': function (node) { 
-            //       let new_pos = -node.position('y') + 100
-            //       console.log(new_pos);
-            //       return new_pos;
-            //     },
-            //   }
-            // },
             {
               selector: 'edge',
               style: {
@@ -3601,7 +3585,6 @@
             let evtTarget = event.target;
             let data = evtTarget.data();
             let id = data['id'];
-            console.log(nested.includes(id), !cy.$id(id).hasClass('nested'))
             if (nested.includes(id) && !cy.$id(id).hasClass('nested')) {
               contextMenu.hideMenuItem(`nodePopOut: ${id}`);
             }
