@@ -1412,11 +1412,9 @@
             cy.on('mouseover', 'node[clickable = "true"]', function(event) {
               let data = event.target.data();
               let node = cy.$id(data.id);
-              let og_width = node.width();
-              let og_height = node.height();
-              cy.$id(this.id).style({
-                'width': og_width*1.1,
-                'height': og_height*1.1,
+              node.style({
+                'width': 150*1.1, // Hard-coded for now
+                'height': 150*1.1,
               }); 
             })
             cy.on('mouseout', 'node[clickable = "true"]', function(event) {           
@@ -1424,9 +1422,9 @@
               let node = cy.$id(data.id);
               let expanded_width = node.width();
               let expanded_height = node.height();
-              cy.$id(this.id).style({
-                'width': expanded_width/1.1,
-                'height': expanded_height/1.1,
+              node.style({
+                'width': 150,
+                'height': 150,
               }); 
           });
           return [rank_pos, subTaxonOf_degree];
@@ -1870,88 +1868,47 @@
                     }
                     cy.add(rank_edge)
                   };
-
-                  // Handle Layout here?
-                    // var rank_layout = cy.nodes(`[class = "property"]`).layout({
-                    // name: 'cola',
-                    // avoidOverlap: true,
-                    // nodeDimensionsIncludeLabels: false,
-                    // handleDisconnected: false,
-                    // centerGraph: false,
-                    // fit: false,
-                    // nodeSpacing: 100,
-                    // });
-                    // var edge_layout = cy.nodes(`[class = "property-edge"]`).layout({
-                    //   name: 'cola',
-                    // });
-                    // rank_layout.run();
-                    // edge_layout.run();
                   
-                });
-
-                // General Processing: handles ALL collapses, since some reason the cy event listener doens't respond at the bottom
-                cy.on("expandcollapse.aftercollapse", function(event) {
-                  let evtTarget = event.target;
-                  let object = evtTarget.data()
-                  let expanded_id = object['id'];
-                  let expanded_type = object['type'];   
-                  let incomers = cy.$id(expanded_id).incomers('edge');    
-
-                  // Turn node back into a regular, clickable node... Get rid of the previous propertes it had. Basically, it no longer has a parent? 
-                  if ('isExpandable' in object && object['isExpandable'] == "true") {
-                    remove_node_properties(expanded_id);
-                     // If already popped out, needs to put the property back in its place
-                    let substep = incomers.remove() // For some reason not working, need to remove before restoring. 
-                    substep.restore();
-                  };
                 });
 
                 cy.on("expandcollapse.beforecollapse", function(event) {
                   let evtTarget = event.target;
                   let object = evtTarget.data();
-                  let id = object['id'];
-                  let inner_id = `V2: ${id}`;
+                  let box_id = object['id'];
                   let expanded_type = object['type'];
 
                   // Define Nodes
-                  let outer = cy.$id(id);
-                  let inner = cy.$id(inner_id);
+                  let outer = cy.$id(box_id); // Which is what we clicked on
 
                   if ('isExpandable' in object && object['isExpandable'] == "true") {
+                    let inner_id = box_id.replace('V2: ', '');
+                    let inner = cy.$id(inner_id);
                     let incomers = inner.incomers('edge');
-                    cy.remove(`[parent = "${id}"]`);
+
                     // Make sure its edges render correctly 
                     if (outer.isOrphan()) {
                       // Two cases exist: existence is determined by whether there is an edge with the target of thie id                     
                       // Case 1: absolutely no arrows connecting inwards: a loner node ==> if we collapse this, we need to simply REMOVE this node, including all of its children.
                       if (incomers.length == 0) { // total orphan 
-                        cy.remove(`[id = "${id}"]`); // Kills node completely 
+                        cy.remove(outer); // Kills node completely 
                       }                    
                       else {
                         // Case 2: there's an arrow connecting inwards (the node/property is still attached to another node); when collapsed, it must revert BACK to a child of its parent node.    
-                        let node = cy.$id(id);
-                        let og_parent = node.data('originalParent');
-                        node = node.move({
-                          parent: og_parent,
-                        });
-                        node.addClass('nested');
-                        incomers = incomers.move({
-                          target: id,
-                        });
-                        revert_position(event);  
+                        console.log(inner);
+                        let og_parent = inner.data('originalParent');
+                        console.log(og_parent);
+                        collapse(inner, og_parent, outer, incomers);
                       }
                     }
                     else {
-                      incomers = incomers.move({
-                        target: id,
-                      });
-                      revert_position(event); 
+                      let parent = outer.parent();
+                      collapse(inner, parent.data('id'), outer, incomers);
                     };
                   } 
                   
                   // Applies to the outer nodes that contain all the mini expand/collapse stuff
                   if (expanded_type == "overlay hierarchy") {
-                    revert_position(event);
+                    revert_position(outer.data('id'));
                     cy.remove(`[class = "property"]`);
                     cy.remove(`[class = "property-edge"]`);
                     document.getElementById("Collapse").style.visibility='hidden';
@@ -1977,6 +1934,7 @@
       //returns the hierarchy back to it's original state
       //after the user unselects a node
       function return_to_normal(node_name, given_taxon, click_of_subtax, farthest_second_left_child_pos) {
+            document.getElementById("Collapse").style.visibility='hidden';
             let navDisplayParent = document.getElementById("navigation-history");
             navDisplayParent.innerHTML = "";
 
@@ -2536,20 +2494,28 @@
       })
     }
 
+    function collapse(inner_node, parent, outer_node, incoming_edge) {
+      cy.remove(outer_node);
+      inner_node.restore();
+      inner_node = inner_node.move({
+        parent: parent,
+      });
+      incoming_edge.restore();
+      inner_node.data('clickable', 'true');
+      revert_position(inner_node.data('id')); 
+    }
+
     // Often, expandable nodes will collapse to an entirely new position. This function ensures that it will go back to its original position. 
-    function revert_position(event) {
-      console.log('i am here');
+    function revert_position(id) {
       // You still have to use the original position, but also track the location of its source.
-      let evtTarget = event.target;
-      let object = evtTarget.data();
-      let id = object['id'];
       let node = cy.$id(id);
-      // Obtain source information 
-      let source = node.incomers('node');
-      let source_id = source.data('id');
       
       // Calculate node positions: change dynamically to reflect where the original position is. 
       if (id in positions) {
+        // Obtain source information 
+        let source = node.incomers('node');
+        let source_id = source.data('id');
+
         let source_position = source.position();
         let source_position_x = source_position['x'];
         let source_position_y = source_position['y'];
@@ -2557,17 +2523,21 @@
           'x': source_position_x + positions[id]['x'],
           'y': source_position_y + positions[id]['y'],
         };
+        node.position({
+          'x': original_position['x'],
+          'y': original_position['y'],
+        });
       }
       else {
+        let object = node.data();
         var original_position = {
         'x': object['x-before-fisheye'], 
         'y': object['y-before-fisheye'],
+        };
+        if (original_position['x'] != undefined && original_position['y'] != undefined ) {
+          node.data('position-before-collapse', original_position);
+        }
       };
-      };
-      if (original_position['x'] != undefined && original_position['y'] != undefined ){
-        // Revert to node original position before collapse. 
-        node.data('position-before-collapse', original_position);
-      }
     }
 
     function extract_q(str) {
@@ -2604,19 +2574,8 @@
       return {'width': max_width + 2*padding, 'height': num_lines*font_size + 2*padding};
     }
 
-    function remove_node_properties(id) {
-      let node = cy.$id(id);
-      node.style('font-size', 30);
-
-      // Default undo––idk if this means undo collapse the creation of it 
-      node.removeClass('cy-expand-collapse-collapsed-node');
-
-      // Need to make clickable again, but cannot directly process that here
-      node.data('reverted', 'true');
-    }
-
     function get_node_properties(event, node_parent, expandable) {
-      cy.$id(node_parent).style('font-size', 45);
+      // cy.$id(node_parent).style('font-size', 45);
       let evtTarget = event.target;
       let node_id = evtTarget.data('id');
       let node_qval = extract_q(node_id);
@@ -2633,11 +2592,20 @@
         let all_edges = [];
 
         let node_id_copy = JSON.parse(JSON.stringify(node_id)); // Ensure doesn't change after; node_id is changed later. 
-        // If expandable version, create repetetive node of original, with the parent as what it would originally be. 
+        // If expandable version, define a new parent node 
         if (expandable == "true"){
-          cy.$id(node_id).data({
-            clickable: 'false',
-          })
+          let node = cy.$id(node_id);
+
+          // Make node unclickable, also reduce node size: the event listener declared earlier, which handles reducing node size on "mouseout", is void due to its contingency of the node being CLICKABLE, which we've converted to false here. 
+          node.data('clickable', 'false');
+          let expanded_width = node.width();
+          let expanded_height = node.height();
+          console.log(node.style('width'), node.style('height'));
+          node.style({
+            'width': expanded_width/1.1,
+            'height': expanded_height/1.1,
+          }); 
+          console.log(node.style('width'), node.style('height'));
 
           // Change arrow's target to be the new node, not the old parent (will do this at the end, but access it now).
           let arrow = cy.edges(`[target = "${node_id}"]`);
@@ -2647,47 +2615,15 @@
           let source_pos = source.position();
           desired_position = extend_nodes(node_id, source_pos, node_position);
 
-          // Add Event Listener: Allow Popup 
-          if (!(nested.includes(node_id_copy))) {
-            let node = cy.$id(node_id_copy);
-            node.addClass('nested');
-            node.addClass('compound'); // Used for styling purposes
-            nested.push(node_id_copy); 
-            contextMenu.appendMenuItem(
-            {
-              id: `nodePopOut: ${node_id_copy}`,
-              content: `Pop Out Node`,
-              selector: `node[id = "${node_id_copy}"]`,
-              onClickFunction: function (event) {
-                node.removeClass('nested');
-                let target = event.target;
-                let data = target.data();
-
-                // Update its parent
-                let originalParent = JSON.parse(JSON.stringify(data['parent']));
-                data['originalParent'] = originalParent;
-                let clicked_node = cy.$id(data.id);
-                clicked_node = clicked_node.move({
-                  parent: node_parent
-                });
-                cy.$id(node_parent).style('font-size', 45);
-              },
-              hasTrailingDivider: true
-            },
-          );
-
-          };
-          
           // NEW node created
-          node_id = `V2: ${node_id}`;
-          var original_node = 
+          let new_parent_id = `V2: ${node_id}`;
+          var parent_node = 
           {
             group: 'nodes',
             data:
-              {id: node_id, 
+              {id: new_parent_id, 
               clickable: 'false',
               name: node_name,
-              color: '#90EE90', 
               width: 150, 
               height: 150,
               type: type,
@@ -2695,15 +2631,48 @@
               class: 'property',
               isExpandable: expandable,
               },
-            position: {'x': desired_position['x'], 'y': desired_position['y']},
+            classes: ['nested'],
             }
           // When creating the edge, it'll attach to this new node. 
-          cy.add(original_node);
-        
-          // Updata edge target: switch it to the inner node, not the outer. 
-          arrow = arrow.move({
-            target: node_id,
-          });          
+          cy.add(parent_node);
+          node = node.move({
+            parent: new_parent_id,
+          });
+          cy.$id(new_parent_id).style('font-size', 45);
+          node.position({'x': desired_position['x'], 'y': desired_position['y']});
+
+          // Add Event Listener: Allow Popup 
+          if (!(nested.includes(new_parent_id))) {
+            let node = cy.$id(new_parent_id);
+            node.addClass('nested');
+            node.addClass('compound'); // Used for styling purposes
+            nested.push(new_parent_id); 
+            contextMenu.appendMenuItem(
+            {
+              id: `nodePopOut: ${new_parent_id}`,
+              content: `Pop Out Node`,
+              selector: `node[id = "${new_parent_id}"]`,
+              onClickFunction: function (event) {
+                let target = event.target;
+                let data = target.data();
+                let clicked_node = cy.$id(data.id);
+                clicked_node.removeClass('nested');
+
+                // Update its parent
+                let originalParent = JSON.parse(JSON.stringify(data['parent']));
+                cy.$id(node_id).data('originalParent', originalParent);
+                clicked_node = clicked_node.move({
+                  parent: node_parent
+                });
+                // cy.$id(node_parent).style('font-size', 45);
+              },
+              hasTrailingDivider: true
+            },
+          );
+          };
+          
+         
+          node_parent = new_parent_id;
         }
 
 
@@ -2808,7 +2777,7 @@
           // Add layout to graph
           // if (expandable == "true") {
           //   console.log('hello?')
-          //   var rank_layout = cy.nodes(cy.$id(node_parent).children()).layout({
+          //   var rank_layout = cy.nodes(all_nodes).layout({
           //   name: 'cola',
           //   avoidOverlap: true,
           //   nodeDimensionsIncludeLabels: false,
@@ -2876,7 +2845,6 @@
           let rank_index = nodes[rank_key]
           ordered_rank_hierarchy[rank_index] = rank_key
         }
-
         // Goal: automate this process, for all nodes, call a query that returns all of its properties. You make the node with the properties expandable. 
         for (rank_qval of ordered_rank_hierarchy) {
           var rank_object = ranks_to_object[rank_qval];
@@ -2951,7 +2919,6 @@
           fit: false,
         })
         rank_layout.run();
-        
         // Default view is collapsed view
         api.collapseAll();
     });
@@ -3599,42 +3566,28 @@
                   id_lastclicked_node = data.id; 
                 }
               }
-                else if (data.reverted == "true"){
-                  // default state is "False"
-                  let node = cy.$id(id);
-                  node.data('clickable', 'true');
-                  node.data('reverted', 'false');
-                }
                 else if (data.clickable == "true") {
                   // If we click on a node that is a display property (one of the nodes part of a ranked subgraph hierarchy), we must make sure that the existing properties and edges are removed.
                   if (data.type == "display") {
                     cy.remove(`[class = "property"]`);
                     cy.remove(`[class = "property-edge"]`);
                   }
-
-                  let position = evtTarget.position();
-                  // Which parent we want to use often varies.
-                  // 1) Node is part of larger expanded hierarchy, the parent should still be the original parent. 
-                  // 2) Node is property of the node in the hierarchy. We want to get this node's properties, so we much reset this node and its properties to have a "parent" of this node's parent. Essentially, we want a nested group of nodes. 
-                  // We determine this differency by seeing how many nodes point into it? (this might b an issue when multiple nodes point to it to stop repeating)
-
+                
+                  // Expandable: true => we want to create a nested node, with this node as the center
+                  // Expandable: false => just a normal get properties, with no nesting created
                   let isExpandable;
-                  let parent;
                   let edge = cy.edges(`[target = "${id}"]`);
                   let source = edge.sources();
 
                   if (source.length == 1) {
-                    parent = id;
                     isExpandable = "true";
                   }
                   else{
-                    parent = cy.$id(id).data('parent');
                     isExpandable = "false";
                   }
-
                   // Call expand function
                   try {
-                    get_node_properties(evt, parent, isExpandable);
+                    get_node_properties(evt, cy.$id(id).data('parent'), isExpandable);
                   }
                   catch(err){
                     console.log(err)
@@ -3648,6 +3601,7 @@
             let evtTarget = event.target;
             let data = evtTarget.data();
             let id = data['id'];
+            console.log(nested.includes(id), !cy.$id(id).hasClass('nested'))
             if (nested.includes(id) && !cy.$id(id).hasClass('nested')) {
               contextMenu.hideMenuItem(`nodePopOut: ${id}`);
             }
