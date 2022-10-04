@@ -2871,7 +2871,7 @@ function add_fisheye_effect(cy_graph, siblings, first_x_pos) {
               //replacing mousemove() function in NYTIMES fisheye algorithm
               //console.log('desired Distortion', desiredDistortion);
 
-              x_pos_on_canvas = (evt.position.x - first_x_pos);
+              x_pos_on_canvas = (evt.position.x - first_x_pos + normalWidth/2);
               //desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
               //desiredFocus = x_pos_on_canvas;
               desiredFocus = Math.max(0, x_pos_on_canvas)
@@ -2885,9 +2885,9 @@ function add_fisheye_effect(cy_graph, siblings, first_x_pos) {
           //we've moved out of the canvas so it's mimicking the mouseout function
           curr_place = 'background';
           //mousemove() function
-          x_pos_on_canvas = (evt.position.x - first_x_pos);
+          x_pos_on_canvas = (evt.position.x - first_x_pos + normalWidth*0.7);
           //desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
-          desiredFocus = Math.max(0, x_pos_on_canvas)
+          desiredFocus = Math.max(0, x_pos_on_canvas);
           move();
 
         }
@@ -2897,12 +2897,12 @@ function add_fisheye_effect(cy_graph, siblings, first_x_pos) {
       cy_graph.on('mousemove', function(evt) {
 
         if (curr_place == 'canvas') {
-          let x_pos_on_canvas = (evt.position.x - first_x_pos);
+          let x_pos_on_canvas = (evt.position.x - first_x_pos + normalWidth/2);
           //desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
           desiredFocus = Math.max(0, x_pos_on_canvas);
           //console.log('desired Focus', desiredFocus, 'x pos on canvas', x_pos_on_canvas);
           move();
-        }
+        } 
         
       });
 
@@ -2988,7 +2988,7 @@ function add_fisheye_effect(cy_graph, siblings, first_x_pos) {
                         name: `${qvals_to_names[curr_child_qval]}`, 
                         //name: '',
                         color: FISHEYE_CHILD_COLOR, 
-                        width: FISHEYE_NODE_SIZE, 
+                        width: FISHEYE_NODE_SIZE*0.7, 
                         height: FISHEYE_NODE_SIZE*3,
                         type: 'fisheye-child'
                       },
