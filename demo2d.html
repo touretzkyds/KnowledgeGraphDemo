@@ -40,7 +40,9 @@
       #nav-up,
       #nav-down,
       #nav-left,
-      #nav-right{
+      #nav-right,
+      #nav-down-left,
+      #nav-down-right{
         border-radius: 50px;
         background-color: white;
         font-weight: 600;
@@ -2125,11 +2127,13 @@
             
       }
 
-      function display_nav_buttons(node_qval, graphType_pc_edges, taxon_qvals, parent_and_all_children) {
+      function display_nav_buttons(node_qval, graphType_pc_edges, taxon_qvals, parent_and_all_children, nodes_we_came_from) {
 
         let right_arrow_head_color = 'white';
         let left_arrow_head_color = 'white';
         let down_arrow_head_color = 'white';
+        let down_left_head_color = 'white';
+        let down_right_head_color = 'white';
 
         let curr_taxon_name = taxon_qvals[node_qval];
 
@@ -2146,18 +2150,23 @@
           up_arrow_head_color = 'white';
         }
         
-        let relationships = ["nav-up", "nav-down", "nav-left", "nav-right"];
+        let relationships = ["nav-up", "nav-down", "nav-left", "nav-right", "nav-down-left", "nav-down-right"];
 
         let all_siblings = parent_and_all_children[curr_parent];
         let children = parent_and_all_children[node_qval];
         let left_sibling_name = " ";
         let right_sibling_name = " ";
         let first_child_name = " ";
+        let left_child_name = " ";
+        let right_child_name = " ";
 
         let left_sibling = " ";
         let right_sibling = " ";
         let first_child = " ";
+        let left_child = " ";
+        let right_child = " ";
         let idx_of_curr_node;
+        let idx_of_curr_child;
         let southwest_arrow_color = 'white';
         let southeast_arrow_color = 'white';
 
@@ -2179,13 +2188,36 @@
         }
 
         if (children != undefined && children.length > 0) {
-          first_child = children[0];
+          nodes_we_came_from = nodes_we_came_from.filter(val => val !== node_qval);
+          console.log("nodes from");
+          console.log(nodes_we_came_from.map(val => taxon_qvals[val]));
+          if (nodes_we_came_from.length === 0){
+            first_child = children[0];
+            console.log("Case1");
+            console.log(children.map(val => taxon_qvals[val]));
+          } else {
+            first_child = nodes_we_came_from[nodes_we_came_from.length-1]
+            console.log("Case2");
+            console.log(nodes_we_came_from.map(val => taxon_qvals[val]));
+          }
           southeast_arrow_color = 'black';
           first_child_name = taxon_qvals[first_child];
           down_arrow_head_color = 'rgb(0, 170, 255)';
+          idx_of_curr_child = children.indexOf(first_child);
+          if (idx_of_curr_child > 0) {
+            left_child = children[idx_of_curr_child - 1];
+            left_child_name = taxon_qvals[left_child];
+            down_left_head_color = 'rgb(0, 170, 255)';
+          }
+          if (idx_of_curr_child < (children.length - 1)) {
+            right_child = children[idx_of_curr_child + 1];
+            right_child_name = taxon_qvals[right_child];
+            down_right_head_color = 'rgb(0, 170, 255)';
+          }
         }
         let arrow_head_colors = [up_arrow_head_color, down_arrow_head_color,
-            left_arrow_head_color, right_arrow_head_color];
+            left_arrow_head_color, right_arrow_head_color, 
+            down_left_head_color, down_right_head_color];
 
         let navbuttons = document.getElementById("show-nav-buttons");
             navbuttons.innerHTML = 
@@ -2211,12 +2243,29 @@
                       <span id = 'nav-right-arrow' style="font-size:15px;  color:${right_arrow_head_color}">\u25B6    ${right_sibling_name}</span> 
                     </button>
                    </div>
-                  <button id='nav-down' class="nav-buttons" type="button" style="display: inline-block; border-width:0px;"> 
-                    <span id = 'nav-down-arrow' style="font-size:15px; color:${down_arrow_head_color}">\u25BC</span> 
+                  
+
+                  <div style="display:flex">
+                    <button id='nav-down-left' class="nav-buttons" type="button" style="display: inline-block; border-width:0px; text-align:right; width:33%">
+                      <span id = 'nav-down-left-arrow' style="font-size:15px; color:${down_left_head_color}">\u25E3</span> 
+                      <br>
+                      <span id = 'nav-down-left-text' style="font-size:15px; color:${down_left_head_color}; margin-right: 20px; font-weight: bold;">${left_child_name}   </span> 
+                    </button>
+    
+                    <button id='nav-down' class="nav-buttons" type="button" style="display: inline-block; border-width:0px; width:33%"> 
+                      <span id = 'nav-down-arrow' style="font-size:15px; color:${down_arrow_head_color}">\u25BC</span> 
                       <br>
                       <span id = 'nav-down-text' style="font-size:15px; color:${down_arrow_head_color}">${first_child_name}</span> 
+                    </button>      
+
+                    <button id='nav-down-right' class="nav-buttons" type="button" style="display: inline-block; border-width:0px; position: relative; text-align:left; width:33%">
+                      <span id = 'nav-down-right-arrow' style="font-size:15px; color:${down_right_head_color}">\u25E2</span> 
+                      <br>
+                      <span id = 'nav-down-right-text' style="font-size:15px;  color:${down_right_head_color}; margin-left: 20px; font-weight: bold;">   ${right_child_name}</span> 
                     </button>
-                  <br>             
+                  </div>
+
+                   
               </div>
            </div>`
            
@@ -2266,7 +2315,7 @@
                 document.getElementById("nav-right").style.width = `${new_width}px`;
            }
 
-           return [first_child, left_sibling, right_sibling, curr_parent]
+           return [first_child, left_sibling, right_sibling, curr_parent, left_child, right_child]
       }
 
       //only want this function to perform the query if we select a non-rank node
@@ -2274,8 +2323,8 @@
        pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node, taxon_qvals, 
        parent_and_all_children, nodes_we_came_from) {
 
-            let four_relationships_qvals = display_nav_buttons(node_qval, graphType_pc_edges, taxon_qvals, parent_and_all_children);
-            let relationships = ["nav-down", "nav-left", "nav-right", "nav-up"];
+            let four_relationships_qvals = display_nav_buttons(node_qval, graphType_pc_edges, taxon_qvals, parent_and_all_children, nodes_we_came_from);
+            let relationships = ["nav-down", "nav-left", "nav-right", "nav-up", "nav-down-left", "nav-down-right"];
             //relationships needs to be in the same order as is returned by the function display nav buttons
             let idx = 0;
             //adding click events for the navigation buttons
@@ -2439,7 +2488,6 @@
         pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node, 
         taxon_qvals, parent_and_all_children, nodes_we_came_from) {
 
-
           let prev_nodes_we_came_from = [...nodes_we_came_from];
           let node_ids_above = [];
           let node_names_above = []
@@ -2570,7 +2618,7 @@
           cy_container.style.height = "65vh";
 
          
-
+          return new_nodes_we_came_from;
      }
 
 
@@ -3052,7 +3100,7 @@
           let navButtonsParent = document.getElementById("show-nav-buttons");
             navButtonsParent.innerHTML = "";
 
-          show_navigation_history(given_taxon, given_taxon, cy, all_ranks,
+          let nodes_we_came_from = show_navigation_history(given_taxon, given_taxon, cy, all_ranks,
           pc_edges, prop_node_diam, graphType_pc_edges, "", taxon_qvals, 
           parent_and_all_children, []);
 
@@ -3060,11 +3108,11 @@
           //property display mode
           let four_relationships_qvals;
           if (full_parent_and_all_children != undefined) {
-            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, full_parent_and_all_children);
+            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, full_parent_and_all_children, nodes_we_came_from);
           } else {
-            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children);
+            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children, nodes_we_came_from);
           }
-          let relationships = ["nav-down", "nav-left", "nav-right", "nav-up"];
+          let relationships = ["nav-down", "nav-left", "nav-right", "nav-up", "nav-down-left", "nav-down-right"];
           //relationships needs to be in the same order as is returned by the function display nav buttons
           let idx = 0;
           //adding click events for the navigation buttons
