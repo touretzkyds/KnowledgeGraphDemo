@@ -3100,7 +3100,7 @@
           let navButtonsParent = document.getElementById("show-nav-buttons");
             navButtonsParent.innerHTML = "";
 
-          let nodes_we_came_from = show_navigation_history(given_taxon, given_taxon, cy, all_ranks,
+          let return_nodes_we_came_from = show_navigation_history(given_taxon, given_taxon, cy, all_ranks,
           pc_edges, prop_node_diam, graphType_pc_edges, "", taxon_qvals, 
           parent_and_all_children, []);
 
@@ -3108,9 +3108,9 @@
           //property display mode
           let four_relationships_qvals;
           if (full_parent_and_all_children != undefined) {
-            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, full_parent_and_all_children, nodes_we_came_from);
+            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, full_parent_and_all_children, return_nodes_we_came_from);
           } else {
-            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children, nodes_we_came_from);
+            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children, return_nodes_we_came_from);
           }
           let relationships = ["nav-down", "nav-left", "nav-right", "nav-up", "nav-down-left", "nav-down-right"];
           //relationships needs to be in the same order as is returned by the function display nav buttons
