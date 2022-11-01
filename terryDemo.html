@@ -183,7 +183,7 @@
             PREFIX la: <https://linked.art/ns/terms/>
             PREFIX un: <http://www.w3.org/2007/ont/unit#> 
             PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
-            SELECT ?Q ?cityName ?locatedInCountry ?prefLabel ?coordinates ?locatedInState ?locatedInCounty ?definition ?type ?locatedInTimeZone ?population
+            SELECT ?Q ?cityName ?locatedInCountry ?prefLabel ?coordinates ?locatedInState ?locatedInCounty ?definition ?locatedInTimeZone ?population
             Where {
             BIND ( '${value}'@en AS ?prefLabel).
             ?Q skos:prefLabel ?prefLabel .
@@ -193,7 +193,6 @@
             OPTIONAL {?Q kgo:locatedInState ?locatedInState .}
             OPTIONAL {?Q kgo:locatedInCounty ?locatedInCounty .}
             OPTIONAL {?Q skos:definition ?definition .}
-            OPTIONAL {?Q rdf:type ?type .}
             OPTIONAL {?Q skos:prefLabel ?prefLabel .}
             OPTIONAL {?Q kgo:locatedInTimeZone ?locatedInTimeZone .}
             OPTIONAL {?Q kgo:population ?population .}
