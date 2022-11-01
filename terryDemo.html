@@ -216,6 +216,19 @@
             d3.json(url).then(function(data) {visualizeData(data);});
         }
 
+        function classifyType(value) {
+          if(value.startsWith('http://')) {
+            return "concept";
+          }
+          if(value.startsWith('b')) {
+            return "qudt";
+          }
+          if(value.includes('boltz:Q')) {
+            return "center";
+          }
+          return "literal";
+        }
+
         function convertToCytoscape(data) {
             if(data === undefined) {
                 return undefined;
@@ -228,6 +241,7 @@
                 var tempNode = {"data":{}};
                 var tempEdge = {"data":{}};
                 tempNode["data"]["id"] = value;
+                tempNode["data"]["type"] = classifyType(value);
                 nodes.push(tempNode);
 
                 tempEdge["data"]["id"] = key;
@@ -257,25 +271,81 @@
             },
             style: [ // the stylesheet for the graph
             {
-                selector: 'node',
+                selector: 'node[type = "literal"]',
                 style: {
-                'font-size': 5,
-                'background-color': '#FFFF00',
-                'content': 'data(id)',
-                'text-valign': 'center',
+                  'shape': 'square',
+                  'width':100,
+                  'height': 50,
+                  'background-color': '#FFD580',
+                  'text-wrap': 'wrap',
+                  'text-max-width': 80,
+                  'border-width': 2,
+                  'border-color': '#FFA500',
+                  'border-style': 'solid',
+                  'font-size': 10,
+                  'font-family': 'Calibri',
+                  'line-height': 1.15,
+                  'label': 'data(id)',
+                  'text-valign': 'center',
                 }
             },
-
+            {
+                selector: 'node[type = "qudt"]',
+                style: {
+                  'shape': 'hexagon',
+                  'width':100,
+                  'height':80,
+                  'background-color': '	#fdfa72',
+                  'text-wrap': 'wrap',
+                  'text-max-width': 80,
+                  'border-width': 2,
+                  'border-color': '#F6BE00',
+                  'border-style': 'solid',
+                  'font-size': 35,
+                  'font-family': 'Garamond',
+                  'line-height': 1.15,
+                  'label': 'data(id)',
+                  'text-valign': 'center',
+                }
+            },
+            {
+                selector: 'node[type = "concept"]',
+                style: {
+                  'width':100,
+                  'height':100,
+                  "background-color": '#ADD8E6',
+                  "border-color": '#00008B',
+                  'label': 'data(id)',
+                  'font-size': 10,
+                  'font-family': 'Garamond',
+                  'line-height': 1.15,
+                  'text-valign': 'center',
+                }
+            },
+            {
+                selector: 'node[type = "center"]',
+                style: {
+                  'width':100,
+                  'height':100,
+                  "background-color": 'red',
+                  'label': 'data(id)',
+                  'font-size': 10,
+                  'font-family': 'Garamond',
+                  'line-height': 1.15,
+                  'text-valign': 'center',
+                }
+            },
             {
                 selector: 'edge',
                 style: {
-                'width': 1,
-                'font-size': 5,
-                'line-color': '#000000',
-                'target-arrow-color': '#000000',
-                'target-arrow-shape': 'triangle',
-                'curve-style': 'bezier',
-                'label': 'data(id)',
+                  'curve-style': 'bezier',
+                  'target-arrow-shape': 'triangle',
+                  'label': 'data(label)',
+                  'width': 3,
+                  'font-size': 10,
+                  'target-arrow-shape': 'triangle',
+                  'curve-style': 'bezier',
+                  'label': 'data(id)',
                 }
             }
             ]
@@ -290,17 +360,19 @@
             }
             var resultData = {};
 
-            if(binding.hasOwnProperty("Q")) {
-                resultData["Q"] = binding.Q.value;
-            }
+            // if(binding.hasOwnProperty("Q")) {
+            //     resultData["Q"] = binding.Q.value;
+            // }
             if(binding.hasOwnProperty("cityName")) {
                 resultData["cityName"] = binding.cityName.value;
             }
             if(binding.hasOwnProperty("locatedInCountry")) {
                 resultData["locatedInCountry"] = binding.locatedInCountry.value;
             }
-            if(binding.hasOwnProperty("prefLabel")) {
-                resultData["prefLabel"] = binding.prefLabel.value;
+            if(binding.hasOwnProperty("prefLabel") && binding.hasOwnProperty("Q")) {
+                const qValueURL = binding.Q.value;
+                const qValue = "boltz:" + qValueURL.split("data/")[1];
+                resultData["prefLabel"] = binding.prefLabel.value + qValue;
             }
             if(binding.hasOwnProperty("coordinates")) {
                 resultData["coordinates"] = binding.coordinates.value;

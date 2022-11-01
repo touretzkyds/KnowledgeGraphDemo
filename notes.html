@@ -1,0 +1,48 @@
+#qudt
+cy_graph.nodes(bnode_id_selector).style({
+    'shape': 'hexagon',
+    'background-color': '	#fdfa72',
+    'text-wrap': 'wrap',
+    'text-max-width': prop_node_diam - 20,
+    'border-width': 5,
+    'border-color': '#F6BE00',
+    'border-style': 'solid',
+    'font-size': 35,
+    'font-family': 'Garamond',
+    'line-height': 1.15
+  });
+
+cy_graph.nodes(`[id = "${new_bnode_id}"]`).style({
+    'shape': 'hexagon',
+    'background-color': '	#fdfa72',
+    'text-wrap': 'wrap',
+    'text-max-width': prop_node_diam - 20,
+    'border-width': 5,
+    'border-color': '#F6BE00',
+});
+
+#literal
+cy_graph.nodes(literal_id_selector).style({
+    'shape': 'square',
+    'background-color': '#FFD580',
+    'text-wrap': 'wrap',
+    'text-max-width': prop_node_diam - 20,
+    'border-width': 5,
+    'border-color': '#FFA500',
+    'border-style': 'solid',
+    'font-size': 35,
+    'font-family': 'Calibri',
+    'line-height': 1.15
+  });
+
+#center
+cy_graph.nodes(id_label).style({
+    "background-color": "red",
+    'border-width': 0
+  });
+
+#concept
+cy_graph.nodes().style({
+    "background-color": '#ADD8E6',
+    "border-color": '#00008B';
+});
