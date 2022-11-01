@@ -240,6 +240,7 @@
                 var value = data[key];
                 var tempNode = {"data":{}};
                 var tempEdge = {"data":{}};
+                
                 tempNode["data"]["id"] = value;
                 tempNode["data"]["type"] = classifyType(value);
                 nodes.push(tempNode);
@@ -274,15 +275,15 @@
                 selector: 'node[type = "literal"]',
                 style: {
                   'shape': 'square',
-                  'width':100,
-                  'height': 50,
+                  'width':150,
+                  'height': 75,
                   'background-color': '#FFD580',
                   'text-wrap': 'wrap',
-                  'text-max-width': 80,
+                  'text-max-width': 130,
                   'border-width': 2,
                   'border-color': '#FFA500',
                   'border-style': 'solid',
-                  'font-size': 10,
+                  'font-size': 15,
                   'font-family': 'Calibri',
                   'line-height': 1.15,
                   'label': 'data(id)',
@@ -293,8 +294,8 @@
                 selector: 'node[type = "qudt"]',
                 style: {
                   'shape': 'hexagon',
-                  'width':100,
-                  'height':80,
+                  'width':180,
+                  'height':150,
                   'background-color': '	#fdfa72',
                   'text-wrap': 'wrap',
                   'text-max-width': 80,
@@ -311,12 +312,12 @@
             {
                 selector: 'node[type = "concept"]',
                 style: {
-                  'width':100,
-                  'height':100,
+                  'width':150,
+                  'height':150,
                   "background-color": '#ADD8E6',
                   "border-color": '#00008B',
                   'label': 'data(id)',
-                  'font-size': 10,
+                  'font-size': 20,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
                   'text-valign': 'center',
@@ -325,11 +326,13 @@
             {
                 selector: 'node[type = "center"]',
                 style: {
-                  'width':100,
-                  'height':100,
+                  'width':150,
+                  'height':150,
                   "background-color": 'red',
+                  'text-wrap': 'wrap',
+                  'text-max-width': 80,
                   'label': 'data(id)',
-                  'font-size': 10,
+                  'font-size': 20,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
                   'text-valign': 'center',
@@ -338,17 +341,22 @@
             {
                 selector: 'edge',
                 style: {
+                  'opacity': 50,
                   'curve-style': 'bezier',
                   'target-arrow-shape': 'triangle',
                   'label': 'data(label)',
-                  'width': 3,
-                  'font-size': 10,
+                  'width': 10,
+                  'font-size': 20,
                   'target-arrow-shape': 'triangle',
                   'curve-style': 'bezier',
                   'label': 'data(id)',
-                }
+                } 
             }
-            ]
+            ],
+            layout: {
+              name: 'concentric',
+              minNodeSpacing: 100
+            } 
             });
         }
 
@@ -371,7 +379,7 @@
             }
             if(binding.hasOwnProperty("prefLabel") && binding.hasOwnProperty("Q")) {
                 const qValueURL = binding.Q.value;
-                const qValue = "boltz:" + qValueURL.split("data/")[1];
+                const qValue = "\nboltz:" + qValueURL.split("data/")[1];
                 resultData["prefLabel"] = binding.prefLabel.value + qValue;
             }
             if(binding.hasOwnProperty("coordinates")) {
@@ -414,9 +422,6 @@
           <input id="endpoint" class="span5" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
           <div id="show-nav-buttons">
           </div>
-          
-           
-            
           
           <div id ="hierarchy-entry">
             <input id="cityName" class="input-species" placeholder="Enter City Name">
