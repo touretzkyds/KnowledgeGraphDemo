@@ -2247,12 +2247,7 @@
             }
 
             if (children != undefined && children.length > 0) {
-                console.log("Original nodes from", original_nodes_we_came_from.map(val => taxon_qvals[val]));
-                nodes_we_came_from = original_nodes_we_came_from.filter(val => val !== node_qval);
-                console.log("nodes from1", nodes_we_came_from.map(val => taxon_qvals[val]));
-                nodes_we_came_from = nodes_we_came_from.filter(val => val !== curr_parent);
-                console.log("nodes from2", nodes_we_came_from.map(val => taxon_qvals[val]));
-                nodes_we_came_from = nodes_we_came_from.filter(val => children.includes(val));
+                nodes_we_came_from = original_nodes_we_came_from.filter(val => children.includes(val));
                 if (nodes_we_came_from.length === 0 || original_nodes_we_came_from[original_nodes_we_came_from.length - 1] === node_qval) {
                     first_child = children[0];
                     console.log("Case1", children.map(val => taxon_qvals[val]));
@@ -2778,7 +2773,8 @@
 
 
 
-        function exec(graph_type) {
+        function exec(new_graph_type) {
+            graph_type = new_graph_type;
             let cy_container = document.getElementById("cy");
             cy_container.style.height = "67vh";
 
@@ -3172,14 +3168,14 @@
             let navButtonsParent = document.getElementById("show-nav-buttons");
             navButtonsParent.innerHTML = "";
 
-            // console.log("Hierarchy nodes", return_nodes_we_came_from)
+            // console.log("Hierarchy nodes", nodes_we_came_from)
             //so we want the functionality of the nav buttons to be different from the one when we are in
             //property display mode
             let four_relationships_qvals;
             // if (full_parent_and_all_children != undefined) {
-            //     four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, full_parent_and_all_children, return_nodes_we_came_from);
+            //     four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, full_parent_and_all_children, nodes_we_came_from);
             // } else {
-            //     four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children, return_nodes_we_came_from);
+            //     four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children, nodes_we_came_from);
             // }
             four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children, nodes_we_came_from);
 
@@ -3215,7 +3211,7 @@
             //padding amount 140 for 8 nodes
             //
 
-            console.log('padding amount', padding_amount, 'nodes lst', nodes_lst.length)
+            // console.log('padding amount', padding_amount, 'nodes lst', nodes_lst.length)
             cy.animate({
                 fit: {
                     eles: taxon_label,
@@ -3396,7 +3392,9 @@
         function change_buttons(new_data, full_json, taxonVal, nodes_we_came_from) {
             document.getElementById("Full").onclick =
                 function() {
+                    console.log("Before click", graph_type);
                     graph_type = 'Full';
+                    console.log("After click", graph_type);
                     display_hierarchy(full_json, {
                         given_data: new_data,
                         taxon_value: taxonVal
@@ -3405,7 +3403,9 @@
 
             document.getElementById("Moderate").onclick =
                 function() {
+                    console.log("Before click", graph_type);
                     graph_type = 'Moderate';
+                    console.log("After click", graph_type);
                     display_hierarchy(full_json, {
                         given_data: new_data,
                         taxon_value: taxonVal
@@ -3415,7 +3415,9 @@
 
             document.getElementById("Concise").onclick =
                 function() {
+                    console.log("Before click", graph_type);
                     graph_type = 'Concise';
+                    console.log("After click", graph_type);
                     display_hierarchy(full_json, {
                         given_data: new_data,
                         taxon_value: taxonVal
