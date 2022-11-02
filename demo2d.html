@@ -2252,6 +2252,7 @@
                 console.log("nodes from1", nodes_we_came_from.map(val => taxon_qvals[val]));
                 nodes_we_came_from = nodes_we_came_from.filter(val => val !== curr_parent);
                 console.log("nodes from2", nodes_we_came_from.map(val => taxon_qvals[val]));
+                nodes_we_came_from = nodes_we_came_from.filter(val => children.includes(val));
                 if (nodes_we_came_from.length === 0 || original_nodes_we_came_from[original_nodes_we_came_from.length - 1] === node_qval) {
                     first_child = children[0];
                     console.log("Case1", children.map(val => taxon_qvals[val]));
