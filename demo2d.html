@@ -2792,14 +2792,16 @@
                 display_hierarchy(json_result, {
                     given_data: 'null',
                     taxon_value: "null"
-                }, "root");
+                }, "root", []);
             });
         }
 
 
         //givenData is an object {given_data: 'null'} if we're not going to be given anything, otherwise
         //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
-        function display_hierarchy(data, givenData, given_taxon) {
+        function display_hierarchy(data, givenData, given_taxon, nodes_we_came_from) {
+
+            console.log("Hierarchy nodes from", nodes_we_came_from)
 
             let user_entered_taxon = givenData.taxon_value;
             let converted_data;
@@ -2867,7 +2869,7 @@
                 edge_lst = converted_data.edges;
             }
 
-            console.log('graph type parent and all kids in display hierarchy', parent_and_all_children, 'graph type', graph_type);
+            // console.log('graph type parent and all kids in display hierarchy', parent_and_all_children, 'graph type', graph_type);
 
             const cyDiv = document.querySelector('#cy');
             cyDiv.style.display = 'block';
@@ -3169,31 +3171,31 @@
             let navButtonsParent = document.getElementById("show-nav-buttons");
             navButtonsParent.innerHTML = "";
 
-            let return_nodes_we_came_from = show_navigation_history(given_taxon, given_taxon, cy, all_ranks,
-                pc_edges, prop_node_diam, graphType_pc_edges, "", taxon_qvals,
-                parent_and_all_children, []);
-            console.log("Hierarchy nodes", return_nodes_we_came_from)
-                //so we want the functionality of the nav buttons to be different from the one when we are in
-                //property display mode
+            // console.log("Hierarchy nodes", return_nodes_we_came_from)
+            //so we want the functionality of the nav buttons to be different from the one when we are in
+            //property display mode
             let four_relationships_qvals;
             // if (full_parent_and_all_children != undefined) {
             //     four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, full_parent_and_all_children, return_nodes_we_came_from);
             // } else {
             //     four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children, return_nodes_we_came_from);
             // }
-            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children, return_nodes_we_came_from);
+            four_relationships_qvals = display_nav_buttons(given_taxon, graphType_pc_edges, taxon_qvals, parent_and_all_children, nodes_we_came_from);
+
+            nodes_we_came_from = show_navigation_history(given_taxon, given_taxon, cy, all_ranks,
+                pc_edges, prop_node_diam, graphType_pc_edges, "", taxon_qvals,
+                parent_and_all_children, []);
+
             let relationships = ["nav-down", "nav-left", "nav-right", "nav-up", "nav-down-left", "nav-down-right"];
             //relationships needs to be in the same order as is returned by the function display nav buttons
             let idx = 0;
             //adding click events for the navigation buttons
-            four_relationships_qvals.forEach(qval => {
-                let nodes_lst = [];
-
+            four_relationships_qvals.forEach(node_qval => {
                 let curr_relationship_id = relationships[idx];
 
-                if (qval != " ") {
+                if (node_qval != " ") {
                     document.getElementById(`${curr_relationship_id}`).addEventListener('click', function() {
-                        get_hierarchy(qval);
+                        get_hierarchy(node_qval, nodes_we_came_from);
                     })
                 }
                 idx += 1;
@@ -3390,14 +3392,14 @@
 
 
         //changes the buttons for the new input node 
-        function change_buttons(new_data, full_json, taxonVal) {
+        function change_buttons(new_data, full_json, taxonVal, nodes_we_came_from) {
             document.getElementById("Full").onclick =
                 function() {
                     graph_type = 'Full';
                     display_hierarchy(full_json, {
                         given_data: new_data,
                         taxon_value: taxonVal
-                    }, taxonVal)
+                    }, taxonVal, nodes_we_came_from)
                 };
 
             document.getElementById("Moderate").onclick =
@@ -3406,7 +3408,7 @@
                     display_hierarchy(full_json, {
                         given_data: new_data,
                         taxon_value: taxonVal
-                    }, taxonVal)
+                    }, taxonVal, nodes_we_came_from)
                 };
 
 
@@ -3416,14 +3418,14 @@
                     display_hierarchy(full_json, {
                         given_data: new_data,
                         taxon_value: taxonVal
-                    }, taxonVal)
+                    }, taxonVal, nodes_we_came_from)
                 };
 
         }
 
         /*transform_data is a function that takes in the query from the new root node
         and then updates it so that it returns all the nodes above the queried node*/
-        function transform_data(full_data, full_json, short_json, taxonVal, taxon_qval) {
+        function transform_data(full_data, full_json, short_json, taxonVal, taxon_qval, nodes_we_came_from) {
 
             let short_data = convert_to_cytoscape(short_json);
             let short_pc_edges = short_data.pc_edges;
@@ -3517,12 +3519,12 @@
             //now we want to display the graph.
 
 
-            change_buttons(new_data, full_json, taxon_qval);
+            change_buttons(new_data, full_json, taxon_qval, nodes_we_came_from);
             display_hierarchy(full_json, {
                 given_data: new_data,
                 taxon_value: taxon_qval,
                 full_parent_and_all_children: full_parent_and_all_children
-            }, taxon_qval);
+            }, taxon_qval, nodes_we_came_from);
             document.getElementById("Concise").style.background = 'black';
             document.getElementById("Full").style.background = 'black';
             document.getElementById("Moderate").style.background = 'black';
@@ -3575,7 +3577,7 @@
 
         }
 
-        function get_hierarchy_intermediate(full_data_json, taxonVal) {
+        function get_hierarchy_intermediate(full_data_json, taxonVal, nodes_we_came_from) {
             let full_data = convert_to_cytoscape(full_data_json);
 
             let pref_labels = full_data.pref_labels;
@@ -3621,13 +3623,13 @@
             hierarchy_query(ROOT_NAME, false);
 
             d3.json(short_data_url).then(function(short_data_json) {
-                transform_data(full_data, full_data_json, short_data_json, taxonVal, taxon_qval);
+                transform_data(full_data, full_data_json, short_data_json, taxonVal, taxon_qval, nodes_we_came_from);
             })
         }
 
 
 
-        function get_hierarchy(given_taxon) {
+        function get_hierarchy(given_taxon, nodes_we_came_from) {
             let navDisplayParent = document.getElementById("navigation-history");
             navDisplayParent.innerHTML = "";
 
@@ -3691,7 +3693,7 @@
             document.getElementById("hierarchySpecies").value = "";
 
             d3.json(full_data_url).then(function(full_data_json) {
-                get_hierarchy_intermediate(full_data_json, hierarchyVal)
+                get_hierarchy_intermediate(full_data_json, hierarchyVal, nodes_we_came_from)
             });
         }
     </script>
@@ -3788,7 +3790,7 @@
         let taxonSpecies = document.getElementById("hierarchySpecies");
         taxonSpecies.addEventListener("keydown", function(e) {
             if (e.key == "Enter") {
-                get_hierarchy("null");
+                get_hierarchy("null", []);
             }
         });
     </script>
