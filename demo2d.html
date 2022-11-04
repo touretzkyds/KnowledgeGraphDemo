@@ -2798,7 +2798,7 @@
         //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
         function display_hierarchy(data, givenData, given_taxon, nodes_we_came_from) {
 
-            console.log("Hierarchy nodes from", nodes_we_came_from)
+            // console.log("Hierarchy nodes from", nodes_we_came_from)
 
             let user_entered_taxon = givenData.taxon_value;
             let converted_data;
@@ -3522,9 +3522,9 @@
             //now we want to display the graph.
 
 
-            change_buttons(new_data, full_json, taxon_qval, nodes_we_came_from);
+            change_buttons(full_data, full_json, taxon_qval, nodes_we_came_from);
             display_hierarchy(full_json, {
-                given_data: new_data,
+                given_data: full_data,
                 taxon_value: taxon_qval,
                 full_parent_and_all_children: full_parent_and_all_children
             }, taxon_qval, nodes_we_came_from);
