@@ -46,3 +46,37 @@ cy_graph.nodes().style({
     "background-color": '#ADD8E6',
     "border-color": '#00008B';
 });
+
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+PREFIX qudt:  <http://qudt.org/schema/qudt/>
+PREFIX unit:  <http://qudt.org/vocab/unit/> 
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
+PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
+PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
+PREFIX la: <https://linked.art/ns/terms/>
+PREFIX un: <http://www.w3.org/2007/ont/unit#> 
+PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
+#SELECT ?Q ?cityName ?locatedInCountry ?prefLabel ?coordinates ?locatedInState ?locatedInCounty ?definition ?type ?locatedInTimeZone ?population
+SELECT *
+Where {
+ BIND ( 'New York City'@en AS ?prefLabel).
+ ?Q skos:prefLabel ?prefLabel .
+ ?Q ?r ?y.
+  OPTIONAL {?Q ?r [?s ?z] FILTER isBlank(?y)}.
+  OPTIONAL {?y rdfs:label|skos:prefLabel ?yLabel}.
+#OPTIONAL {?Q kgo:cityName ?cityName} .
+# OPTIONAL {?Q kgo:locatedInCountry ?locatedInCountry .}
+# OPTIONAL {?Q kgo:coordinates ?coordinates .}
+# OPTIONAL {?Q kgo:locatedInState ?locatedInState .}
+# OPTIONAL {?Q kgo:locatedInCounty ?locatedInCounty .}
+# OPTIONAL {?Q skos:definition ?definition .}
+# OPTIONAL {?Q rdf:type ?type .}
+# OPTIONAL {?Q skos:prefLabel ?prefLabel .}
+# OPTIONAL {?Q kgo:locatedInTimeZone ?locatedInTimeZone .}
+# OPTIONAL {?Q kg ?Q ?r ?y.
+}
