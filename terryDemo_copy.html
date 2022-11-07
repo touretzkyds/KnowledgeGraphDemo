@@ -237,6 +237,7 @@
                 } else {
                   tempNode["data"]["type"] = classifyType(value);
                 }
+
                 nodes.push(tempNode);
 
                 tempEdge["data"]["id"] = key;
@@ -358,7 +359,7 @@
 
         function getDataJSON(data) {
             const binding = data.results.bindings;
-            if(binding.length === 0) {
+            if(binding === undefined) {
                 alert('Please enter valid city name.');
                 return undefined;
             }
