@@ -354,6 +354,12 @@
               minNodeSpacing: 100
             } 
             });
+            cy.on('tap', function(evt) {
+              var node = evt.target;
+              if(node.json().data.type === 'qudt') {
+                console.log('target' + node.id() + 'is qudt');
+              }
+            });
         }
 
         function getDataJSON(data) {
