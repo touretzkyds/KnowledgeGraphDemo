@@ -1,0 +1,30 @@
+function convertbnodeJSONToCytoscape(data) {
+    if(data === undefined) {
+        return undefined;
+    }
+    var nodes = [];
+    var edges = [];
+    var source = data["prefLabel"];
+    Object.keys(data).forEach(function(key) {
+        var value = data[key];
+        var tempNode = {"data":{}};
+        var tempEdge = {"data":{}};
+        
+        tempNode["data"]["id"] = value;
+        if(key == "prefLabel") {
+          tempNode["data"]["type"] = "center";
+        } else {
+          tempNode["data"]["type"] = classifyType(value);
+        }
+        nodes.push(tempNode);
+
+        tempEdge["data"]["id"] = key;
+        if(value !== source) {
+            tempEdge["data"]["source"] = source;
+            tempEdge["data"]["target"] = value;
+            edges.push(tempEdge);
+        }
+    })
+    console.log(nodes);
+    return [nodes, edges];
+}

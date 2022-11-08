@@ -246,6 +246,7 @@
                     edges.push(tempEdge);
                 }
             })
+            console.log(nodes);
             return [nodes, edges];
         }
 
@@ -357,7 +358,9 @@
             cy.on('tap', function(evt) {
               var node = evt.target;
               if(node.json().data.type === 'qudt') {
+                console.log(node.json().data)
                 console.log('target' + node.id() + 'is qudt');
+                // addbNode(cy)
               }
             });
         }
@@ -369,10 +372,11 @@
                 return undefined;
             }
             var resultData = {};
+            var bnodeData = {};
 
             Object.keys(binding).forEach(function(key) {
                 const dataEntry = binding[key];
-                // console.log(dataEntry);
+                console.log(dataEntry);
                 var relation = dataEntry.r.value;
                 if(relation.includes("skos")) {
                   relation = relation.split("core#")[1];
@@ -390,6 +394,26 @@
                     finalValue = dataEntry.yLabel.value + "\nboltz:" + Qnumber;
                   }
                 }
+                //store bnode info
+                if(dataEntry.y.type == 'bnode') {
+                  if(!bnodeData.hasOwnProperty(finalValue)) {
+                    bnodeData[finalValue] = {};
+                  }
+                  
+                  var bnodeKeyList = dataEntry.s.value.split("/");
+                  bnodeKey = bnodeKeyList[bnodeKeyList.length - 1];
+                  console.log(bnodeKey);
+                  var bnodeValueList = dataEntry.z.value.split("/");
+                  bnodeValue = bnodeValueList[bnodeValueList.length - 1];
+                  if(bnodeKey.includes("#")) {
+                    bnodeKeyList = dataEntry.s.value.split("#");
+                    bnodeKey = bnodeKeyList[bnodeKeyList.length - 1];
+                  }
+                  bnodeData[finalValue][bnodeKey] = bnodeValue;
+                }
+
+                store(bnodeData);
+                //store resultData for display
                 resultData[relation] = finalValue;
             })
 
@@ -397,7 +421,7 @@
             const Qnumber = binding[0].Q.value.split("/data/")[1];
             resultData["prefLabel"] = prefLabel + "\nboltz:" + Qnumber;
             
-            console.log(resultData);
+            // console.log(bnodeData);
             return resultData;
         }
     </script>
