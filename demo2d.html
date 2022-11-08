@@ -2228,6 +2228,10 @@
             let idx_of_curr_child;
             let southwest_arrow_color = 'white';
             let southeast_arrow_color = 'white';
+            let sibling_left_dot_color = 'white';
+            let sibling_right_dot_color = 'white';
+            let children_left_dot_color = 'white';
+            let children_right_dot_color = 'white';
 
 
 
@@ -2244,16 +2248,22 @@
                     right_sibling_name = taxon_qvals[right_sibling];
                     right_arrow_head_color = 'rgb(0, 170, 255)'
                 }
+                if (idx_of_curr_node > 1) {
+                    sibling_left_dot_color = 'rgb(0, 170, 255)'
+                }
+                if (idx_of_curr_node < (all_siblings.length - 2)) {
+                    sibling_right_dot_color = 'rgb(0, 170, 255)'
+                }
             }
 
             if (children != undefined && children.length > 0) {
                 nodes_we_came_from = original_nodes_we_came_from.filter(val => children.includes(val));
                 if (nodes_we_came_from.length === 0 || original_nodes_we_came_from[original_nodes_we_came_from.length - 1] === node_qval) {
                     first_child = children[0];
-                    console.log("Case1", children.map(val => taxon_qvals[val]));
+                    // console.log("Case1", children.map(val => taxon_qvals[val]));
                 } else {
                     first_child = nodes_we_came_from[nodes_we_came_from.length - 1]
-                    console.log("Case2", nodes_we_came_from.map(val => taxon_qvals[val]));
+                    // console.log("Case2", nodes_we_came_from.map(val => taxon_qvals[val]));
                 }
                 southeast_arrow_color = 'black';
                 first_child_name = taxon_qvals[first_child];
@@ -2269,6 +2279,12 @@
                     right_child_name = taxon_qvals[right_child];
                     down_right_head_color = 'rgb(0, 170, 255)';
                 }
+                if (idx_of_curr_child > 1) {
+                    children_left_dot_color = 'rgb(0, 170, 255)'
+                }
+                if (idx_of_curr_child < (children.length - 2)) {
+                    children_right_dot_color = 'rgb(0, 170, 255)'
+                }
             }
             let arrow_head_colors = [up_arrow_head_color, down_arrow_head_color,
                 left_arrow_head_color, right_arrow_head_color,
@@ -2279,45 +2295,62 @@
             navbuttons.innerHTML =
                 `<div id = "navigation-buttons" style="width: 100%">
               <div style="float:right; text-align: center; margin-right: 70px;">
-                  <button id='nav-up' class="nav-buttons" type="button" style="display: inline-block; border-width:0px"> 
+                  <button id='nav-up' class="nav-buttons" type="button" style="display: inline-block; border-width:0px; width:130px"> 
                     <span id = 'nav-up-text' style="font-size:15px; color:${up_arrow_head_color}">${curr_parent_name}</span> 
                     <br>
                     <span id = 'nav-up-arrow' style="font-size:15px; color:${up_arrow_head_color}">\u25B2</span> 
                   </button>
   
                   <div style="display:flex">
+                    <button id ="nav-left-dots" class="nav-buttons" type="button" style="border-width:0px; position: relative; text-align:right">
+                      <span style="font-size:15px; color:${sibling_left_dot_color}">\u25CF \u25CF \u25CF</span> 
+                    </button>
+
                     <button id='nav-left' class="nav-buttons" type="button" style="border-width:0px; position: relative; text-align:right">
                       <span id = 'nav-left-arrow' style="font-size:15px; color:${left_arrow_head_color}">${left_sibling_name}    \u25C0</span> 
                     </button>
     
                     <button id="middle-nav" class="nav-buttons" type="button" 
-                    style="display: block; font-size: 12px; color:#fff3f4; border-width:0px;">
+                    style="display: block; font-size: 12px; color:#fff3f4; border-width:0px; text-align:center; width:130px">
                     ${curr_taxon_name}
                     </button>
   
                     <button id='nav-right' class="nav-buttons" type="button" style="border-width:0px; position: relative; text-align:left">
                       <span id = 'nav-right-arrow' style="font-size:15px;  color:${right_arrow_head_color}">\u25B6    ${right_sibling_name}</span> 
                     </button>
+
+                    <button id="nav-right-dots"  class="nav-buttons" type="button" style="border-width:0px; position: relative; text-align:right">
+                      <span style="font-size:15px; color:${sibling_right_dot_color}">\u25CF \u25CF \u25CF</span> 
+                    </button>
                    </div>
                   
 
                   <div style="display:flex">
-                    <button id='nav-down-left' class="nav-buttons" type="button" style="display: inline-block; border-width:0px; text-align:right; width:33%">
+                    <button id ="nav-down-left-dots" class="nav-buttons" type="button" style="border-width:0px; position: relative; text-align:right; width:11%">
+                      <span style="font-size:15px; color:${children_left_dot_color}">\u25CF \u25CF \u25CF</span> 
+                    </button>
+
+                    <button id='nav-down-left' class="nav-buttons" type="button" style="display: inline-block; border-width:0px; text-align:right; width:26%">
                       <span id = 'nav-down-left-arrow' style="font-size:15px; color:${down_left_head_color}">\u25E3</span> 
                       <br>
                       <span id = 'nav-down-left-text' style="font-size:15px; color:${down_left_head_color}; margin-right: 20px; font-weight: bold;">${left_child_name}   </span> 
                     </button>
     
-                    <button id='nav-down' class="nav-buttons" type="button" style="display: inline-block; border-width:0px; width:33%"> 
+                    <button id='nav-down' class="nav-buttons" type="button" 
+                    style="display: inline-block; font-size: 12px; color:#fff3f4; border-width:0px; text-align:center; width:26%"> 
                       <span id = 'nav-down-arrow' style="font-size:15px; color:${down_arrow_head_color}">\u25BC</span> 
                       <br>
                       <span id = 'nav-down-text' style="font-size:15px; color:${down_arrow_head_color}">${first_child_name}</span> 
                     </button>      
 
-                    <button id='nav-down-right' class="nav-buttons" type="button" style="display: inline-block; border-width:0px; position: relative; text-align:left; width:33%">
+                    <button id='nav-down-right' class="nav-buttons" type="button" style="display: inline-block; border-width:0px; position: relative; text-align:left; width:26%">
                       <span id = 'nav-down-right-arrow' style="font-size:15px; color:${down_right_head_color}">\u25E2</span> 
                       <br>
                       <span id = 'nav-down-right-text' style="font-size:15px;  color:${down_right_head_color}; margin-left: 20px; font-weight: bold;">   ${right_child_name}</span> 
+                    </button>
+
+                    <button id="nav-down-right-dots"  class="nav-buttons" type="button" style="border-width:0px; position: relative; text-align:right; width:11%">
+                      <span style="font-size:15px; color:${children_right_dot_color}">\u25CF \u25CF \u25CF</span> 
                     </button>
                   </div>
 
@@ -2353,6 +2386,26 @@
                 idx += 1;
 
             })
+
+            nav_btn = document.getElementById("nav-left-dots");
+            nav_btn.style.backgroundColor = 'white';
+            nav_btn.style.borderWidth = "0px";
+            nav_btn.style.height = '40px';
+
+            nav_btn = document.getElementById("nav-right-dots");
+            nav_btn.style.backgroundColor = 'white';
+            nav_btn.style.borderWidth = "0px";
+            nav_btn.style.height = '40px';
+
+            nav_btn = document.getElementById("nav-down-left-dots");
+            nav_btn.style.backgroundColor = 'white';
+            nav_btn.style.borderWidth = "0px";
+            nav_btn.style.height = '40px';
+
+            nav_btn = document.getElementById("nav-down-right-dots");
+            nav_btn.style.backgroundColor = 'white';
+            nav_btn.style.borderWidth = "0px";
+            nav_btn.style.height = '40px';
 
             //13 has width 150
             //150 = 13*const
