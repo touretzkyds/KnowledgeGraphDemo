@@ -212,7 +212,7 @@
             d3.json(url).then(function(data) {visualizeData(data);});
         }
 
-        function classifyType(value) {
+        function classifyclass(value) {
           if(value.startsWith('b')) {
             return "qudt";
           }
@@ -236,9 +236,9 @@
                 
                 tempNode["data"]["id"] = value;
                 if(key == "prefLabel") {
-                  tempNode["data"]["type"] = "center";
+                  tempNode["data"]["class"] = "center";
                 } else {
-                  tempNode["data"]["type"] = classifyType(value);
+                  tempNode["data"]["class"] = classifyclass(value);
                 }
                 nodes.push(tempNode);
 
@@ -272,7 +272,7 @@
             },
             style: [ // the stylesheet for the graph
             {
-                selector: 'node[type = "literal"]',
+                selector: 'node[class = "literal"]',
                 style: {
                   'shape': 'square',
                   'width':150,
@@ -291,7 +291,7 @@
                 }
             },
             {
-                selector: 'node[type = "qudt"]',
+                selector: 'node[class = "qudt"]',
                 style: {
                   'shape': 'hexagon',
                   'width':180,
@@ -310,7 +310,7 @@
                 }
             },
             {
-                selector: 'node[type = "concept"]',
+                selector: 'node[class = "concept"]',
                 style: {
                   'width':150,
                   'height':150,
@@ -326,7 +326,7 @@
                 }
             },
             {
-                selector: 'node[type = "center"]',
+                selector: 'node[class = "center"]',
                 style: {
                   'width':150,
                   'height':150,
@@ -341,15 +341,18 @@
                 }
             },
             {
-                selector: 'node[type = "bnode"]',
+                selector: 'node[class = "bnode"]',
                 style: {
+                  'shape': 'ellipse',
+                  'border-style': 'solid',
                   'width':150,
                   'height':150,
-                  "background-color": 'purple',
+                  "background-color": '#CBC3E3',
+                  "border-color": '#301934',
                   'text-wrap': 'wrap',
                   'text-max-width': 80,
                   'label': 'data(id)',
-                  'font-size': 20,
+                  'font-size': 35,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
                   'text-valign': 'center',
@@ -358,7 +361,6 @@
             {
                 selector: 'edge',
                 style: {
-                  'opacity': 50,
                   'curve-style': 'bezier',
                   'target-arrow-shape': 'triangle',
                   'label': 'data(label)',
@@ -371,16 +373,21 @@
             }
             ],
             layout: {
-              name: 'concentric',
+              name: 'cose',
               minNodeSpacing: 100
             } 
             });
             cy.on('tap', function(evt) {
               var node = evt.target;
-              if(node.json().data.type === 'qudt') {
+              if(node.json().data.class === 'qudt') {
                 addbNode(cy, node.id());
+                var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
+                
+                layout.run(); 
+                // layout.run();
               }
             });
+            
         }
 
         function addbNode(cy, id) {
@@ -395,11 +402,10 @@
             if(key === 'type') {
               key = 'qudt type';
             }
-            tempNode.data = {id: value, type: 'bnode'};
+            tempNode.data = {id: value, class: 'bnode'};
             var tempEdge = {}
             tempEdge.group = "edges";
             tempEdge.data = {id: key, source: id, target: value};
-            console.log(key);
             addedData.push(tempNode);
             addedData.push(tempEdge);
             cy.add(addedData);
@@ -450,18 +456,14 @@
                     bnodeKeyList = dataEntry.s.value.split("#");
                     bnodeKey = bnodeKeyList[bnodeKeyList.length - 1];
                   }
+                  
                   bnodeData[finalValue][bnodeKey] = bnodeValue;
 
-                  if(!isNaN(bnodeValue)) {
-                    finalValue = finalValue + ":" + bnodeValue;
-                  }
                 }
 
                 bnodeExpansionData = bnodeData;
                 //store resultData for display
-                if(!(finalValue.startsWith("b0") && !finalValue.includes(":"))) {
-                  resultData[relation] = finalValue;
-                }
+                resultData[relation] = finalValue;
             })
 
             const prefLabel = binding[0].prefLabel.value;
