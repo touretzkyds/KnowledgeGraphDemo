@@ -166,6 +166,9 @@
     </style>
 
     <script>
+
+        var bnodeExpansionData = {};
+
         function propertyQuery(value, perform_query) {
         const prevquery = document.getElementById("sparql2");
         prevquery.innerHTML = 
@@ -209,7 +212,7 @@
             d3.json(url).then(function(data) {visualizeData(data);});
         }
 
-        function classifyType(value) {
+        function classifyclass(value) {
           if(value.startsWith('b')) {
             return "qudt";
           }
@@ -233,9 +236,9 @@
                 
                 tempNode["data"]["id"] = value;
                 if(key == "prefLabel") {
-                  tempNode["data"]["type"] = "center";
+                  tempNode["data"]["class"] = "center";
                 } else {
-                  tempNode["data"]["type"] = classifyType(value);
+                  tempNode["data"]["class"] = classifyclass(value);
                 }
                 nodes.push(tempNode);
 
@@ -246,6 +249,7 @@
                     edges.push(tempEdge);
                 }
             })
+            // console.log(nodes);
             return [nodes, edges];
         }
 
@@ -254,19 +258,21 @@
             if(CytoscapeData === undefined) {
                 return;
             }
+            
             const nodes = CytoscapeData[0];
+            // console.log(nodes);
             const edges = CytoscapeData[1];
             var cy = cytoscape({
 
             container: document.getElementById('cy'), // container to render in
-
+            
             elements: {
                 nodes: nodes,
                 edges: edges
             },
             style: [ // the stylesheet for the graph
             {
-                selector: 'node[type = "literal"]',
+                selector: 'node[class = "literal"]',
                 style: {
                   'shape': 'square',
                   'width':150,
@@ -285,7 +291,7 @@
                 }
             },
             {
-                selector: 'node[type = "qudt"]',
+                selector: 'node[class = "qudt"]',
                 style: {
                   'shape': 'hexagon',
                   'width':180,
@@ -296,7 +302,7 @@
                   'border-width': 2,
                   'border-color': '#F6BE00',
                   'border-style': 'solid',
-                  'font-size': 35,
+                  'font-size': 25,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
                   'label': 'data(id)',
@@ -304,7 +310,7 @@
                 }
             },
             {
-                selector: 'node[type = "concept"]',
+                selector: 'node[class = "concept"]',
                 style: {
                   'width':150,
                   'height':150,
@@ -320,7 +326,7 @@
                 }
             },
             {
-                selector: 'node[type = "center"]',
+                selector: 'node[class = "center"]',
                 style: {
                   'width':150,
                   'height':150,
@@ -335,9 +341,26 @@
                 }
             },
             {
+                selector: 'node[class = "bnode"]',
+                style: {
+                  'shape': 'ellipse',
+                  'border-style': 'solid',
+                  'width':150,
+                  'height':150,
+                  "background-color": '#CBC3E3',
+                  "border-color": '#301934',
+                  'text-wrap': 'wrap',
+                  'text-max-width': 80,
+                  'label': 'data(id)',
+                  'font-size': 35,
+                  'font-family': 'Garamond',
+                  'line-height': 1.15,
+                  'text-valign': 'center',
+                }
+            },
+            {
                 selector: 'edge',
                 style: {
-                  'opacity': 50,
                   'curve-style': 'bezier',
                   'target-arrow-shape': 'triangle',
                   'label': 'data(label)',
@@ -350,10 +373,44 @@
             }
             ],
             layout: {
-              name: 'concentric',
+              name: 'cose',
               minNodeSpacing: 100
             } 
             });
+            cy.on('tap', function(evt) {
+              var node = evt.target;
+              if(node.json().data.class === 'qudt') {
+                addbNode(cy, node.id());
+                var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
+                
+                layout.run(); 
+                // layout.run();
+              }
+            });
+            
+        }
+
+        function addbNode(cy, id) {
+          var bnodeData = bnodeExpansionData[id];
+          var addedData = [];
+          Object.keys(bnodeData).forEach(function(key) {
+            const value = bnodeData[key];
+            
+            var tempNode = {}
+            tempNode.group = "nodes";
+            // it cannot have the keyword type
+            if(key === 'type') {
+              key = 'qudt type';
+            }
+            tempNode.data = {id: value, class: 'bnode'};
+            var tempEdge = {}
+            tempEdge.group = "edges";
+            tempEdge.data = {id: key, source: id, target: value};
+            addedData.push(tempNode);
+            addedData.push(tempEdge);
+            cy.add(addedData);
+            addedData = [];
+          })
         }
 
         function getDataJSON(data) {
@@ -363,6 +420,7 @@
                 return undefined;
             }
             var resultData = {};
+            var bnodeData = {};
 
             Object.keys(binding).forEach(function(key) {
                 const dataEntry = binding[key];
@@ -384,6 +442,27 @@
                     finalValue = dataEntry.yLabel.value + "\nboltz:" + Qnumber;
                   }
                 }
+                //store bnode info and add number to node id
+                if(dataEntry.y.type == 'bnode') {
+                  if(!bnodeData.hasOwnProperty(finalValue)) {
+                    bnodeData[finalValue] = {};
+                  }
+                  
+                  var bnodeKeyList = dataEntry.s.value.split("/");
+                  bnodeKey = bnodeKeyList[bnodeKeyList.length - 1];
+                  var bnodeValueList = dataEntry.z.value.split("/");
+                  bnodeValue = bnodeValueList[bnodeValueList.length - 1];
+                  if(bnodeKey.includes("#")) {
+                    bnodeKeyList = dataEntry.s.value.split("#");
+                    bnodeKey = bnodeKeyList[bnodeKeyList.length - 1];
+                  }
+                  
+                  bnodeData[finalValue][bnodeKey] = bnodeValue;
+
+                }
+
+                bnodeExpansionData = bnodeData;
+                //store resultData for display
                 resultData[relation] = finalValue;
             })
 
@@ -391,7 +470,6 @@
             const Qnumber = binding[0].Q.value.split("/data/")[1];
             resultData["prefLabel"] = prefLabel + "\nboltz:" + Qnumber;
             
-            console.log(resultData);
             return resultData;
         }
     </script>
