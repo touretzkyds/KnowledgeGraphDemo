@@ -2477,7 +2477,6 @@
 
             console.log('id_label', id_label);
             cy_graph.nodes(`[id = '${global_node_qval}']`).on('click', function(evt) {
-                console.log("CLICK");
                 get_hierarchy(global_node_qval, nodes_we_came_from)
             });
 
