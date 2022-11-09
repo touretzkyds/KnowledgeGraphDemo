@@ -1397,7 +1397,7 @@
                     navDisplayParent.innerHTML = "";
                     let new_nodes_we_came_from = [...nodes_we_came_from]
                     new_nodes_we_came_from.push(node_qval);
-                    console.log('parent node', parent_node)
+                    // console.log('parent node', parent_node)
                     get_properties(given_taxon, parent_node, cy_graph, all_ranks,
                         pc_edges, prop_node_diam, graphType_pc_edges, node_qval, taxon_qvals,
                         parent_and_all_children, new_nodes_we_came_from);
@@ -3324,6 +3324,8 @@
                                     prev_nodes_clicked = [];
                                 }
                             }
+                            global_node_qval = data.id;
+                            console.log('new_gloabl_node_qval', global_node_qval);
                             get_properties(given_taxon, data.id, cy, all_ranks,
                                 pc_edges, prop_node_diam, graphType_pc_edges,
                                 id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
