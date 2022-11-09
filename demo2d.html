@@ -2453,7 +2453,7 @@
                 if (qval != " ") {
                     document.getElementById(`${curr_relationship_id}`).addEventListener('click', function() {
                         global_node_qval = qval;
-                        console.log("Current node_qval", global_node_qval)
+                        // console.log("Current node_qval", global_node_qval)
                         get_properties(given_taxon, qval, cy_graph, all_ranks,
                             pc_edges, prop_node_diam, graphType_pc_edges, node_qval, taxon_qvals, parent_and_all_children, nodes_lst);
                     })
@@ -2474,6 +2474,12 @@
             });
 
             let node_name = taxon_qvals[node_qval];
+
+            console.log('id_label', id_label);
+            cy_graph.nodes(`[id = '${global_node_qval}']`).on('click', function(evt) {
+                console.log("CLICK");
+                get_hierarchy(global_node_qval, nodes_we_came_from)
+            });
 
             cy_graph.remove(`node[type = "subTaxProp"]`);
             cy_graph.remove(`node[type = "overlayRank"]`);
@@ -3325,7 +3331,7 @@
                                 }
                             }
                             global_node_qval = data.id;
-                            console.log('new_gloabl_node_qval', global_node_qval);
+                            // console.log('new_gloabl_node_qval', global_node_qval);
                             get_properties(given_taxon, data.id, cy, all_ranks,
                                 pc_edges, prop_node_diam, graphType_pc_edges,
                                 id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
