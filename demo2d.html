@@ -177,10 +177,13 @@
         let parent;
         let data_obj;
         let graph_type;
+        let global_node_qval;
 
         const ROOT_QVAL = "Q729";
         const ROOT_NAME = "Animalia";
         const CONCISE_NODES_LENGTH = 1481;
+
+        global_node_qval = ROOT_QVAL;
 
         //takes a string and capitalizes all first letters of the word;
         function capitalize(str) {
@@ -844,7 +847,7 @@
             let bnode_obj;
             let obj2_value;
 
-            console.log('properties', property_array);
+            // console.log('properties', property_array);
 
             //also don't want to count a bnode as multiple nodes
             let bnodes = {};
@@ -1645,7 +1648,7 @@
 
             }
 
-            console.log('bnode list', bnode_list);
+            // console.log('bnode list', bnode_list);
 
             create_property_nodes(node_qval, data, cy_graph,
                 pos, pc_edges, prop_node_diam, graphType_pc_edges,
@@ -2185,7 +2188,7 @@
 
         function display_nav_buttons(node_qval, graphType_pc_edges, taxon_qvals, parent_and_all_children, original_nodes_we_came_from) {
 
-            console.log("Graph type", graph_type)
+            // console.log("Graph type", graph_type)
             let nodes_we_came_from;
 
             let right_arrow_head_color = 'white';
@@ -2449,8 +2452,10 @@
                 }
                 if (qval != " ") {
                     document.getElementById(`${curr_relationship_id}`).addEventListener('click', function() {
+                        global_node_qval = qval;
+                        console.log("Current node_qval", global_node_qval)
                         get_properties(given_taxon, qval, cy_graph, all_ranks,
-                            pc_edges, prop_node_diam, graphType_pc_edges, node_qval, taxon_qvals, parent_and_all_children, nodes_lst)
+                            pc_edges, prop_node_diam, graphType_pc_edges, node_qval, taxon_qvals, parent_and_all_children, nodes_lst);
                     })
                 }
                 idx += 1;
@@ -2488,6 +2493,7 @@
                 pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node, taxon_qvals,
                 parent_and_all_children, nodes_we_came_from);
 
+            change_buttons(nodes_we_came_from);
             let url = property_query(node_name, true);
             d3.json(url).then(function(json) {
                 show_property_nodes(node_qval, json, cy_graph, pc_edges,
@@ -2728,7 +2734,7 @@
             let cy_container = document.getElementById("cy");
             cy_container.style.height = "65vh";
 
-            console.log('node_names_above', node_names_above)
+            // console.log('node_names_above', node_names_above)
             return node_ids_above;
         }
 
@@ -2874,7 +2880,7 @@
                 ...(converted_data.parent_and_all_children)
             };
 
-            console.log('full parent and all children', full_parent_and_all_children);
+            // console.log('full parent and all children', full_parent_and_all_children);
 
             //of the form where keys are qvals and values are the taxon names
             let graphType_pc_edges = {
@@ -2976,10 +2982,10 @@
                     }
                 }]
             });
-            console.log('pc edges', graphType_pc_edges);
-            console.log('parent to children', parent_and_all_children);
-            console.log('nodes lst', nodes_lst);
-            console.log('edges', edge_lst);
+            // console.log('pc edges', graphType_pc_edges);
+            // console.log('parent to children', parent_and_all_children);
+            // console.log('nodes lst', nodes_lst);
+            // console.log('edges', edge_lst);
             assign_node_positions(root, cy.nodes(), graphType_pc_edges, parent_and_all_children);
 
 
@@ -3240,12 +3246,13 @@
             //relationships needs to be in the same order as is returned by the function display nav buttons
             let idx = 0;
             //adding click events for the navigation buttons
-            four_relationships_qvals.forEach(node_qval => {
+            four_relationships_qvals.forEach(qval => {
                 let curr_relationship_id = relationships[idx];
 
-                if (node_qval != " ") {
+                if (qval != " ") {
                     document.getElementById(`${curr_relationship_id}`).addEventListener('click', function() {
-                        get_hierarchy(node_qval, nodes_we_came_from);
+                        global_node_qval = qval;
+                        get_hierarchy(qval, nodes_we_came_from);
                     })
                 }
                 idx += 1;
@@ -3442,39 +3449,31 @@
 
 
         //changes the buttons for the new input node 
-        function change_buttons(new_data, full_json, taxonVal, nodes_we_came_from) {
+        function change_buttons(nodes_we_came_from) {
+            console.log('node_qval for change_button', global_node_qval);
             document.getElementById("Full").onclick =
                 function() {
-                    console.log("Before click", graph_type);
+                    // console.log("Before click", graph_type);
                     graph_type = 'Full';
-                    console.log("After click", graph_type);
-                    display_hierarchy(full_json, {
-                        given_data: new_data,
-                        taxon_value: taxonVal
-                    }, taxonVal, nodes_we_came_from)
+                    // console.log("After click", graph_type);
+                    get_hierarchy(global_node_qval, nodes_we_came_from)
                 };
 
             document.getElementById("Moderate").onclick =
                 function() {
-                    console.log("Before click", graph_type);
+                    // console.log("Before click", graph_type);
                     graph_type = 'Moderate';
-                    console.log("After click", graph_type);
-                    display_hierarchy(full_json, {
-                        given_data: new_data,
-                        taxon_value: taxonVal
-                    }, taxonVal, nodes_we_came_from)
+                    // console.log("After click", graph_type);
+                    get_hierarchy(global_node_qval, nodes_we_came_from)
                 };
 
 
             document.getElementById("Concise").onclick =
                 function() {
-                    console.log("Before click", graph_type);
+                    // console.log("Before click", graph_type);
                     graph_type = 'Concise';
-                    console.log("After click", graph_type);
-                    display_hierarchy(full_json, {
-                        given_data: new_data,
-                        taxon_value: taxonVal
-                    }, taxonVal, nodes_we_came_from)
+                    // console.log("After click", graph_type);
+                    get_hierarchy(global_node_qval, nodes_we_came_from)
                 };
 
         }
@@ -3509,73 +3508,11 @@
                 ...old_edges
             };
 
-
-            const MAX_ITER = 5000;
-            let iterations = 0;
-
-            while (curr_node != root && ++iterations < MAX_ITER) {
-
-                next_node = pc_edges[curr_node];
-
-                next_node_name = `${qvals_to_names[next_node]} boltz: ${next_node}`;
-
-                let new_node = {
-                    data: {
-                        id: next_node,
-                        name: next_node_name,
-                        color: '#ADD8E6',
-                        width: 250,
-                        height: 250,
-                        type: 'taxon'
-                    }
-                };
-                old_nodes.push(new_node);
-
-                //only add a new edge if it hasn't already been added
-                if ((curr_node != undefined && next_node != undefined)) {
-                    if (short_pc_edges[curr_node] == undefined || short_pc_edges[curr_node] == "root") {
-
-                        if (given_taxon_parent_and_all_children[next_node] == undefined) {
-                            given_taxon_parent_and_all_children[next_node] = [curr_node];
-                        } else {
-                            if (!given_taxon_parent_and_all_children[next_node].includes(curr_node)) {
-                                given_taxon_parent_and_all_children[next_node].push(curr_node);
-                            }
-                        }
-
-                        let new_edge = {
-                            data: {
-                                id: curr_node.concat(next_node),
-                                source: curr_node,
-                                target: next_node,
-                                label: 'subTaxonOf'
-                            }
-                        };
-                        old_edges.push(new_edge);
-
-                    }
-                }
-
-                curr_node = next_node;
-            }
-            let new_data = {
-                edges: old_edges,
-                nodes: old_nodes,
-                pc_edges: pc_edges,
-                rn_edges: full_data.rn_edges,
-                root_rank: full_data.root_rank,
-                root: full_data.root,
-                definitions: full_data.definitions,
-                taxon_qvals: full_data.taxon_qvals,
-                pref_lables: full_data.pref_labels,
-                parent_and_all_children: given_taxon_parent_and_all_children
-            };
-
             //so we've updated our edges and nodes to include the ones above the root we queried, so 
             //now we want to display the graph.
 
 
-            change_buttons(full_data, full_json, taxon_qval, nodes_we_came_from);
+            change_buttons(nodes_we_came_from);
             display_hierarchy(full_json, {
                 given_data: full_data,
                 taxon_value: taxon_qval,
