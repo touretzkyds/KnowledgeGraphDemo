@@ -235,6 +235,7 @@
                 var tempEdge = {"data":{}};
                 
                 tempNode["data"]["id"] = value;
+                tempNode["data"]["label"] = value;
                 if(key == "prefLabel") {
                   tempNode["data"]["class"] = "center";
                 } else {
@@ -242,7 +243,8 @@
                 }
                 nodes.push(tempNode);
 
-                tempEdge["data"]["id"] = key;
+                tempEdge["data"]["id"] = source + "_" + key;
+                tempEdge["data"]["label"] = key;
                 if(value !== source) {
                     tempEdge["data"]["source"] = source;
                     tempEdge["data"]["target"] = value;
@@ -286,7 +288,7 @@
                   'font-size': 15,
                   'font-family': 'Calibri',
                   'line-height': 1.15,
-                  'label': 'data(id)',
+                  'label': 'data(label)',
                   'text-valign': 'center',
                 }
             },
@@ -305,7 +307,7 @@
                   'font-size': 25,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
-                  'label': 'data(id)',
+                  'label': 'data(label)',
                   'text-valign': 'center',
                 }
             },
@@ -318,7 +320,7 @@
                   "border-color": '#00008B',
                   'text-wrap': 'wrap',
                   'text-max-width': 80,
-                  'label': 'data(id)',
+                  'label': 'data(label)',
                   'font-size': 20,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
@@ -333,7 +335,7 @@
                   "background-color": 'red',
                   'text-wrap': 'wrap',
                   'text-max-width': 80,
-                  'label': 'data(id)',
+                  'label': 'data(label)',
                   'font-size': 20,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
@@ -351,7 +353,7 @@
                   "border-color": '#301934',
                   'text-wrap': 'wrap',
                   'text-max-width': 80,
-                  'label': 'data(id)',
+                  'label': 'data(label)',
                   'font-size': 35,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
@@ -363,12 +365,11 @@
                 style: {
                   'curve-style': 'bezier',
                   'target-arrow-shape': 'triangle',
-                  'label': 'data(label)',
                   'width': 10,
                   'font-size': 20,
                   'target-arrow-shape': 'triangle',
                   'curve-style': 'bezier',
-                  'label': 'data(id)',
+                  'label': 'data(label)'
                 } 
             }
             ],
@@ -399,16 +400,17 @@
             var tempNode = {}
             tempNode.group = "nodes";
             // it cannot have the keyword type
-            if(key === 'type') {
-              key = 'qudt type';
-            }
-            tempNode.data = {id: value, class: 'bnode'};
+            // if(key === 'type') {
+            //   key = 'qudt type';
+            // }
+            tempNode.data = {id: value, label: value, class: 'bnode'};
             var tempEdge = {}
             tempEdge.group = "edges";
-            tempEdge.data = {id: key, source: id, target: value};
+            tempEdge.data = {id: id + "_" + key, label: key, source: id, target: value};
             addedData.push(tempNode);
             addedData.push(tempEdge);
             cy.add(addedData);
+            console.log(addedData);
             addedData = [];
           })
         }
