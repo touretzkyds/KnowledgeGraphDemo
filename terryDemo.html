@@ -228,30 +228,46 @@
             }
             var nodes = [];
             var edges = [];
-            var source = data["prefLabel"];
+            var source = data["prefLabel"].split("boltz:Q")[1];
+            //how the id is defined?
+            //node: if it's not a concept: <boltzQnumber of the source>_to_<relationship>
+            // if it's a concept: <boltzQnumber>
+            //edge: <boltzQnumber of the source>_<relations>
             Object.keys(data).forEach(function(key) {
                 var value = data[key];
                 var tempNode = {"data":{}};
                 var tempEdge = {"data":{}};
                 
-                tempNode["data"]["id"] = value;
-                tempNode["data"]["label"] = value;
                 if(key == "prefLabel") {
                   tempNode["data"]["class"] = "center";
                 } else {
                   tempNode["data"]["class"] = classifyclass(value);
                 }
+                tempNode["data"]["label"] = value;
+                if(classifyclass(value) == "concept") {
+                  value = value.split("boltz:Q")[1];
+                  tempNode["data"]["id"] = value;
+                } else if(classifyclass(value) == "qudt") {
+                  tempNode["data"]["id"] = value;
+                  //true if it's ready to collapse
+                  tempNode["data"]["status"] = false;
+                } else {
+                  tempNode["data"]["id"] = convertToNodeID(source, key);
+                }
+                
+                
                 nodes.push(tempNode);
 
-                tempEdge["data"]["id"] = source + "_" + key;
+                tempEdge["data"]["id"] = convertToEdgeID(source, key);
                 tempEdge["data"]["label"] = key;
                 if(value !== source) {
                     tempEdge["data"]["source"] = source;
-                    tempEdge["data"]["target"] = value;
+                    tempEdge["data"]["target"] = tempNode["data"]["id"];
                     edges.push(tempEdge);
                 }
             })
-            // console.log(nodes);
+            console.log(nodes);
+            console.log(edges);
             return [nodes, edges];
         }
 
@@ -381,11 +397,16 @@
             cy.on('tap', function(evt) {
               var node = evt.target;
               if(node.json().data.class === 'qudt') {
-                addbNode(cy, node.id());
-                var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
-                
-                layout.run(); 
-                // layout.run();
+                if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
+                  console.log("here");
+                  addbNode(cy, node.id());
+                  var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
+                  layout.run(); 
+                  cy.$("#" + node.id()).addClass('readyToCollapse')
+                } else {
+                  removebNode(cy, node.id());
+                  cy.$("#" + node.id()).removeClass('readyToCollapse')
+                }
               }
             });
             
@@ -399,20 +420,35 @@
             
             var tempNode = {}
             tempNode.group = "nodes";
-            // it cannot have the keyword type
-            // if(key === 'type') {
-            //   key = 'qudt type';
-            // }
-            tempNode.data = {id: value, label: value, class: 'bnode'};
+            const dataID = convertToNodeID(id, key);
+            tempNode.data = {id: dataID, label: value, class: 'bnode'};
             var tempEdge = {}
             tempEdge.group = "edges";
-            tempEdge.data = {id: id + "_" + key, label: key, source: id, target: value};
+            tempEdge.data = {id: convertToEdgeID(id, key), label: key, source: id, target: dataID};
             addedData.push(tempNode);
             addedData.push(tempEdge);
             cy.add(addedData);
-            console.log(addedData);
             addedData = [];
           })
+        }
+
+        function removebNode(cy, id) {
+          var bnodeData = bnodeExpansionData[id];
+          Object.keys(bnodeData).forEach(function(key) {
+            const value = bnodeData[key];
+            const nodeID = convertToNodeID(id, key);
+            const edgeID = convertToEdgeID(id, key);
+            cy.remove(cy.$('#' + edgeID));
+            cy.remove(cy.$('#' + nodeID));
+          })
+        }
+
+        function convertToEdgeID(id, key) {
+          return id + "_" + key;
+        }
+
+        function convertToNodeID(id, key) {
+          return id + "_to_" + key;
         }
 
         function getDataJSON(data) {
@@ -471,7 +507,7 @@
             const prefLabel = binding[0].prefLabel.value;
             const Qnumber = binding[0].Q.value.split("/data/")[1];
             resultData["prefLabel"] = prefLabel + "\nboltz:" + Qnumber;
-            
+            console.log(resultData);
             return resultData;
         }
     </script>
