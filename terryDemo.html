@@ -228,28 +228,49 @@
             }
             var nodes = [];
             var edges = [];
-            var source = data["prefLabel"];
+            var source = data.prefLabel.split("boltz:Q")[1];
+            //how the id is defined?
+            //node: if it's not a concept: <boltzQnumber of the source>_to_<relationship>
+            // if it's a concept: <boltzQnumber>
+            //edge: <boltzQnumber of the source>_<relations>
             Object.keys(data).forEach(function(key) {
                 var value = data[key];
                 var tempNode = {"data":{}};
                 var tempEdge = {"data":{}};
                 
-                tempNode["data"]["id"] = value;
                 if(key == "prefLabel") {
-                  tempNode["data"]["class"] = "center";
+                  tempNode.data.class = "center";
                 } else {
-                  tempNode["data"]["class"] = classifyclass(value);
+                  tempNode.data.class = classifyclass(value);
                 }
+                tempNode.data.label = value;
+                tempNode.data.sourceID = source;
+
+                if(classifyclass(value) == "concept") {
+                  value = value.split("boltz:Q")[1];
+                  tempNode.data.id = value;
+                } else if(classifyclass(value) == "qudt") {
+                  tempNode.data.id = value;
+                  //true if it's ready to collapse
+                  tempNode.data.status = false;
+                } else {
+                  tempNode.data.id = convertToNodeID(source, key);
+                }
+                // tempNode["position"] = {x:1, y:2};
+                
                 nodes.push(tempNode);
 
-                tempEdge["data"]["id"] = key;
+                tempEdge.data.id = convertToEdgeID(source, key);
+                tempEdge.data.label = key;
                 if(value !== source) {
-                    tempEdge["data"]["source"] = source;
-                    tempEdge["data"]["target"] = value;
+                    tempEdge.data.source = source;
+                    tempEdge.data.target = tempNode.data.id;
                     edges.push(tempEdge);
                 }
             })
             // console.log(nodes);
+            // console.log(edges);
+            // console.log(source);
             return [nodes, edges];
         }
 
@@ -263,7 +284,6 @@
             // console.log(nodes);
             const edges = CytoscapeData[1];
             var cy = cytoscape({
-
             container: document.getElementById('cy'), // container to render in
             
             elements: {
@@ -286,7 +306,7 @@
                   'font-size': 15,
                   'font-family': 'Calibri',
                   'line-height': 1.15,
-                  'label': 'data(id)',
+                  'label': 'data(label)',
                   'text-valign': 'center',
                 }
             },
@@ -305,7 +325,7 @@
                   'font-size': 25,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
-                  'label': 'data(id)',
+                  'label': 'data(label)',
                   'text-valign': 'center',
                 }
             },
@@ -318,7 +338,7 @@
                   "border-color": '#00008B',
                   'text-wrap': 'wrap',
                   'text-max-width': 80,
-                  'label': 'data(id)',
+                  'label': 'data(label)',
                   'font-size': 20,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
@@ -333,7 +353,7 @@
                   "background-color": 'red',
                   'text-wrap': 'wrap',
                   'text-max-width': 80,
-                  'label': 'data(id)',
+                  'label': 'data(label)',
                   'font-size': 20,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
@@ -345,14 +365,14 @@
                 style: {
                   'shape': 'ellipse',
                   'border-style': 'solid',
-                  'width':150,
-                  'height':150,
+                  'width':120,
+                  'height':120,
                   "background-color": '#CBC3E3',
                   "border-color": '#301934',
                   'text-wrap': 'wrap',
                   'text-max-width': 80,
-                  'label': 'data(id)',
-                  'font-size': 35,
+                  'label': 'data(label)',
+                  'font-size': 30,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
                   'text-valign': 'center',
@@ -363,54 +383,176 @@
                 style: {
                   'curve-style': 'bezier',
                   'target-arrow-shape': 'triangle',
-                  'label': 'data(label)',
                   'width': 10,
                   'font-size': 20,
                   'target-arrow-shape': 'triangle',
                   'curve-style': 'bezier',
-                  'label': 'data(id)',
+                  'label': 'data(label)'
                 } 
             }
             ],
             layout: {
-              name: 'cose',
+              name: 'concentric',
               minNodeSpacing: 100
             } 
             });
             cy.on('tap', function(evt) {
               var node = evt.target;
               if(node.json().data.class === 'qudt') {
-                addbNode(cy, node.id());
-                var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
-                
-                layout.run(); 
-                // layout.run();
+                if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
+                  // console.log("here");
+                  const x = cy.$("#" + node.id()).position('x');
+                  const y = cy.$("#" + node.id()).position('y');
+                  const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
+                  const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
+                  cy.$("#" + node.id()).shift({ x: x-sourceX, y: y-sourceY});
+                  addbNode(cy, node.id());
+                  // var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
+                  // layout.run(); 
+                  cy.$("#" + node.id()).addClass('readyToCollapse')
+                } else {
+                  removebNode(cy, node.id());
+                  cy.$("#" + node.id()).removeClass('readyToCollapse')
+                }
+              }
+              if(node.json().data.class === 'concept') {
+                // console.log(node.json().data);
+                const city = node.json().data.label.split("\nboltz")[0]
+                // console.log(city);
+                // getDataResponse(city);
+                const x = cy.$("#" + node.id()).position('x');
+                const y = cy.$("#" + node.id()).position('y');
+                const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
+                const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
+                cy.$("#" + node.id()).shift({ x: 2*(x-sourceX), y: 2*(y-sourceY)});
+                cy.center("#" + node.id());
+                // addConceptNode(cy, city);
+                const url = propertyQuery(city, true);
+                d3.json(url).then(function(data) {addConceptNode(cy, node.id(), data);});
+                // var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
+                // layout.run(); 
               }
             });
-            
+            cy.on('mouseover', function(evt) {
+              var node = evt.target;
+              if(node.json().data.class === 'qudt' || node.json().data.class === 'concept') {
+                // console.log(node.json());
+                const node_width = node.width();
+                const node_height = node.height();
+                cy.nodes(`[id = "${node.id()}"]`).style({
+
+                    'width': node_width * 1.25,
+                    'height': node_height * 1.25
+
+                });
+              }
+            });
+            cy.on('mouseout', function(evt) {
+              var node = evt.target;
+              if(node.json().data.class === 'qudt' || node.json().data.class === 'concept') {
+                // console.log(node.json());
+                const node_width = node.width();
+                const node_height = node.height();
+                cy.nodes(`[id = "${node.id()}"]`).style({
+
+                    'width': node_width * 0.8,
+                    'height': node_height * 0.8
+
+                });
+              }
+            });
+        }
+
+        function addConceptNode(cy, id, data) {
+          const nodeData = getDataJSON(data);
+          console.log(nodeData);
+          var addedData = [];
+          const sourceX = cy.$("#" + id).position('x');
+          const sourceY = cy.$("#" + id).position('y');
+          const radius = 400;
+          var numOfKeys = -1;
+          Object.keys(nodeData).forEach(function(key) {
+            numOfKeys++;
+          }) 
+          var count = 0;
+          Object.keys(nodeData).forEach(function(key) {
+            if(key != "prefLabel") {
+              const value = nodeData[key];
+              const classValue = classifyclass(value);
+              var tempNode = {}
+              tempNode.group = "nodes";
+              const dataID = convertToNodeID(id, key);
+              
+              tempNode.data = {id: dataID, label: value, class: classValue};
+              tempNode.data.sourceID = id;
+              const radian = (Math.PI * 2 / numOfKeys) * count;  
+              const x = sourceX + radius * Math.sin(radian);
+              const y = sourceY - radius * Math.cos(radian);
+              tempNode.position = {x:x, y:y};
+              var tempEdge = {}
+              tempEdge.group = "edges";
+              tempEdge.data = {id: convertToEdgeID(id, key), label: key, source: id, target: dataID};
+              addedData.push(tempNode);
+              addedData.push(tempEdge);
+              cy.add(addedData);
+              addedData = [];
+              count++;
+            }
+          })
         }
 
         function addbNode(cy, id) {
           var bnodeData = bnodeExpansionData[id];
           var addedData = [];
+          const sourceX = cy.$("#" + id).position('x');
+          const sourceY = cy.$("#" + id).position('y');
+          const radius = 300;
+          var numOfKeys = 0;
+          Object.keys(bnodeData).forEach(function(key) {
+            numOfKeys++;
+          }) 
+          var count = 0;
           Object.keys(bnodeData).forEach(function(key) {
             const value = bnodeData[key];
             
             var tempNode = {}
             tempNode.group = "nodes";
-            // it cannot have the keyword type
-            if(key === 'type') {
-              key = 'qudt type';
-            }
-            tempNode.data = {id: value, class: 'bnode'};
+            const dataID = convertToNodeID(id, key);
+            tempNode.data = {id: dataID, label: value, class: 'bnode'};
+            tempNode.data.sourceID = id;
+            const radian = (Math.PI * 2 / numOfKeys) * count;  
+            const x = sourceX + radius * Math.sin(radian);
+            const y = sourceY - radius * Math.cos(radian);
+            tempNode.position = {x:x, y:y};
+
             var tempEdge = {}
             tempEdge.group = "edges";
-            tempEdge.data = {id: key, source: id, target: value};
+            tempEdge.data = {id: convertToEdgeID(id, key), label: key, source: id, target: dataID};
             addedData.push(tempNode);
             addedData.push(tempEdge);
             cy.add(addedData);
             addedData = [];
+            count++;
           })
+        }
+
+        function removebNode(cy, id) {
+          var bnodeData = bnodeExpansionData[id];
+          Object.keys(bnodeData).forEach(function(key) {
+            const value = bnodeData[key];
+            const nodeID = convertToNodeID(id, key);
+            const edgeID = convertToEdgeID(id, key);
+            cy.remove(cy.$('#' + edgeID));
+            cy.remove(cy.$('#' + nodeID));
+          })
+        }
+
+        function convertToEdgeID(id, key) {
+          return id + "_" + key;
+        }
+
+        function convertToNodeID(id, key) {
+          return id + "_rel_" + key;
         }
 
         function getDataJSON(data) {
@@ -420,7 +562,7 @@
                 return undefined;
             }
             var resultData = {};
-            var bnodeData = {};
+            // var bnodeData = {};
 
             Object.keys(binding).forEach(function(key) {
                 const dataEntry = binding[key];
@@ -444,8 +586,8 @@
                 }
                 //store bnode info and add number to node id
                 if(dataEntry.y.type == 'bnode') {
-                  if(!bnodeData.hasOwnProperty(finalValue)) {
-                    bnodeData[finalValue] = {};
+                  if(!bnodeExpansionData.hasOwnProperty(finalValue)) {
+                    bnodeExpansionData[finalValue] = {};
                   }
                   
                   var bnodeKeyList = dataEntry.s.value.split("/");
@@ -457,11 +599,12 @@
                     bnodeKey = bnodeKeyList[bnodeKeyList.length - 1];
                   }
                   
-                  bnodeData[finalValue][bnodeKey] = bnodeValue;
+                  bnodeExpansionData[finalValue][bnodeKey] = bnodeValue;
 
                 }
 
-                bnodeExpansionData = bnodeData;
+                // bnodeExpansionData = bnodeData;
+                
                 //store resultData for display
                 resultData[relation] = finalValue;
             })
@@ -469,7 +612,7 @@
             const prefLabel = binding[0].prefLabel.value;
             const Qnumber = binding[0].Q.value.split("/data/")[1];
             resultData["prefLabel"] = prefLabel + "\nboltz:" + Qnumber;
-            
+            // console.log(resultData);
             return resultData;
         }
     </script>
