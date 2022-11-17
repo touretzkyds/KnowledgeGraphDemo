@@ -167,7 +167,8 @@
 
     <script>
 
-        var bnodeExpansionData = {};
+        var bnodeExpansionDataCache = {};
+        var conceptExpansionDataCache = {};
 
         function propertyQuery(value, perform_query) {
         const prevquery = document.getElementById("sparql2");
@@ -413,24 +414,41 @@
                 } else {
                   removebNode(cy, node.id());
                   cy.$("#" + node.id()).removeClass('readyToCollapse')
+                  const x = cy.$("#" + node.id()).position('x');
+                  const y = cy.$("#" + node.id()).position('y');
+                  const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
+                  const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
+                  cy.$("#" + node.id()).shift({ x: -0.5*(x-sourceX), y: -0.5*(y-sourceY)});
                 }
               }
               if(node.json().data.class === 'concept') {
-                // console.log(node.json().data);
                 const city = node.json().data.label.split("\nboltz")[0]
-                // console.log(city);
-                // getDataResponse(city);
-                const x = cy.$("#" + node.id()).position('x');
-                const y = cy.$("#" + node.id()).position('y');
-                const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
-                const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
-                cy.$("#" + node.id()).shift({ x: 2*(x-sourceX), y: 2*(y-sourceY)});
-                cy.center("#" + node.id());
-                // addConceptNode(cy, city);
-                const url = propertyQuery(city, true);
-                d3.json(url).then(function(data) {addConceptNode(cy, node.id(), data);});
-                // var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
-                // layout.run(); 
+                if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
+                  // console.log(node.json().data);
+                  
+                  // console.log(city);
+                  // getDataResponse(city);
+                  const x = cy.$("#" + node.id()).position('x');
+                  const y = cy.$("#" + node.id()).position('y');
+                  const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
+                  const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
+                  cy.$("#" + node.id()).shift({ x: 3*(x-sourceX), y: 3*(y-sourceY)});
+                  cy.center("#" + node.id());
+                  // addConceptNode(cy, city);
+                  const url = propertyQuery(city, true);
+                  d3.json(url).then(function(data) {addConceptNode(cy, node.id(), data);});
+                  // var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
+                  // layout.run(); 
+                  cy.$("#" + node.id()).addClass('readyToCollapse')
+                } else {
+                  removeConceptNode(cy, node.id());
+                  cy.$("#" + node.id()).removeClass('readyToCollapse')
+                  const x = cy.$("#" + node.id()).position('x');
+                  const y = cy.$("#" + node.id()).position('y');
+                  const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
+                  const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
+                  cy.$("#" + node.id()).shift({ x: -0.75*(x-sourceX), y: -0.75*(y-sourceY)});
+                }
               }
             });
             cy.on('mouseover', function(evt) {
@@ -465,6 +483,7 @@
 
         function addConceptNode(cy, id, data) {
           const nodeData = getDataJSON(data);
+          conceptExpansionDataCache[id] = nodeData;
           console.log(nodeData);
           var addedData = [];
           const sourceX = cy.$("#" + id).position('x');
@@ -485,24 +504,42 @@
               
               tempNode.data = {id: dataID, label: value, class: classValue};
               tempNode.data.sourceID = id;
+
               const radian = (Math.PI * 2 / numOfKeys) * count;  
               const x = sourceX + radius * Math.sin(radian);
               const y = sourceY - radius * Math.cos(radian);
               tempNode.position = {x:x, y:y};
+
               var tempEdge = {}
               tempEdge.group = "edges";
-              tempEdge.data = {id: convertToEdgeID(id, key), label: key, source: id, target: dataID};
+              const edgeID = convertToEdgeID(id, key);
+              tempEdge.data = {id: edgeID, label: key, source: id, target: dataID};
+
               addedData.push(tempNode);
               addedData.push(tempEdge);
               cy.add(addedData);
               addedData = [];
               count++;
+              console.log(dataID);
+              console.log(edgeID);
             }
           })
         }
 
+        function removeConceptNode(cy, id) {
+          const nodeData = conceptExpansionDataCache[id];
+          Object.keys(nodeData).forEach(function(key) {
+            const nodeID = convertToNodeID(id, key);
+            const edgeID = convertToEdgeID(id, key);
+            cy.remove(cy.$('#' + edgeID));
+            cy.remove(cy.$('#' + nodeID));
+            console.log(nodeID);
+              console.log(edgeID);
+          })
+        }
+
         function addbNode(cy, id) {
-          var bnodeData = bnodeExpansionData[id];
+          var bnodeData = bnodeExpansionDataCache[id];
           var addedData = [];
           const sourceX = cy.$("#" + id).position('x');
           const sourceY = cy.$("#" + id).position('y');
@@ -537,9 +574,8 @@
         }
 
         function removebNode(cy, id) {
-          var bnodeData = bnodeExpansionData[id];
+          var bnodeData = bnodeExpansionDataCache[id];
           Object.keys(bnodeData).forEach(function(key) {
-            const value = bnodeData[key];
             const nodeID = convertToNodeID(id, key);
             const edgeID = convertToEdgeID(id, key);
             cy.remove(cy.$('#' + edgeID));
@@ -586,8 +622,8 @@
                 }
                 //store bnode info and add number to node id
                 if(dataEntry.y.type == 'bnode') {
-                  if(!bnodeExpansionData.hasOwnProperty(finalValue)) {
-                    bnodeExpansionData[finalValue] = {};
+                  if(!bnodeExpansionDataCache.hasOwnProperty(finalValue)) {
+                    bnodeExpansionDataCache[finalValue] = {};
                   }
                   
                   var bnodeKeyList = dataEntry.s.value.split("/");
@@ -599,11 +635,11 @@
                     bnodeKey = bnodeKeyList[bnodeKeyList.length - 1];
                   }
                   
-                  bnodeExpansionData[finalValue][bnodeKey] = bnodeValue;
+                  bnodeExpansionDataCache[finalValue][bnodeKey] = bnodeValue;
 
                 }
 
-                // bnodeExpansionData = bnodeData;
+                // bnodeExpansionDataCache = bnodeData;
                 
                 //store resultData for display
                 resultData[relation] = finalValue;
