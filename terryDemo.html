@@ -441,13 +441,31 @@
                   // layout.run(); 
                   cy.$("#" + node.id()).addClass('readyToCollapse')
                 } else {
-                  removeConceptNode(cy, node.id());
+                  var nodeStack = [];
+                  cy.elements().bfs({
+                    roots:'#'+node.id(),
+                    visit: function(v,e,u,i,depth) {
+                      // console.log(v.id());
+                      nodeStack.push(v.id());
+                      // removeConceptNode(cy, v.id());
+                    },
+                    directed:true
+                  });
+                  const n = nodeStack.length;
+                  for(let i = 0; i < n - 1; i++) {
+                    const id = nodeStack.pop();
+                    // console.log(id);
+                    cy.remove(cy.$('#' + id));
+                  }
+
+                  // removeConceptNode(cy, node.id());
                   cy.$("#" + node.id()).removeClass('readyToCollapse')
                   const x = cy.$("#" + node.id()).position('x');
                   const y = cy.$("#" + node.id()).position('y');
                   const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
                   const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
                   cy.$("#" + node.id()).shift({ x: -0.75*(x-sourceX), y: -0.75*(y-sourceY)});
+                  
                 }
               }
             });
@@ -484,7 +502,7 @@
         function addConceptNode(cy, id, data) {
           const nodeData = getDataJSON(data);
           conceptExpansionDataCache[id] = nodeData;
-          console.log(nodeData);
+          // console.log(nodeData);
           var addedData = [];
           const sourceX = cy.$("#" + id).position('x');
           const sourceY = cy.$("#" + id).position('y');
@@ -520,8 +538,8 @@
               cy.add(addedData);
               addedData = [];
               count++;
-              console.log(dataID);
-              console.log(edgeID);
+              // console.log(dataID);
+              // console.log(edgeID);
             }
           })
         }
@@ -533,8 +551,8 @@
             const edgeID = convertToEdgeID(id, key);
             cy.remove(cy.$('#' + edgeID));
             cy.remove(cy.$('#' + nodeID));
-            console.log(nodeID);
-              console.log(edgeID);
+            // console.log(nodeID);
+            // console.log(edgeID);
           })
         }
 
