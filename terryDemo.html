@@ -501,40 +501,174 @@
                   
                   // var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
                   // layout.run(); 
-                  cy.$("#" + node.id()).addClass('readyToCollapse')
-                } else {
+
                   var nodeStack = [];
+                  var numOfNodesSmallerThanDepth1 = 0;
+                  var centerConceptNodesWithDepth1 = [];
+                  var deepCenterConceptNodes = [];
+                  var conceptLinkNodes = [];
+
                   cy.elements().bfs({
                     roots:'#'+node.id(),
                     visit: function(v,e,u,i,depth) {
-                      // console.log(v.id());
+                      if(depth <= 1) {
+                        numOfNodesSmallerThanDepth1++;
+                      }
+                      if(v.hasClass('readyToCollapse')) {
+                        if(depth == 1) {
+                          centerConceptNodesWithDepth1.push(v.id());
+                        } else {
+                          deepCenterConceptNodes.push(v.id());
+                        }
+                      }
+                      if(u == undefined || u.json().data.class == "concept") {
+                        conceptLinkNodes.push(v.id());
+                      }
                       
                       nodeStack.push(v.id());
-                      // removeConceptNode(cy, v.id());
+                      
                     },
                     directed:true
                   });
+                  console.log(deepCenterConceptNodes);
                   const n = nodeStack.length;
-                  // for(let i = 0; i < n - 1; i++) {
-                  //   const id = nodeStack.pop();
-                  //   console.log(id);
-                    // const label = cy.$('#' + id).json().data.label;
-                  //   // console.log(label);
-                    
-                  //   cy.remove(cy.$('#' + id));
-                  //   // console.log(label);
-                    // if(conceptNodeLabelToID[label] == id) {
-                    //   delete conceptNodeLabelToID[label];
-                    // }
+                  const n1 = centerConceptNodesWithDepth1.length;
+                  const n2 = deepCenterConceptNodes.length;
+                  const n3 = conceptLinkNodes.length;
+                  for(let i = 0; i < n - numOfNodesSmallerThanDepth1; i++) {
+                    const id = nodeStack.pop();
+                    const label = cy.$('#' + id).json().data.label;
+                    cy.remove(cy.$('#' + id));
+                    if(conceptNodeLabelToID[label] == id) {
+                      console.log(id);
+                      delete conceptNodeLabelToID[label];
+                    }
+                  }
+                  //reconstruct the concept link
+                  // for(let i = 0; i < n3; i++) {
+                  //   const id = conceptLinkNodes.pop();
+                  //   const x = cy.$("#" + id).position('x');
+                  //   const y = cy.$("#" + id).position('y');
+                  //   const sourceID = cy.$("#" + id).json().data.sourceID;
+                  //   const sourceX = cy.$("#" + sourceID).position('x');
+                  //   const sourceY = cy.$("#" + sourceID).position('y');
+                  //   var startAngle = getAngleShift(x, y, sourceX, sourceY);
+                  //   addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                  //   removeConceptNodeExceptConcept(cy, id);
                   // }
 
-                  removeConceptNode(cy, node.id());
+                  // adjust positions of properties
+                  for(let i = 0; i < n1; i++) {
+                    const id = centerConceptNodesWithDepth1.pop();
+                    const x = cy.$("#" + id).position('x');
+                    const y = cy.$("#" + id).position('y');
+                    const sourceID = cy.$("#" + id).json().data.sourceID;
+                    const sourceX = cy.$("#" + sourceID).position('x');
+                    const sourceY = cy.$("#" + sourceID).position('y');
+                    var startAngle = getAngleShift(x, y, sourceX, sourceY);
+                    addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                  }
+                  // console.log(deepCenterConceptNodes);
+                  for(let i = 0; i < n2; i++) {
+                    const id = deepCenterConceptNodes.pop();
+                    console.log(cy.$("#" + id).json());
+                    const x = cy.$("#" + id).position('x');
+                    const y = cy.$("#" + id).position('y');
+                    const sourceID = cy.$("#" + id).json().data.sourceID;
+                    const sourceX = cy.$("#" + sourceID).position('x');
+                    const sourceY = cy.$("#" + sourceID).position('y');
+                    cy.$("#" + id).shift({ x: 3*(x-sourceX), y: 3*(y-sourceY)});
+                    var startAngle = getAngleShift(x, y, sourceX, sourceY);
+                    addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    cy.$("#" + id).addClass('readyToCollapse')
+                  }
+
+                  cy.$("#" + node.id()).addClass('readyToCollapse')
+                } else {
                   cy.$("#" + node.id()).removeClass('readyToCollapse')
+                  removeConceptNode(cy, node.id());
                   const x = cy.$("#" + node.id()).position('x');
                   const y = cy.$("#" + node.id()).position('y');
                   const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
                   const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
                   cy.$("#" + node.id()).shift({ x: -0.75*(x-sourceX), y: -0.75*(y-sourceY)});
+
+                  var nodeStack = [];
+                  var numOfNodesSmallerThanDepth1 = 0;
+                  var centerConceptNodesWithDepth1 = [];
+                  var deepCenterConceptNodes = [];
+                  var conceptLinkNodes = [];
+                  cy.elements().bfs({
+                    roots:'#'+node.id(),
+                    visit: function(v,e,u,i,depth) {
+                      if(depth <= 1) {
+                        numOfNodesSmallerThanDepth1++;
+                      }
+                      if(v.hasClass('readyToCollapse')) {
+                        if(depth == 1) {
+                          centerConceptNodesWithDepth1.push(v.id());
+                        } else {
+                          deepCenterConceptNodes.push(v.id());
+                        }
+                      }
+                      if(u == undefined || u.json().data.class == "concept") {
+                        conceptLinkNodes.push(v.id());
+                      }
+                      nodeStack.push(v.id());
+                    },
+                    directed:true
+                  });
+                  console.log(nodeStack);
+                  const n = nodeStack.length;
+                  const n1 = centerConceptNodesWithDepth1.length;
+                  const n2 = deepCenterConceptNodes.length;
+                  const n3 = conceptLinkNodes.length;
+                  for(let i = 0; i < n - numOfNodesSmallerThanDepth1; i++) {
+                    const id = nodeStack.pop();
+                    const label = cy.$('#' + id).json().data.label;
+                    cy.remove(cy.$('#' + id));
+                    if(conceptNodeLabelToID[label] == id) {
+                      console.log(id);
+                      delete conceptNodeLabelToID[label];
+                    }
+                  }
+                  //reconstruct the concept link
+                  // for(let i = 0; i < n3; i++) {
+                  //   const id = conceptLinkNodes.pop();
+                  //   const x = cy.$("#" + id).position('x');
+                  //   const y = cy.$("#" + id).position('y');
+                  //   const sourceID = cy.$("#" + id).json().data.sourceID;
+                  //   const sourceX = cy.$("#" + sourceID).position('x');
+                  //   const sourceY = cy.$("#" + sourceID).position('y');
+                  //   var startAngle = getAngleShift(x, y, sourceX, sourceY);
+                  //   addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                  //   removeConceptNodeExceptConcept(cy, id);
+                  // }
+
+                  // adjust positions of properties
+                  for(let i = 0; i < n1; i++) {
+                    const id = centerConceptNodesWithDepth1.pop();
+                    const x = cy.$("#" + id).position('x');
+                    const y = cy.$("#" + id).position('y');
+                    const sourceID = cy.$("#" + id).json().data.sourceID;
+                    const sourceX = cy.$("#" + sourceID).position('x');
+                    const sourceY = cy.$("#" + sourceID).position('y');
+                    var startAngle = getAngleShift(x, y, sourceX, sourceY);
+                    addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                  }
+                  for(let i = 0; i < n2; i++) {
+                    const id = deepCenterConceptNodes.pop();
+                    const x = cy.$("#" + id).position('x');
+                    const y = cy.$("#" + id).position('y');
+                    const sourceID = cy.$("#" + id).json().data.sourceID;
+                    const sourceX = cy.$("#" + sourceID).position('x');
+                    const sourceY = cy.$("#" + sourceID).position('y');
+                    cy.$("#" + id).shift({ x: 3*(x-sourceX), y: 3*(y-sourceY)});
+                    var startAngle = getAngleShift(x, y, sourceX, sourceY);
+                    addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    cy.$("#" + id).addClass('readyToCollapse')
+                  }
+                  // cy.$("#" + node.id()).shift({ x: -0.75*(x-sourceX), y: -0.75*(y-sourceY)});
                   
                 }
               }
@@ -670,6 +804,24 @@
                   delete conceptNodeLabelToID[label];
                 }
                 // console.log(cy.$('#' + nodeID).json());
+                cy.remove(cy.$('#' + edgeID));
+                cy.remove(cy.$('#' + nodeID));
+              }
+            }
+            // conceptNodeLabelToID
+          })
+        }
+
+        function removeConceptNodeExceptConcept(cy, id) {
+          // console.log(id);
+          const nodeData = conceptExpansionDataCache[id];
+          console.log(nodeData);
+          Object.keys(nodeData).forEach(function(key) {
+            if(key != "prefLabel") {
+              var value = nodeData[key];
+              const nodeID = convertToNodeID(id, key, value);
+              const edgeID = convertToEdgeID(id, key);
+              if(cy.$('#' + nodeID).json().data.class != "concept") {
                 cy.remove(cy.$('#' + edgeID));
                 cy.remove(cy.$('#' + nodeID));
               }
