@@ -823,7 +823,6 @@
         }
 
         function removeConceptNode(cy, id) {
-          // console.log(id);
           const nodeData = conceptExpansionDataCache[id];
           console.log(nodeData);
           Object.keys(nodeData).forEach(function(key) {
@@ -836,12 +835,10 @@
                 if(conceptNodeLabelToID[label] == nodeID) {
                   delete conceptNodeLabelToID[label];
                 }
-                // console.log(cy.$('#' + nodeID).json());
                 cy.remove(cy.$('#' + edgeID));
                 cy.remove(cy.$('#' + nodeID));
               }
             }
-            // conceptNodeLabelToID
           })
         }
 
