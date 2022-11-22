@@ -498,15 +498,11 @@
                     const url = propertyQuery(cityName, true);
                     d3.json(url).then(function(data) {addConceptNode(cy, node.id(), getDataJSON(data), startAngle);});
                   }
-                  
-                  // var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
-                  // layout.run(); 
 
                   var nodeStack = [];
                   var numOfNodesSmallerThanDepth1 = 0;
                   var centerConceptNodesWithDepth1 = [];
                   var deepCenterConceptNodes = [];
-                  var conceptLinkNodes = [];
 
                   cy.elements().bfs({
                     roots:'#'+node.id(),
@@ -514,15 +510,12 @@
                       if(depth <= 1) {
                         numOfNodesSmallerThanDepth1++;
                       }
-                      if(v.hasClass('readyToCollapse')) {
+                      if(v.json().data.class == "concept") {
                         if(depth == 1) {
-                          centerConceptNodesWithDepth1.push(v.id());
-                        } else {
-                          deepCenterConceptNodes.push(v.id());
+                          centerConceptNodesWithDepth1.push([v.id(), v.hasClass('readyToCollapse'), v.outgoers().length == 0]);
+                        } else if (depth > 1) {
+                          deepCenterConceptNodes.push([v.id(), v.hasClass('readyToCollapse'), v.outgoers().length == 0]);
                         }
-                      }
-                      if(u == undefined || u.json().data.class == "concept") {
-                        conceptLinkNodes.push(v.id());
                       }
                       
                       nodeStack.push(v.id());
@@ -530,47 +523,54 @@
                     },
                     directed:true
                   });
-                  console.log(deepCenterConceptNodes);
                   const n = nodeStack.length;
                   const n1 = centerConceptNodesWithDepth1.length;
                   const n2 = deepCenterConceptNodes.length;
-                  const n3 = conceptLinkNodes.length;
                   for(let i = 0; i < n - numOfNodesSmallerThanDepth1; i++) {
                     const id = nodeStack.pop();
                     const label = cy.$('#' + id).json().data.label;
                     cy.remove(cy.$('#' + id));
                     if(conceptNodeLabelToID[label] == id) {
-                      console.log(id);
                       delete conceptNodeLabelToID[label];
                     }
                   }
-                  //reconstruct the concept link
-                  // for(let i = 0; i < n3; i++) {
-                  //   const id = conceptLinkNodes.pop();
-                  //   const x = cy.$("#" + id).position('x');
-                  //   const y = cy.$("#" + id).position('y');
-                  //   const sourceID = cy.$("#" + id).json().data.sourceID;
-                  //   const sourceX = cy.$("#" + sourceID).position('x');
-                  //   const sourceY = cy.$("#" + sourceID).position('y');
-                  //   var startAngle = getAngleShift(x, y, sourceX, sourceY);
-                  //   addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
-                  //   removeConceptNodeExceptConcept(cy, id);
-                  // }
 
-                  // adjust positions of properties
                   for(let i = 0; i < n1; i++) {
-                    const id = centerConceptNodesWithDepth1.pop();
+                    
+                    const idTuple = centerConceptNodesWithDepth1.shift();
+                    const id = idTuple[0];
+                    const isReadyToCollapse = idTuple[1];
+                    const isLeaf = idTuple[2];
+                    if(isLeaf) {
+                      continue;
+                    }
                     const x = cy.$("#" + id).position('x');
                     const y = cy.$("#" + id).position('y');
                     const sourceID = cy.$("#" + id).json().data.sourceID;
                     const sourceX = cy.$("#" + sourceID).position('x');
                     const sourceY = cy.$("#" + sourceID).position('y');
                     var startAngle = getAngleShift(x, y, sourceX, sourceY);
-                    addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
+                    // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
+                      addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    } else {
+                      const url = propertyQuery(cityName, true);
+                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data), startAngle);});
+                    }
+                    if(!isReadyToCollapse) {
+                      removeConceptNodeExceptConcept(cy, id);
+                    }
                   }
                   // console.log(deepCenterConceptNodes);
                   for(let i = 0; i < n2; i++) {
-                    const id = deepCenterConceptNodes.pop();
+                    const idTuple = deepCenterConceptNodes.shift();
+                    const id = idTuple[0];
+                    const isReadyToCollapse = idTuple[1];
+                    const isLeaf = idTuple[2];
+                    if(isLeaf) {
+                      continue;
+                    }
                     console.log(cy.$("#" + id).json());
                     const x = cy.$("#" + id).position('x');
                     const y = cy.$("#" + id).position('y');
@@ -579,7 +579,17 @@
                     const sourceY = cy.$("#" + sourceID).position('y');
                     cy.$("#" + id).shift({ x: 3*(x-sourceX), y: 3*(y-sourceY)});
                     var startAngle = getAngleShift(x, y, sourceX, sourceY);
-                    addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
+                    // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
+                      addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    } else {
+                      const url = propertyQuery(cityName, true);
+                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data), startAngle);});
+                    }
+                    if(!isReadyToCollapse) {
+                      removeConceptNodeExceptConcept(cy, id);
+                    }
                     cy.$("#" + id).addClass('readyToCollapse')
                   }
 
@@ -597,22 +607,18 @@
                   var numOfNodesSmallerThanDepth1 = 0;
                   var centerConceptNodesWithDepth1 = [];
                   var deepCenterConceptNodes = [];
-                  var conceptLinkNodes = [];
                   cy.elements().bfs({
                     roots:'#'+node.id(),
                     visit: function(v,e,u,i,depth) {
                       if(depth <= 1) {
                         numOfNodesSmallerThanDepth1++;
                       }
-                      if(v.hasClass('readyToCollapse')) {
+                      if(v.json().data.class == "concept") {
                         if(depth == 1) {
-                          centerConceptNodesWithDepth1.push(v.id());
-                        } else {
-                          deepCenterConceptNodes.push(v.id());
+                          centerConceptNodesWithDepth1.push([v.id(), v.hasClass('readyToCollapse'), v.outgoers().length == 0]);
+                        } else if (depth > 1) {
+                          deepCenterConceptNodes.push([v.id(), v.hasClass('readyToCollapse'), v.outgoers().length == 0]);
                         }
-                      }
-                      if(u == undefined || u.json().data.class == "concept") {
-                        conceptLinkNodes.push(v.id());
                       }
                       nodeStack.push(v.id());
                     },
@@ -622,7 +628,6 @@
                   const n = nodeStack.length;
                   const n1 = centerConceptNodesWithDepth1.length;
                   const n2 = deepCenterConceptNodes.length;
-                  const n3 = conceptLinkNodes.length;
                   for(let i = 0; i < n - numOfNodesSmallerThanDepth1; i++) {
                     const id = nodeStack.pop();
                     const label = cy.$('#' + id).json().data.label;
@@ -632,32 +637,42 @@
                       delete conceptNodeLabelToID[label];
                     }
                   }
-                  //reconstruct the concept link
-                  // for(let i = 0; i < n3; i++) {
-                  //   const id = conceptLinkNodes.pop();
-                  //   const x = cy.$("#" + id).position('x');
-                  //   const y = cy.$("#" + id).position('y');
-                  //   const sourceID = cy.$("#" + id).json().data.sourceID;
-                  //   const sourceX = cy.$("#" + sourceID).position('x');
-                  //   const sourceY = cy.$("#" + sourceID).position('y');
-                  //   var startAngle = getAngleShift(x, y, sourceX, sourceY);
-                  //   addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
-                  //   removeConceptNodeExceptConcept(cy, id);
-                  // }
 
                   // adjust positions of properties
                   for(let i = 0; i < n1; i++) {
-                    const id = centerConceptNodesWithDepth1.pop();
+                    const idTuple = centerConceptNodesWithDepth1.shift();
+                    const id = idTuple[0];
+                    const isReadyToCollapse = idTuple[1];
+                    const isLeaf = idTuple[2];
+                    if(isLeaf) {
+                      continue;
+                    }
                     const x = cy.$("#" + id).position('x');
                     const y = cy.$("#" + id).position('y');
                     const sourceID = cy.$("#" + id).json().data.sourceID;
                     const sourceX = cy.$("#" + sourceID).position('x');
                     const sourceY = cy.$("#" + sourceID).position('y');
                     var startAngle = getAngleShift(x, y, sourceX, sourceY);
-                    addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
+                    // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
+                      addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    } else {
+                      const url = propertyQuery(cityName, true);
+                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data), startAngle);});
+                    }
+                    if(!isReadyToCollapse) {
+                      removeConceptNodeExceptConcept(cy, id);
+                    }
                   }
                   for(let i = 0; i < n2; i++) {
-                    const id = deepCenterConceptNodes.pop();
+                    const idTuple = deepCenterConceptNodes.shift();
+                    const id = idTuple[0];
+                    const isReadyToCollapse = idTuple[1];
+                    const isLeaf = idTuple[2];
+                    if(isLeaf) {
+                      continue;
+                    }
                     const x = cy.$("#" + id).position('x');
                     const y = cy.$("#" + id).position('y');
                     const sourceID = cy.$("#" + id).json().data.sourceID;
@@ -665,7 +680,17 @@
                     const sourceY = cy.$("#" + sourceID).position('y');
                     cy.$("#" + id).shift({ x: 3*(x-sourceX), y: 3*(y-sourceY)});
                     var startAngle = getAngleShift(x, y, sourceX, sourceY);
-                    addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
+                    // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
+                      addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    } else {
+                      const url = propertyQuery(cityName, true);
+                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data), startAngle);});
+                    }
+                    if(!isReadyToCollapse) {
+                      removeConceptNodeExceptConcept(cy, id);
+                    }
                     cy.$("#" + id).addClass('readyToCollapse')
                   }
                   // cy.$("#" + node.id()).shift({ x: -0.75*(x-sourceX), y: -0.75*(y-sourceY)});
@@ -798,7 +823,7 @@
               var value = nodeData[key];
               const nodeID = convertToNodeID(id, key, value);
               const edgeID = convertToEdgeID(id, key);
-              if(!cy.$('#' + nodeID).hasClass('readyToCollapse')) {
+              if(cy.$('#' + nodeID).outgoers().length == 0) {
                 const label = cy.$('#' + nodeID).json().data.label;
                 if(conceptNodeLabelToID[label] == nodeID) {
                   delete conceptNodeLabelToID[label];
