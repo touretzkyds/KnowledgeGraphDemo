@@ -314,7 +314,7 @@
         }
 
         function visualizeData(data) {
-            const CytoscapeData = convertToCytoscape(getDataJSON(data));
+            const CytoscapeData = convertToCytoscape(getDataJSON(data)[0]);
             if(CytoscapeData === undefined) {
                 return;
             }
@@ -456,7 +456,7 @@
               var node = evt.target;
               if(node.json().data.class === 'qudt') {
                 if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
-                  // console.log("here");
+                  console.log(node.id());
                   const x = cy.$("#" + node.id()).position('x');
                   const y = cy.$("#" + node.id()).position('y');
                   const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
@@ -466,12 +466,20 @@
                   const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
                   const bnodeID = sourceQnumber + "_rel_" + node.json().data.label;
                   var startAngle = getAngleShift(x, y, sourceX, sourceY);
-                  addbNode(cy, node.id(), bnodeID, startAngle);
+                  const sourceCityName = cy.$('#' + node.json().data.sourceID).json().data.label.split("\nboltz:")[0];
+                    // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
+                    if(bnodeExpansionDataCache.hasOwnProperty(node.id())) {
+                      addbNode(cy, node.id(), bnodeExpansionDataCache[node.id()], startAngle);
+                    } else {
+                      const url = propertyQuery(sourceCityName, true);
+                      d3.json(url).then(function(data) {addbNode(cy, node.id(), getDataJSON(data)[1], startAngle);});
+                    }
+                  
                   cy.$("#" + node.id()).addClass('readyToCollapse')
                 } else {
                   const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
                   const bnodeID = sourceQnumber + "_rel_" + node.json().data.label;
-                  removebNode(cy, node.id(), bnodeID);
+                  removebNode(cy, node.id());
                   cy.$("#" + node.id()).removeClass('readyToCollapse')
                   const x = cy.$("#" + node.id()).position('x');
                   const y = cy.$("#" + node.id()).position('y');
@@ -496,7 +504,7 @@
                     addConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()], startAngle);
                   } else {
                     const url = propertyQuery(cityName, true);
-                    d3.json(url).then(function(data) {addConceptNode(cy, node.id(), getDataJSON(data), startAngle);});
+                    d3.json(url).then(function(data) {addConceptNode(cy, node.id(), getDataJSON(data)[0], startAngle);});
                   }
 
                   var nodeStack = [];
@@ -552,11 +560,11 @@
                     var startAngle = getAngleShift(x, y, sourceX, sourceY);
                     const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
                     // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
-                    if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
+                    if(conceptExpansionDataCache.hasOwnProperty(id)) {
                       addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
                     } else {
                       const url = propertyQuery(cityName, true);
-                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data), startAngle);});
+                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data)[0], startAngle);});
                     }
                     if(!isReadyToCollapse) {
                       removeConceptNodeExceptConcept(cy, id);
@@ -581,11 +589,11 @@
                     var startAngle = getAngleShift(x, y, sourceX, sourceY);
                     const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
                     // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
-                    if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
+                    if(conceptExpansionDataCache.hasOwnProperty(id)) {
                       addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
                     } else {
                       const url = propertyQuery(cityName, true);
-                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data), startAngle);});
+                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data)[0], startAngle);});
                     }
                     if(!isReadyToCollapse) {
                       removeConceptNodeExceptConcept(cy, id);
@@ -655,11 +663,11 @@
                     var startAngle = getAngleShift(x, y, sourceX, sourceY);
                     const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
                     // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
-                    if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
+                    if(conceptExpansionDataCache.hasOwnProperty(id)) {
                       addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
                     } else {
                       const url = propertyQuery(cityName, true);
-                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data), startAngle);});
+                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data)[0], startAngle);});
                     }
                     if(!isReadyToCollapse) {
                       removeConceptNodeExceptConcept(cy, id);
@@ -682,11 +690,11 @@
                     var startAngle = getAngleShift(x, y, sourceX, sourceY);
                     const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
                     // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
-                    if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
+                    if(conceptExpansionDataCache.hasOwnProperty(id)) {
                       addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
                     } else {
                       const url = propertyQuery(cityName, true);
-                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data), startAngle);});
+                      d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data)[0], startAngle);});
                     }
                     if(!isReadyToCollapse) {
                       removeConceptNodeExceptConcept(cy, id);
@@ -855,8 +863,13 @@
           })
         }
 
-        function addbNode(cy, id, bnodeID, startAngle) {
-          var bnodeData = bnodeExpansionDataCache[bnodeID];
+        function addbNode(cy, id, bnodeData, startAngle) {
+          bnodeExpansionDataCache[id] = bnodeData;
+          if(cy.$('#' + id).json().data.label == 'b0') {
+            bnodeData = bnodeData.b0;
+          } else {
+            bnodeData = bnodeData.b1;
+          }
           var addedData = [];
           const sourceX = cy.$("#" + id).position('x');
           const sourceY = cy.$("#" + id).position('y');
@@ -890,8 +903,13 @@
           })
         }
 
-        function removebNode(cy, id, bnodeID) {
-          var bnodeData = bnodeExpansionDataCache[bnodeID];
+        function removebNode(cy, id) {
+          var bnodeData = bnodeExpansionDataCache[id];
+          if(cy.$('#' + id).json().data.label == 'b0') {
+            bnodeData = bnodeData.b0;
+          } else {
+            bnodeData = bnodeData.b1;
+          }
           Object.keys(bnodeData).forEach(function(key) {
             const value = bnodeData[key];
             const nodeID = convertToNodeID(id, key, value);
@@ -923,7 +941,7 @@
                 return undefined;
             }
             var resultData = {};
-            // var bnodeData = {};
+            var bnodeData = {};
             const prefLabel = binding[0].prefLabel.value;
             const centerQnumber = binding[0].Q.value.split("/data/")[1];
             const prefLabelValue = prefLabel + "\nboltz:" + centerQnumber;
@@ -952,12 +970,12 @@
                 //store bnode info and add number to node id
                 if(dataEntry.y.type == 'bnode') {
 
-                  var bnodeID = centerQnumber + "_rel_" + finalValue;
+                  var bnodeID = finalValue;
                   // console.log(bnodeID);
-                  if(!bnodeExpansionDataCache.hasOwnProperty(bnodeID)) {
-                    bnodeExpansionDataCache[bnodeID] = {};
+                  if(!bnodeData.hasOwnProperty(bnodeID)) {
+                    // bnodeExpansionDataCache[bnodeID] = {};
+                    bnodeData[bnodeID] = {};
                   }
-                  
                   var bnodeKeyList = dataEntry.s.value.split("/");
                   bnodeKey = bnodeKeyList[bnodeKeyList.length - 1];
                   var bnodeValueList = dataEntry.z.value.split("/");
@@ -967,7 +985,8 @@
                     bnodeKey = bnodeKeyList[bnodeKeyList.length - 1];
                   }
                   
-                  bnodeExpansionDataCache[bnodeID][bnodeKey] = bnodeValue;
+                  // bnodeExpansionDataCache[bnodeID][bnodeKey] = bnodeValue;
+                  bnodeData[bnodeID][bnodeKey] = bnodeValue;
 
                 }
 
@@ -976,8 +995,10 @@
 
             
             resultData["prefLabel"] = prefLabelValue
+            console.log('bnodedata is');
+            console.log(bnodeData);
             console.log(resultData);
-            return resultData;
+            return [resultData, bnodeData];
         }
     </script>
 
