@@ -426,7 +426,8 @@
 
                   const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
                   const bnodeID = sourceQnumber + "_rel_" + node.json().data.label;
-                  addbNode(cy, node.id(), bnodeID);
+                  var startAngle = getAngleShift(x, y, sourceX, sourceY);
+                  addbNode(cy, node.id(), bnodeID, startAngle);
                   cy.$("#" + node.id()).addClass('readyToCollapse')
                 } else {
                   const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
@@ -449,11 +450,14 @@
                   const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
                   cy.$("#" + node.id()).shift({ x: 3*(x-sourceX), y: 3*(y-sourceY)});
                   cy.center("#" + node.id());
+
+                  
+                  var startAngle = getAngleShift(x, y, sourceX, sourceY);
                   if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
-                    addConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()]);
+                    addConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()], startAngle);
                   } else {
                     const url = propertyQuery(cityName, true);
-                    d3.json(url).then(function(data) {addConceptNode(cy, node.id(), getDataJSON(data));});
+                    d3.json(url).then(function(data) {addConceptNode(cy, node.id(), getDataJSON(data), startAngle);});
                   }
                   
                   // var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
@@ -535,18 +539,38 @@
             });
         }
 
-        function addConceptNode(cy, id, nodeData) {
+        function getAngleShift(x, y, sourceX, sourceY) {
+          var startAngle = Math.atan((x-sourceX)/(y-sourceY));
+          if(x > sourceX) {
+            if(y < sourceY) {
+              startAngle = - Math.PI - startAngle;
+            } else {
+              startAngle = - startAngle;
+            }
+          } else {
+            if(y < sourceY) {
+              startAngle = Math.PI - startAngle;
+            } else {
+              startAngle = - startAngle;
+            }
+          }
+          return startAngle;
+        }
+
+        function addConceptNode(cy, id, nodeData, startAngle) {
           // const nodeData = getDataJSON(data);
           conceptExpansionDataCache[id] = nodeData;
           var addedData = [];
           const sourceX = cy.$("#" + id).position('x');
           const sourceY = cy.$("#" + id).position('y');
           const radius = 400;
-          var numOfKeys = -1;
+          var numOfKeys = 0;
+          
           Object.keys(nodeData).forEach(function(key) {
             numOfKeys++;
           }) 
-          var count = 0;
+          console.log(startAngle);
+          var count = 1;
           Object.keys(nodeData).forEach(function(key) {
             if(key != "prefLabel") {
               var value = nodeData[key];
@@ -567,7 +591,7 @@
               
               addedData.push(tempNode);
               
-              const radian = (Math.PI * 2 / numOfKeys) * count;  
+              const radian = startAngle + (Math.PI * 2 / numOfKeys) * count;  
               const x = sourceX + radius * Math.sin(radian);
               const y = sourceY - radius * Math.cos(radian);
               tempNode.position = {x:x, y:y};
@@ -602,17 +626,17 @@
           })
         }
 
-        function addbNode(cy, id, bnodeID) {
+        function addbNode(cy, id, bnodeID, startAngle) {
           var bnodeData = bnodeExpansionDataCache[bnodeID];
           var addedData = [];
           const sourceX = cy.$("#" + id).position('x');
           const sourceY = cy.$("#" + id).position('y');
           const radius = 300;
-          var numOfKeys = 0;
+          var numOfKeys = 1;
           Object.keys(bnodeData).forEach(function(key) {
             numOfKeys++;
           }) 
-          var count = 0;
+          var count = 1;
           Object.keys(bnodeData).forEach(function(key) {
             const value = bnodeData[key];
             
@@ -621,7 +645,7 @@
             const dataID = convertToNodeID(id, key, value);
             tempNode.data = {id: dataID, label: value, class: 'bnode'};
             tempNode.data.sourceID = id;
-            const radian = (Math.PI * 2 / numOfKeys) * count;  
+            const radian = startAngle + (Math.PI * 2 / numOfKeys) * count;  
             const x = sourceX + radius * Math.sin(radian);
             const y = sourceY - radius * Math.cos(radian);
             tempNode.position = {x:x, y:y};
