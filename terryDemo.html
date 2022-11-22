@@ -169,6 +169,7 @@
 
         var bnodeExpansionDataCache = {};
         var conceptExpansionDataCache = {};
+        var conceptNodeLabelToID = {};
 
         function propertyQuery(value, perform_query) {
         const prevquery = document.getElementById("sparql2");
@@ -237,15 +238,21 @@
             Object.keys(data).forEach(function(key) {
                 var value = data[key];
                 var tempNode = {"data":{}};
+                tempNode.data.label = value;
                 if(key == "prefLabel") {
                   tempNode.data.class = "center";
                   tempNode.data.id = source;
+                  conceptNodeLabelToID[value] = source;
                 } else {
                   tempNode.data.class = classifyclass(value);
+                  if(tempNode.data.class == "concept") {
+                    if(!conceptNodeLabelToID.hasOwnProperty(value)) {
+                      conceptNodeLabelToID[value] = tempNode.data.id;
+                    }
+                  }
                   tempNode.data.id = convertToNodeID(source, key, value);
                   tempNode.data.sourceID = source;
                 }
-                tempNode.data.label = value;
                 
                 // tempNode.data.id = convertToNodeID(source, key, value);
                 nodes.push(tempNode);
@@ -337,6 +344,22 @@
                 }
             },
             {
+                selector: 'node[class = "dummyConcept"]',
+                style: {
+                  'width':150,
+                  'height':150,
+                  "background-color": '#ADD877',
+                  "border-color": '#00008B',
+                  'text-wrap': 'wrap',
+                  'text-max-width': 80,
+                  'label': 'data(label)',
+                  'font-size': 20,
+                  'font-family': 'Garamond',
+                  'line-height': 1.15,
+                  'text-valign': 'center',
+                }
+            },
+            {
                 selector: 'node[class = "center"]',
                 style: {
                   'width':150,
@@ -397,7 +420,7 @@
                   const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
                   const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
                   cy.$("#" + node.id()).shift({ x: x-sourceX, y: y-sourceY});
-                  console.log(node.id());
+                  // console.log(node.id());
                   addbNode(cy, node.id());
                   // var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
                   // layout.run(); 
@@ -421,8 +444,13 @@
                   const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
                   cy.$("#" + node.id()).shift({ x: 3*(x-sourceX), y: 3*(y-sourceY)});
                   cy.center("#" + node.id());
-                  const url = propertyQuery(cityName, true);
-                  d3.json(url).then(function(data) {addConceptNode(cy, node.id(), data);});
+                  if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
+                    addConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()]);
+                  } else {
+                    const url = propertyQuery(cityName, true);
+                    d3.json(url).then(function(data) {addConceptNode(cy, node.id(), getDataJSON(data));});
+                  }
+                  
                   // var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
                   // layout.run(); 
                   cy.$("#" + node.id()).addClass('readyToCollapse')
@@ -441,7 +469,12 @@
                   for(let i = 0; i < n - 1; i++) {
                     const id = nodeStack.pop();
                     // console.log(id);
+                    const label = cy.$('#' + id).json().data.label;
                     cy.remove(cy.$('#' + id));
+                    console.log(label);
+                    if(conceptNodeLabelToID[label] == id) {
+                      delete conceptNodeLabelToID[label];
+                    }
                   }
 
                   // removeConceptNode(cy, node.id());
@@ -475,8 +508,8 @@
             });
         }
 
-        function addConceptNode(cy, id, data) {
-          const nodeData = getDataJSON(data);
+        function addConceptNode(cy, id, nodeData) {
+          // const nodeData = getDataJSON(data);
           conceptExpansionDataCache[id] = nodeData;
           var addedData = [];
           const sourceX = cy.$("#" + id).position('x');
@@ -497,6 +530,14 @@
               tempNode.data.class = classifyclass(value);
               tempNode.data.id = convertToNodeID(id, key, value);
               tempNode.data.sourceID = id;
+              if(tempNode.data.class == "concept") {
+                if(!conceptNodeLabelToID.hasOwnProperty(value)) {
+                conceptNodeLabelToID[value] = tempNode.data.id;
+              } else {
+                tempNode.data.class = "dummyConcept";
+              }
+              }
+              
               addedData.push(tempNode);
               
               const radian = (Math.PI * 2 / numOfKeys) * count;  
@@ -515,13 +556,14 @@
               cy.add(addedData);
               addedData = [];
               count++;
-              console.log(tempNode.data.id);
-              console.log(tempEdge.data.id);
+              // console.log(tempNode.data.id);
+              // console.log(tempEdge.data.id);
             }
           })
         }
 
         function removeConceptNode(cy, id) {
+          // console.log(id);
           const nodeData = conceptExpansionDataCache[id];
           Object.keys(nodeData).forEach(function(key) {
             var value = nodeData[key];
@@ -529,6 +571,7 @@
             const edgeID = convertToEdgeID(id, key);
             cy.remove(cy.$('#' + edgeID));
             cy.remove(cy.$('#' + nodeID));
+            // conceptNodeLabelToID
           })
         }
 
@@ -604,7 +647,7 @@
             const prefLabel = binding[0].prefLabel.value;
             const centerQnumber = binding[0].Q.value.split("/data/")[1];
             const prefLabelValue = prefLabel + "\nboltz:" + centerQnumber;
-            console.log(centerQnumber);
+            // console.log(centerQnumber);
 
             Object.keys(binding).forEach(function(key) {
                 const dataEntry = binding[key];
