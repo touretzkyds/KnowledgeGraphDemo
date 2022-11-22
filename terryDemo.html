@@ -239,12 +239,15 @@
                 var tempNode = {"data":{}};
                 if(key == "prefLabel") {
                   tempNode.data.class = "center";
+                  tempNode.data.id = source;
                 } else {
                   tempNode.data.class = classifyclass(value);
+                  tempNode.data.id = convertToNodeID(source, key, value);
+                  tempNode.data.sourceID = source;
                 }
                 tempNode.data.label = value;
-                tempNode.data.sourceID = source;
-                tempNode.data.id = convertToNodeID(source, key, value);
+                
+                // tempNode.data.id = convertToNodeID(source, key, value);
                 nodes.push(tempNode);
 
                 var tempEdge = {"data":{}};
@@ -580,10 +583,11 @@
         }
 
         function convertToNodeID(id, key, value) {
-          if(classifyclass(value) == "concept") {
-            value = value.split("boltz:")[1];
-            return value;
-          } else if(classifyclass(value) == "qudt") {
+          // if(classifyclass(value) == "concept") {
+          //   value = value.split("boltz:")[1];
+          //   return value;
+          // } else 
+          if(classifyclass(value) == "qudt") {
             return id + "_rel_" + value;
           }
           return id + "_rel_" + key;
