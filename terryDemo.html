@@ -243,27 +243,29 @@
                   tempNode.data.class = "center";
                   tempNode.data.id = source;
                   conceptNodeLabelToID[value] = source;
+                  nodes.push(tempNode);
                 } else {
                   tempNode.data.class = classifyclass(value);
+                  tempNode.data.id = convertToNodeID(source, key, value);
+                  tempNode.data.sourceID = source;
                   if(tempNode.data.class == "concept") {
                     if(!conceptNodeLabelToID.hasOwnProperty(value)) {
                       conceptNodeLabelToID[value] = tempNode.data.id;
                     }
                   }
-                  tempNode.data.id = convertToNodeID(source, key, value);
-                  tempNode.data.sourceID = source;
-                }
-                
-                // tempNode.data.id = convertToNodeID(source, key, value);
-                nodes.push(tempNode);
 
-                var tempEdge = {"data":{}};
-                tempEdge.data.label = key;
-                tempEdge.data.id = convertToEdgeID(source, key);
-                if(value !== source) {
-                    tempEdge.data.source = source;
-                    tempEdge.data.target = tempNode.data.id;
-                    edges.push(tempEdge);
+                
+                  // tempNode.data.id = convertToNodeID(source, key, value);
+                  nodes.push(tempNode);
+
+                  var tempEdge = {"data":{}};
+                  tempEdge.data.label = key;
+                  tempEdge.data.id = convertToEdgeID(source, key);
+                  if(value !== source) {
+                      tempEdge.data.source = source;
+                      tempEdge.data.target = tempNode.data.id;
+                      edges.push(tempEdge);
+                  }
                 }
             })
             // console.log(nodes);
@@ -348,15 +350,16 @@
                 style: {
                   'width':150,
                   'height':150,
-                  "background-color": '#ADD877',
-                  "border-color": '#00008B',
+                  "background-color": '#FFFFFF',
+                  "border-color": '#ADD8E6',
+                  "border-width": 10,
                   'text-wrap': 'wrap',
                   'text-max-width': 80,
                   'label': 'data(label)',
                   'font-size': 20,
                   'font-family': 'Garamond',
                   'line-height': 1.15,
-                  'text-valign': 'center',
+                  'text-valign': 'center'
                 }
             },
             {
@@ -420,13 +423,15 @@
                   const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
                   const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
                   cy.$("#" + node.id()).shift({ x: x-sourceX, y: y-sourceY});
-                  // console.log(node.id());
-                  addbNode(cy, node.id());
-                  // var layout = cy.elements().layout({name: 'cose', minNodeSpacing: 100}); 
-                  // layout.run(); 
+
+                  const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
+                  const bnodeID = sourceQnumber + "_rel_" + node.json().data.label;
+                  addbNode(cy, node.id(), bnodeID);
                   cy.$("#" + node.id()).addClass('readyToCollapse')
                 } else {
-                  removebNode(cy, node.id());
+                  const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
+                  const bnodeID = sourceQnumber + "_rel_" + node.json().data.label;
+                  removebNode(cy, node.id(), bnodeID);
                   cy.$("#" + node.id()).removeClass('readyToCollapse')
                   const x = cy.$("#" + node.id()).position('x');
                   const y = cy.$("#" + node.id()).position('y');
@@ -471,7 +476,7 @@
                     // console.log(id);
                     const label = cy.$('#' + id).json().data.label;
                     cy.remove(cy.$('#' + id));
-                    console.log(label);
+                    // console.log(label);
                     if(conceptNodeLabelToID[label] == id) {
                       delete conceptNodeLabelToID[label];
                     }
@@ -495,6 +500,17 @@
                     'width': node.width() * 1.25,
                     'height': node.height() * 1.25
                 });
+              } else if(node.json().data.class === 'dummyConcept') {
+                // cy.nodes(`[id = "${node.id()}"]`).style({
+                //     'width': node.width() * 1.25,
+                //     'height': node.height() * 1.25
+                // });
+                const id = conceptNodeLabelToID[node.json().data.label];
+                cy.nodes(`[id = "${conceptNodeLabelToID[node.json().data.label]}"]`).style({
+                    'width': cy.$('#'+id).width() * 1.25,
+                    'height': cy.$('#'+id).height() * 1.25
+                });
+                // cy.center("#" + id);
               }
             });
             cy.on('mouseout', function(evt) {
@@ -504,6 +520,17 @@
                     'width': node.width() * 0.8,
                     'height': node.height() * 0.8
                 });
+              } else if(node.json().data.class === 'dummyConcept') {
+                // cy.nodes(`[id = "${node.id()}"]`).style({
+                //     'width': node.width() * 0.8,
+                //     'height': node.height() * 0.8
+                // });
+                const id = conceptNodeLabelToID[node.json().data.label];
+                cy.nodes(`[id = "${id}"]`).style({
+                    'width': cy.$('#'+id).width() * 0.8,
+                    'height': cy.$('#'+id).height() * 0.8
+                });
+                // cy.center("#" + id);
               }
             });
         }
@@ -575,8 +602,8 @@
           })
         }
 
-        function addbNode(cy, id) {
-          var bnodeData = bnodeExpansionDataCache[id];
+        function addbNode(cy, id, bnodeID) {
+          var bnodeData = bnodeExpansionDataCache[bnodeID];
           var addedData = [];
           const sourceX = cy.$("#" + id).position('x');
           const sourceY = cy.$("#" + id).position('y');
@@ -610,8 +637,8 @@
           })
         }
 
-        function removebNode(cy, id) {
-          var bnodeData = bnodeExpansionDataCache[id];
+        function removebNode(cy, id, bnodeID) {
+          var bnodeData = bnodeExpansionDataCache[bnodeID];
           Object.keys(bnodeData).forEach(function(key) {
             const value = bnodeData[key];
             const nodeID = convertToNodeID(id, key, value);
@@ -647,7 +674,7 @@
             const prefLabel = binding[0].prefLabel.value;
             const centerQnumber = binding[0].Q.value.split("/data/")[1];
             const prefLabelValue = prefLabel + "\nboltz:" + centerQnumber;
-            // console.log(centerQnumber);
+            console.log(centerQnumber);
 
             Object.keys(binding).forEach(function(key) {
                 const dataEntry = binding[key];
@@ -671,8 +698,9 @@
                 }
                 //store bnode info and add number to node id
                 if(dataEntry.y.type == 'bnode') {
+
                   var bnodeID = centerQnumber + "_rel_" + finalValue;
-                  console.log(bnodeID);
+                  // console.log(bnodeID);
                   if(!bnodeExpansionDataCache.hasOwnProperty(bnodeID)) {
                     bnodeExpansionDataCache[bnodeID] = {};
                   }
@@ -695,6 +723,7 @@
 
             
             resultData["prefLabel"] = prefLabelValue
+            console.log(resultData);
             return resultData;
         }
     </script>
