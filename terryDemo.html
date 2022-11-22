@@ -209,8 +209,47 @@
 
         }
 
-        function getDataResponse(taxon_value) {
-            const url = propertyQuery(taxon_value, true);
+        function propertyQueryWithQnumber(q, perform_query) {
+        const prevquery = document.getElementById("sparql2");
+        prevquery.innerHTML = 
+           `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+            PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+            PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+            PREFIX qudt:  <http://qudt.org/schema/qudt/>
+            PREFIX unit:  <http://qudt.org/vocab/unit/> 
+            PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+            PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
+            PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
+            PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
+            PREFIX la: <https://linked.art/ns/terms/>
+            PREFIX un: <http://www.w3.org/2007/ont/unit#> 
+            PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
+            SELECT *
+            Where {
+            BIND ( '${q}'@en AS ?Q).
+            ?Q skos:prefLabel ?prefLabel .
+            ?Q ?r ?y.
+            OPTIONAL {?Q ?r [?s ?z] FILTER isBlank(?y)}.
+            OPTIONAL {?y rdfs:label|skos:prefLabel ?yLabel}.
+            }`; 
+
+            
+            if (perform_query) {
+            const endpoint = d3.select("#endpoint2").property("value")
+            const sparql = d3.select("#sparql2").property("value")
+            const url = endpoint + "?query=" + encodeURIComponent(sparql)
+            return url
+            } else {
+            return false
+            }
+
+        }
+
+        function getDataResponse(value) {
+            const url = propertyQuery(value, true);
+            conceptNodeLabelToID = {};
             d3.json(url).then(function(data) {visualizeData(data);});
         }
 
@@ -469,24 +508,27 @@
                     roots:'#'+node.id(),
                     visit: function(v,e,u,i,depth) {
                       // console.log(v.id());
+                      
                       nodeStack.push(v.id());
                       // removeConceptNode(cy, v.id());
                     },
                     directed:true
                   });
                   const n = nodeStack.length;
-                  for(let i = 0; i < n - 1; i++) {
-                    const id = nodeStack.pop();
-                    // console.log(id);
-                    const label = cy.$('#' + id).json().data.label;
-                    cy.remove(cy.$('#' + id));
-                    // console.log(label);
-                    if(conceptNodeLabelToID[label] == id) {
-                      delete conceptNodeLabelToID[label];
-                    }
-                  }
+                  // for(let i = 0; i < n - 1; i++) {
+                  //   const id = nodeStack.pop();
+                  //   console.log(id);
+                    // const label = cy.$('#' + id).json().data.label;
+                  //   // console.log(label);
+                    
+                  //   cy.remove(cy.$('#' + id));
+                  //   // console.log(label);
+                    // if(conceptNodeLabelToID[label] == id) {
+                    //   delete conceptNodeLabelToID[label];
+                    // }
+                  // }
 
-                  // removeConceptNode(cy, node.id());
+                  removeConceptNode(cy, node.id());
                   cy.$("#" + node.id()).removeClass('readyToCollapse')
                   const x = cy.$("#" + node.id()).position('x');
                   const y = cy.$("#" + node.id()).position('y');
@@ -616,12 +658,22 @@
         function removeConceptNode(cy, id) {
           // console.log(id);
           const nodeData = conceptExpansionDataCache[id];
+          console.log(nodeData);
           Object.keys(nodeData).forEach(function(key) {
-            var value = nodeData[key];
-            const nodeID = convertToNodeID(id, key, value);
-            const edgeID = convertToEdgeID(id, key);
-            cy.remove(cy.$('#' + edgeID));
-            cy.remove(cy.$('#' + nodeID));
+            if(key != "prefLabel") {
+              var value = nodeData[key];
+              const nodeID = convertToNodeID(id, key, value);
+              const edgeID = convertToEdgeID(id, key);
+              if(!cy.$('#' + nodeID).hasClass('readyToCollapse')) {
+                const label = cy.$('#' + nodeID).json().data.label;
+                if(conceptNodeLabelToID[label] == nodeID) {
+                  delete conceptNodeLabelToID[label];
+                }
+                // console.log(cy.$('#' + nodeID).json());
+                cy.remove(cy.$('#' + edgeID));
+                cy.remove(cy.$('#' + nodeID));
+              }
+            }
             // conceptNodeLabelToID
           })
         }
@@ -690,7 +742,7 @@
         function getDataJSON(data) {
             const binding = data.results.bindings;
             if(binding.length === 0) {
-                alert('Please enter valid city name.');
+                alert('Please enter valid name.');
                 return undefined;
             }
             var resultData = {};
