@@ -2785,11 +2785,6 @@
       storeRatio = 2;
     }
 
-    // sleep time expects milliseconds
-    function sleep (time) {
-      return new Promise((resolve) => setTimeout(resolve, time));
-    }
-
     //COPIED DIRECTLY FROM THE NY TIMES SOURCE
     function fisheye() {
       let startTime = new Date().getTime();
@@ -2833,6 +2828,15 @@
       return fisheye;
     }
 
+
+    //FINDING THE NEW_NODE_WIDTH DIVIDEND
+    //new_node_width/4 for 26 children 
+    //new_node_width/2.5 for 8 children
+    //new_node_width/1.8 for 4 children
+    //creating a quadratic approximation to determine the appropriate node width
+    //using the three set of points from above was able to create a second-degree
+    //quadratic regression equation: -0.004 X^2 +0.225 X +0.967
+
     //copying the render() function from the NYTIMES fisheye algorithm 
     function render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth, first_x_pos, currentFocus) {
       let startTime = new Date().getTime();
@@ -2862,7 +2866,6 @@
 
     //NEW ADD_FISHEYE_EFFECT FUNCTION USING THE NY TIMES ALGORITHM
     function enableFisheye(cy_graph, siblings, first_x_pos) {
-
       let startTimee = new Date().getTime();
 
       let canvas_width = (FISHEYE_NODE_SIZE * (siblings.length));
@@ -2883,7 +2886,7 @@
 
       let curr_place = 'background';
 
-      sleep(500).then(() => cy_graph.on('mouseover', function (evt) {
+      cy_graph.on('mouseover', function (evt) {
 
         let x_pos_on_canvas;
         let evtTarget = evt.target;
@@ -2912,11 +2915,11 @@
           // desiredDistortion = 0;
           move();
         }
-      }));
+      });
 
 
 
-      sleep(500).then(() => cy_graph.on('mousemove', function (evt) {
+      cy_graph.on('mousemove', function (evt) {
         // console.log(desiredFocus)
         if (curr_place == 'canvas') {
           let x_pos_on_canvas = evt.position.x - first_x_pos;
@@ -2925,7 +2928,7 @@
           //console.log('desired Focus', desiredFocus, 'x pos on canvas', x_pos_on_canvas);
           move();
         }
-      }));
+      });
 
       function move() {
 
@@ -2949,7 +2952,7 @@
           // console.log("Render_func takes milliseconds", endTime - startTime)
         }
 
-        var timer = d3.timer(render_func);
+        var timer = d3.timer(render_func, 500);
 
       }
 
