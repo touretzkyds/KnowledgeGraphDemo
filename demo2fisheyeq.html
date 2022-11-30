@@ -2785,13 +2785,9 @@
       storeRatio = 2;
     }
 
-    // sleep time expects milliseconds
-    function sleep (time) {
-      return new Promise((resolve) => setTimeout(resolve, time));
-    }
-
     //COPIED DIRECTLY FROM THE NY TIMES SOURCE
     function fisheye() {
+      console.log("fisheye")
       let startTime = new Date().getTime();
 
       var min = 0,
@@ -2828,13 +2824,14 @@
       };
 
       let endTime = new Date().getTime();
-      console.log("fisheye takes milliseconds", endTime - startTime);
+      // console.log("fisheye takes milliseconds", endTime - startTime);
 
       return fisheye;
     }
 
     //copying the render() function from the NYTIMES fisheye algorithm 
     function render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth, first_x_pos, currentFocus) {
+      console.log("render_nodes")
       let startTime = new Date().getTime();
 
       for (let i = 0; i < siblings.length; i++) {
@@ -2860,14 +2857,14 @@
 
     //NEW ADD_FISHEYE_EFFECT FUNCTION USING THE NY TIMES ALGORITHM
     function enableFisheye(cy_graph, siblings, first_x_pos) {
-
+      console.log("enableFisheye")
       let startTimee = new Date().getTime();
 
       let canvas_width = (FISHEYE_NODE_SIZE * (siblings.length));
       let canvas_height = FISHEYE_NODE_SEP;
       let normalWidth = FISHEYE_NODE_SIZE;
 
-      console.log("canvas width", canvas_width);
+      // console.log("canvas width", canvas_width);
 
       let nodeWidth = normalWidth * 7; // Why?
       let nodeHeight = 225;
@@ -2877,12 +2874,12 @@
 
       let fisheye_fn_instance = fisheye().distortion(0).extent([0, canvas_width]);
 
-      console.log('initial distortion', fisheye_fn_instance.distortion())
+      // console.log('initial distortion', fisheye_fn_instance.distortion())
 
       let curr_place = 'background';
 
       cy_graph.on('mouseover', function (evt) {
-
+        // console.log('mouseover', curr_place)
         let x_pos_on_canvas;
         let evtTarget = evt.target;
         let data = evtTarget._private.data;
@@ -2898,7 +2895,7 @@
           desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
           //console.log('canvas width', canvas_width)
           //console.log('desired Focus', desiredFocus, 'x pos on canvas', x_pos_on_canvas);
-
+          console.log('mouseover moving 1')
           move();
           curr_place = 'canvas';
         } else {
@@ -2908,6 +2905,7 @@
           x_pos_on_canvas = evt.position.x - first_x_pos;
           desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
           // desiredDistortion = 0;
+          console.log('mouseover moving 2')
           move();
         }
       });
@@ -2915,20 +2913,27 @@
 
 
       cy_graph.on('mousemove', function (evt) {
-        // console.log(desiredFocus)
+        // console.log('mousemove', curr_place)
         if (curr_place == 'canvas') {
           let x_pos_on_canvas = evt.position.x - first_x_pos;
           //desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
           desiredFocus = Math.min(Math.max(0, x_pos_on_canvas), canvas_width);
           //console.log('desired Focus', desiredFocus, 'x pos on canvas', x_pos_on_canvas);
+          console.log('mousemove moving')
           move();
         }
       });
 
       function move() {
-
         console.log('moving')
-        if (idle) d3.timer(function() {
+        function idle_function() {
+          if (curr_place !== 'canvas') {
+            console.log('stop')
+            timer.stop()
+          } else {
+            console.log('restart')
+            timer.restart(idle_function)
+          }
           var currentDistortion = fisheye_fn_instance.distortion(),
             currentFocus = currentDistortion ? fisheye_fn_instance.focus() : desiredFocus;
           idle = Math.abs(desiredDistortion - currentDistortion) < .01 && Math.abs(desiredFocus - currentFocus) < .5;
@@ -2937,7 +2942,17 @@
           fisheye_fn_instance.focus(idle ? desiredFocus : currentFocus + (desiredFocus - currentFocus) * .14);
           render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth, first_x_pos, currentFocus);
           return idle;
-        });
+        }
+        if (idle) {
+          var timer = d3.timer(idle_function)
+          if (curr_place == 'canvas') {
+            console.log('stop')
+            timer.stop()
+          } else {
+            console.log('restart')
+            timer.restart(idle_function)
+          }
+        };
         // let render_func = function () {
         //   console.log("Render at ", new Date().getTime())
         //   let startTime = new Date().getTime();
@@ -2963,7 +2978,7 @@
       }
 
       let endTimee = new Date().getTime();
-      console.log("enableFisheye takes milliseconds", endTimee - startTimee)
+      //console.log("enableFisheye takes milliseconds", endTimee - startTimee)
       //this render_nodes function basically needs to redraw the nodes
       //giving them their appropriate canvas_width to create the fisheye effect
 
@@ -2973,6 +2988,8 @@
 
 
     function create_fisheye_nodes(node_qval, parent_and_all_children, cy_graph, qvals_to_names) {
+      console.log("create_fisheye_nodes")
+      
       let startTime = new Date().getTime();
 
       cy_graph.remove(`node[type = "fisheye-child"]`);
@@ -3076,7 +3093,7 @@
 
       enableFisheye(cy_graph, curr_children, first_x);
       let endTime = new Date().getTime();
-      console.log("Create_fisheye_Node takes milliseconds", endTime - startTime);
+      // console.log("Create_fisheye_Node takes milliseconds", endTime - startTime);
     }
 
     //givenData is an object {given_data: 'null'} if we're not going to be given anything, otherwise
