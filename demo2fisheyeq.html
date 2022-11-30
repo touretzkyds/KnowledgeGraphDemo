@@ -2831,7 +2831,6 @@
 
     //copying the render() function from the NYTIMES fisheye algorithm 
     function render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth, first_x_pos, currentFocus) {
-      console.log("render_nodes")
       let startTime = new Date().getTime();
 
       for (let i = 0; i < siblings.length; i++) {
@@ -2885,6 +2884,7 @@
         let data = evtTarget._private.data;
 
         if (data.type !== undefined) {
+          console.log(data.type)
           //we just moved over to the canvas
           desiredDistortion = nodeWidth / normalWidth - 1;
 
@@ -2927,13 +2927,13 @@
       function move() {
         console.log('moving')
         function idle_function() {
-          if (curr_place !== 'canvas') {
-            console.log('stop')
-            timer.stop()
-          } else {
-            console.log('restart')
-            timer.restart(idle_function)
-          }
+          // if (curr_place !== 'canvas') {
+          //   console.log('stop')
+          //   timer.stop()
+          // } else {
+          //   console.log('restart')
+          //   timer.restart(idle_function)
+          // }
           var currentDistortion = fisheye_fn_instance.distortion(),
             currentFocus = currentDistortion ? fisheye_fn_instance.focus() : desiredFocus;
           idle = Math.abs(desiredDistortion - currentDistortion) < .01 && Math.abs(desiredFocus - currentFocus) < .5;
@@ -2950,7 +2950,8 @@
             timer.stop()
           } else {
             console.log('restart')
-            timer.restart(idle_function)
+            d3.timerFlush()
+            // var timer = d3.timer(idle_function)
           }
         };
         // let render_func = function () {
