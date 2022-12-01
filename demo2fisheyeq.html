@@ -2831,6 +2831,7 @@
 
     //copying the render() function from the NYTIMES fisheye algorithm 
     function render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth, first_x_pos, currentFocus) {
+      console.log("render_nodes")
       let startTime = new Date().getTime();
 
       for (let i = 0; i < siblings.length; i++) {
@@ -2948,11 +2949,12 @@
           if (curr_place == 'canvas') {
             console.log('stop')
             timer.stop()
-          } else {
-            console.log('restart')
-            d3.timerFlush()
-            // var timer = d3.timer(idle_function)
-          }
+          } 
+          // else {
+          //   console.log('restart')
+          //   d3.timerFlush()
+          //   var timer = d3.timer(idle_function)
+          // }
         };
         // let render_func = function () {
         //   console.log("Render at ", new Date().getTime())
