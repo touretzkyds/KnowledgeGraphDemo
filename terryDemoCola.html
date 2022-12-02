@@ -272,6 +272,7 @@
             var nodes = [];
             var edges = [];
             var source = data.prefLabel.split("boltz:")[1];
+            conceptExpansionDataCache[source] = data;
             //how the id is defined?
             //node: if it's not a concept: <boltzQnumber of the source>_to_<relationship>
             // if it's a concept: <boltzQnumber>
@@ -508,7 +509,7 @@
                   const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
                   const bnodeID = sourceQnumber + "_rel_" + node.json().data.label;
                   removebNode(cy, node.id());
-                  cy.$("#" + node.id()).removeClass('readyToCollapse')
+                  cy.$("#" + node.id()).removeClass('readyToCollapse');
                   
                 }
               } else if(node.json().data.class === 'dummyConcept') {
@@ -528,223 +529,55 @@
                     d3.json(url).then(function(data) {addConceptNode(cy, node.id(), getDataJSON(data)[0]);});
                   }
 
-                  // var nodeStack = [];
-                  // var numOfNodesSmallerThanDepth1 = 0;
-                  // var centerConceptNodesWithDepth1 = [];
-                  // var deepCenterConceptNodes = [];
-
-                  // cy.elements().bfs({
-                  //   roots:'#'+node.id(),
-                  //   visit: function(v,e,u,i,depth) {
-                  //     if(depth <= 1) {
-                  //       numOfNodesSmallerThanDepth1++;
-                  //     }
-                  //     if(v.json().data.class == "concept") {
-                  //       if(depth == 1) {
-                  //         centerConceptNodesWithDepth1.push([v.id(), v.hasClass('readyToCollapse'), v.outgoers().length == 0]);
-                  //       } else if (depth > 1) {
-                  //         deepCenterConceptNodes.push([v.id(), v.hasClass('readyToCollapse'), v.outgoers().length == 0]);
-                  //       }
-                  //     }
-                      
-                  //     nodeStack.push(v.id());
-                      
-                  //   },
-                  //   directed:true
-                  // });
-                  // const n = nodeStack.length;
-                  // const n1 = centerConceptNodesWithDepth1.length;
-                  // const n2 = deepCenterConceptNodes.length;
-                  // for(let i = 0; i < n - numOfNodesSmallerThanDepth1; i++) {
-                  //   const id = nodeStack.pop();
-                  //   const label = cy.$('#' + id).json().data.label;
-                  //   cy.remove(cy.$('#' + id));
-                  //   if(conceptNodeLabelToID[label] == id) {
-                  //     delete conceptNodeLabelToID[label];
-                  //   }
-                  // }
-
-                  // for(let i = 0; i < n1; i++) {
-                    
-                  //   const idTuple = centerConceptNodesWithDepth1.shift();
-                  //   const id = idTuple[0];
-                  //   const isReadyToCollapse = idTuple[1];
-                  //   const isLeaf = idTuple[2];
-                  //   if(isLeaf) {
-                  //     continue;
-                  //   }
-                  //   // const x = cy.$("#" + id).position('x');
-                  //   // const y = cy.$("#" + id).position('y');
-                  //   // const sourceID = cy.$("#" + id).json().data.sourceID;
-                  //   // const sourceX = cy.$("#" + sourceID).position('x');
-                  //   // const sourceY = cy.$("#" + sourceID).position('y');
-                  //   // var startAngle = getAngleShift(x, y, sourceX, sourceY);
-                  //   const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
-                  //   // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
-                  //   if(conceptExpansionDataCache.hasOwnProperty(id)) {
-                  //     addConceptNode(cy, id, conceptExpansionDataCache[id]);
-                  //   } else {
-                  //     const url = propertyQuery(cityName, true);
-                  //     d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data)[0]);});
-                  //   }
-                  //   if(!isReadyToCollapse) {
-                  //     removeConceptNodeExceptConcept(cy, id);
-                  //   }
-                  // }
-                  // console.log(deepCenterConceptNodes);
-                  // for(let i = 0; i < n2; i++) {
-                  //   const idTuple = deepCenterConceptNodes.shift();
-                  //   const id = idTuple[0];
-                  //   const isReadyToCollapse = idTuple[1];
-                  //   const isLeaf = idTuple[2];
-                  //   if(isLeaf) {
-                  //     continue;
-                  //   }
-                  //   console.log(cy.$("#" + id).json());
-                  //   // const x = cy.$("#" + id).position('x');
-                  //   // const y = cy.$("#" + id).position('y');
-                  //   // const sourceID = cy.$("#" + id).json().data.sourceID;
-                  //   // const sourceX = cy.$("#" + sourceID).position('x');
-                  //   // const sourceY = cy.$("#" + sourceID).position('y');
-                  //   // cy.$("#" + id).shift({ x: 3*(x-sourceX), y: 3*(y-sourceY)});
-                  //   // var startAngle = getAngleShift(x, y, sourceX, sourceY);
-                  //   const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
-                  //   // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
-                  //   if(conceptExpansionDataCache.hasOwnProperty(id)) {
-                  //     addConceptNode(cy, id, conceptExpansionDataCache[id]);
-                  //   } else {
-                  //     const url = propertyQuery(cityName, true);
-                  //     d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data)[0]);});
-                  //   }
-                  //   if(!isReadyToCollapse) {
-                  //     removeConceptNodeExceptConcept(cy, id);
-                  //   }
-                  //   cy.$("#" + id).addClass('readyToCollapse')
-                  // }
-
                   cy.$("#" + node.id()).addClass('readyToCollapse');
-                  console.log(1111);
                   console.log(node.json().data);
                 } else {
                   cy.$("#" + node.id()).removeClass('readyToCollapse');
-                  console.log(11112);
                   console.log(node.json().data);
                   removeConceptNode(cy, node.id());
-                  // const x = cy.$("#" + node.id()).position('x');
-                  // const y = cy.$("#" + node.id()).position('y');
-                  // const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
-                  // const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
-                  // cy.$("#" + node.id()).shift({ x: -0.75*(x-sourceX), y: -0.75*(y-sourceY)});
-
-                  // var nodeStack = [];
-                  // var numOfNodesSmallerThanDepth1 = 0;
-                  // var centerConceptNodesWithDepth1 = [];
-                  // var deepCenterConceptNodes = [];
-                  // cy.elements().bfs({
-                  //   roots:'#'+node.id(),
-                  //   visit: function(v,e,u,i,depth) {
-                  //     if(depth <= 1) {
-                  //       numOfNodesSmallerThanDepth1++;
-                  //     }
-                  //     if(v.json().data.class == "concept") {
-                  //       if(depth == 1) {
-                  //         centerConceptNodesWithDepth1.push([v.id(), v.hasClass('readyToCollapse'), v.outgoers().length == 0]);
-                  //       } else if (depth > 1) {
-                  //         deepCenterConceptNodes.push([v.id(), v.hasClass('readyToCollapse'), v.outgoers().length == 0]);
-                  //       }
-                  //     }
-                  //     nodeStack.push(v.id());
-                  //   },
-                  //   directed:true
-                  // });
-                  // console.log(nodeStack);
-                  // const n = nodeStack.length;
-                  // const n1 = centerConceptNodesWithDepth1.length;
-                  // const n2 = deepCenterConceptNodes.length;
-                  // for(let i = 0; i < n - numOfNodesSmallerThanDepth1; i++) {
-                  //   const id = nodeStack.pop();
-                  //   const label = cy.$('#' + id).json().data.label;
-                  //   cy.remove(cy.$('#' + id));
-                  //   if(conceptNodeLabelToID[label] == id) {
-                  //     console.log(id);
-                  //     delete conceptNodeLabelToID[label];
-                  //   }
-                  // }
-
-                  // // adjust positions of properties
-                  // for(let i = 0; i < n1; i++) {
-                  //   const idTuple = centerConceptNodesWithDepth1.shift();
-                  //   const id = idTuple[0];
-                  //   const isReadyToCollapse = idTuple[1];
-                  //   const isLeaf = idTuple[2];
-                  //   if(isLeaf) {
-                  //     continue;
-                  //   }
-                    // const x = cy.$("#" + id).position('x');
-                    // const y = cy.$("#" + id).position('y');
-                    // const sourceID = cy.$("#" + id).json().data.sourceID;
-                    // const sourceX = cy.$("#" + sourceID).position('x');
-                    // const sourceY = cy.$("#" + sourceID).position('y');
-                    // var startAngle = getAngleShift(x, y, sourceX, sourceY);
-                  //   const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
-                  //   // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
-                  //   if(conceptExpansionDataCache.hasOwnProperty(id)) {
-                  //     addConceptNode(cy, id, conceptExpansionDataCache[id]);
-                  //   } else {
-                  //     const url = propertyQuery(cityName, true);
-                  //     d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data)[0]);});
-                  //   }
-                  //   if(!isReadyToCollapse) {
-                  //     removeConceptNodeExceptConcept(cy, id);
-                  //   }
-                  // }
-                  // for(let i = 0; i < n2; i++) {
-                  //   const idTuple = deepCenterConceptNodes.shift();
-                  //   const id = idTuple[0];
-                  //   const isReadyToCollapse = idTuple[1];
-                  //   const isLeaf = idTuple[2];
-                  //   if(isLeaf) {
-                  //     continue;
-                  //   }
-                    // const x = cy.$("#" + id).position('x');
-                    // const y = cy.$("#" + id).position('y');
-                    // const sourceID = cy.$("#" + id).json().data.sourceID;
-                    // const sourceX = cy.$("#" + sourceID).position('x');
-                    // const sourceY = cy.$("#" + sourceID).position('y');
-                    // cy.$("#" + id).shift({ x: 3*(x-sourceX), y: 3*(y-sourceY)});
-                    // var startAngle = getAngleShift(x, y, sourceX, sourceY);
-                  //   const cityName = cy.$("#" + id).json().data.label.split("\nboltz")[0]
-                  //   // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
-                  //   if(conceptExpansionDataCache.hasOwnProperty(id)) {
-                  //     addConceptNode(cy, id, conceptExpansionDataCache[id]);
-                  //   } else {
-                  //     const url = propertyQuery(cityName, true);
-                  //     d3.json(url).then(function(data) {addConceptNode(cy, id, getDataJSON(data)[0]);});
-                  //   }
-                  //   if(!isReadyToCollapse) {
-                  //     removeConceptNodeExceptConcept(cy, id);
-                  //   }
-                  //   cy.$("#" + id).addClass('readyToCollapse')
-                  // }
-                  // cy.$("#" + node.id()).shift({ x: -0.75*(x-sourceX), y: -0.75*(y-sourceY)});
-                  
                 }
               }
             });
             cy.on('cxttap', function(evt) {
               var node = evt.target;
               if(node.json().data.class === 'dummyConcept') {
+                cy.nodes(`[id = "${node.id()}"]`).style({
+                    'width': node.width() * 1.25,
+                    'height': node.height() * 1.25
+                });
+
+                const id = conceptNodeLabelToID[node.json().data.label];
+                if(cy.$("#" + id).json().data.class === 'concept') {
+                  cy.nodes(`[id = "${id}"]`).style({
+                    'width': cy.$('#'+id).width() * 0.8,
+                    'height': cy.$('#'+id).height() * 0.8,
+                    "background-color": '#FFFFFF',
+                  });
+                } else if(cy.$("#" + id).json().data.class === 'center') {
+                  cy.nodes(`[id = "${id}"]`).style({
+                    'width': cy.$('#'+id).width() * 0.8,
+                    'height': cy.$('#'+id).height() * 0.8,
+                    'background-color' : '#FFFFFF'
+                  });
+                }
+
+                // if(cy.$("#" + id).hasClass('readyToCollapse')) {
+                //   removeConceptNode(cy, id);
+                //   cy.$("#" + node.id()).removeClass('readyToCollapse');
+                // };
+
                 const currlabel = node.json().data.label;
                 console.log(currlabel);
                 cy.nodes().forEach(function( ele ){
-                  if(ele.json().data.label === currlabel && ele.json().data.class === 'concept') {
+                  if(ele.json().data.label === currlabel && (ele.json().data.class === 'concept' || ele.json().data.class === 'center')) {
                     
                     ele.json({data:{class:'dummyConcept'}});
                   }
                 });
+                node.json({data:{class:'concept'}});
+                conceptNodeLabelToID[node.json().data.label] = node.id();
               }
-              node.json({data:{class:'concept'}});
-              conceptNodeLabelToID[node.json().data.label] = node.id();
+              
             });
             cy.on('mouseover', function(evt) {
               var node = evt.target;
