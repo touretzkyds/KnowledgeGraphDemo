@@ -283,6 +283,7 @@
                 tempNode.data.label = value;
                 if(key == "prefLabel") {
                   tempNode.data.class = "center";
+                  tempNode.classes = "readyToCollapse";
                   tempNode.data.id = source;
                   conceptNodeLabelToID[value] = source;
                   nodes.push(tempNode);
@@ -477,17 +478,9 @@
               if(node.json().data.class === 'qudt') {
                 if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
                   console.log(node.id());
-                  // const x = cy.$("#" + node.id()).position('x');
-                  // const y = cy.$("#" + node.id()).position('y');
-                  // const sourceX = cy.$("#" + node.json().data.sourceID).position('x');
-                  // const sourceY = cy.$("#" + node.json().data.sourceID).position('y');
-                  // cy.$("#" + node.id()).shift({ x: x-sourceX, y: y-sourceY});
-
                   const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
                   const bnodeID = sourceQnumber + "_rel_" + node.json().data.label;
-                  // var startAngle = getAngleShift(x, y, sourceX, sourceY);
                   const sourceCityName = cy.$('#' + node.json().data.sourceID).json().data.label.split("\nboltz:")[0];
-                    // addConceptNode(cy, id, conceptExpansionDataCache[id], startAngle);
                     if(bnodeExpansionDataCache.hasOwnProperty(node.id())) {
                       addbNode(cy, node.id(), bnodeExpansionDataCache[node.id()]);
                     } else {
@@ -495,16 +488,7 @@
                       d3.json(url).then(function(data) {addbNode(cy, node.id(), getDataJSON(data)[1]);});
                     }
                   
-                  cy.$("#" + node.id()).addClass('readyToCollapse')
-                  var layout = cy.layout({
-                    name: 'cola',
-                    avoidOverlap: true,
-                    edgeLength: 500,
-                    nodeSpacing: 100,
-                    nodeDimensionsIncludeLabels: true,
-                  });
-                  
-                  layout.run();
+                  cy.$("#" + node.id()).addClass('readyToCollapse');
                 } else {
                   const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
                   const bnodeID = sourceQnumber + "_rel_" + node.json().data.label;
@@ -519,9 +503,6 @@
                 const cityName = node.json().data.label.split("\nboltz")[0]
                 if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
                   cy.center("#" + node.id());
-
-                  
-                  // var startAngle = getAngleShift(x, y, sourceX, sourceY);
                   if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
                     addConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()]);
                   } else {
@@ -547,6 +528,8 @@
                 });
 
                 const id = conceptNodeLabelToID[node.json().data.label];
+                console.log("before");
+                console.log(node.json());
                 if(cy.$("#" + id).json().data.class === 'concept') {
                   cy.nodes(`[id = "${id}"]`).style({
                     'width': cy.$('#'+id).width() * 0.8,
@@ -561,11 +544,6 @@
                   });
                 }
 
-                // if(cy.$("#" + id).hasClass('readyToCollapse')) {
-                //   removeConceptNode(cy, id);
-                //   cy.$("#" + node.id()).removeClass('readyToCollapse');
-                // };
-
                 const currlabel = node.json().data.label;
                 console.log(currlabel);
                 cy.nodes().forEach(function( ele ){
@@ -575,7 +553,14 @@
                   }
                 });
                 node.json({data:{class:'concept'}});
+                console.log("after");
+                console.log(node.json());
                 conceptNodeLabelToID[node.json().data.label] = node.id();
+
+                if(cy.$("#" + id).hasClass('readyToCollapse')) {
+                  removeConceptNode(cy, id);
+                  cy.$("#" + id).removeClass('readyToCollapse');
+                }
               }
               
             });
@@ -587,17 +572,12 @@
                     'height': node.height() * 1.25
                 });
               } else if(node.json().data.class === 'dummyConcept') {
-                // cy.nodes(`[id = "${node.id()}"]`).style({
-                //     'width': node.width() * 1.25,
-                //     'height': node.height() * 1.25
-                // });
                 const id = conceptNodeLabelToID[node.json().data.label];
                 cy.nodes(`[id = "${conceptNodeLabelToID[node.json().data.label]}"]`).style({
                     'width': cy.$('#'+id).width() * 1.25,
                     'height': cy.$('#'+id).height() * 1.25,
                     'background-color' : '#00FF00'
                 });
-                // cy.center("#" + id);
               }
             });
             cy.on('mouseout', function(evt) {
@@ -608,10 +588,6 @@
                     'height': node.height() * 0.8
                 });
               } else if(node.json().data.class === 'dummyConcept') {
-                // cy.nodes(`[id = "${node.id()}"]`).style({
-                //     'width': node.width() * 0.8,
-                //     'height': node.height() * 0.8
-                // });
                 const id = conceptNodeLabelToID[node.json().data.label];
                 if(cy.$("#" + id).json().data.class === 'concept') {
                   cy.nodes(`[id = "${id}"]`).style({
