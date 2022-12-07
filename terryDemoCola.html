@@ -172,6 +172,7 @@
         var bnodeExpansionDataCache = {};
         var conceptExpansionDataCache = {};
         var conceptNodeLabelToID = {};
+        var initialPositions = {};
 
         function propertyQuery(value, perform_query) {
         const prevquery = document.getElementById("sparql2");
@@ -324,6 +325,7 @@
             edgeLength: 500,
             nodeSpacing: 100,
             nodeDimensionsIncludeLabels: true,
+            centerGraph:true,
           });
           layout.run();
         }
@@ -494,13 +496,11 @@
             ],
             layout: {
               name: 'cola',
-              animate: false,
-              maxSimulationTime: 1000,
-              ungrabifyWhileSimulating: true,
               avoidOverlap: true,
               edgeLength: 500,
               nodeSpacing: 100,
               nodeDimensionsIncludeLabels: true,
+              centerGraph:true,
             } 
             });
             cy.on('tap', function(evt) {
@@ -635,9 +635,39 @@
                 } else if(cy.$("#" + id).json().data.class === 'greenConcept') {
                   cy.$("#"+id).json({data:{class:'concept'}});
                 }
-                
-                // cy.center("#" + id);
               }
+            });
+            cy.on('grab', function(evt){
+              var draggedNode = evt.target;
+              initialPositions[draggedNode.id()] = {
+                x: draggedNode.position('x'),
+                y: draggedNode.position('y')
+              };
+              var connectedNodes = draggedNode.neighborhood();
+              connectedNodes.forEach(function(node){
+                if(node.id() !== draggedNode.id()){
+                  initialPositions[node.id()] = {
+                    x: node.position('x'),
+                    y: node.position('y')
+                  };
+                }
+              });
+            });
+            cy.on('drag', function(evt){
+              var draggedNode = evt.target;
+              var connectedNodes = draggedNode.neighborhood();
+              connectedNodes.forEach(function(node){
+                if(node.id() !== draggedNode.id() && node.outgoers().length == 0){
+                  var dx = draggedNode.position('x') - initialPositions[draggedNode.id()].x; 
+                  var dy = draggedNode.position('y') - initialPositions[draggedNode.id()].y; 
+                  var newX = dx + initialPositions[node.id()].x;
+                  var newY = dy + initialPositions[node.id()].y;
+                  node.position({
+                    x: newX,
+                    y: newY
+                  });
+                }
+              });
             });
         }
 
