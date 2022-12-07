@@ -2831,7 +2831,7 @@
 
     //copying the render() function from the NYTIMES fisheye algorithm 
     function render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth, first_x_pos, currentFocus) {
-      console.log("render_nodes")
+      //console.log("render_nodes")
       let startTime = new Date().getTime();
 
       for (let i = 0; i < siblings.length; i++) {
@@ -2848,7 +2848,7 @@
         });
 
         cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).position({
-          x: first_x_pos + x0
+          x: first_x_pos + x0 + normalWidth/2
         });
       }
       let endTime = new Date().getTime();
@@ -2856,7 +2856,7 @@
     }
 
     //NEW ADD_FISHEYE_EFFECT FUNCTION USING THE NY TIMES ALGORITHM
-    function enableFisheye(cy_graph, siblings, first_x_pos, first_y_pos) {
+    function enableFisheye(cy_graph, siblings, first_x_pos) {
       console.log("enableFisheye")
       let startTimee = new Date().getTime();
 
@@ -2881,13 +2881,10 @@
       cy_graph.on('mouseover', function (evt) {
         // console.log('mouseover', curr_place)
         let x_pos_on_canvas, y_pos_on_canvas;
-        y_pos_on_canvas = evt.position.y - first_y_pos;
-        console.log('y', y_pos_on_canvas);
         let evtTarget = evt.target;
         let data = evtTarget._private.data;
-
-        if (data.type !== undefined) {
-          console.log(data.type)
+        console.log(data.type)
+        if (data.type === 'fisheye-child') {
           //we just moved over to the canvas
           desiredDistortion = nodeWidth / normalWidth - 1;
 
@@ -2898,17 +2895,17 @@
           desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
           //console.log('canvas width', canvas_width)
           //console.log('desired Focus', desiredFocus, 'x pos on canvas', x_pos_on_canvas);
-          console.log('mouseover moving 1')
-          move();
+          //console.log('mouseover moving 1')
           curr_place = 'canvas';
+          move();
         } else {
           //we've moved out of the canvas so it's mimicking the mouseout function
           curr_place = 'background';
           //mousemove() function
           x_pos_on_canvas = evt.position.x - first_x_pos;
           desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
-          // desiredDistortion = 0;
-          console.log('mouseover moving 2')
+          desiredDistortion = 0;
+          //console.log('mouseover moving 2')
           move();
         }
       });
@@ -2922,13 +2919,13 @@
           //desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
           desiredFocus = Math.min(Math.max(0, x_pos_on_canvas), canvas_width);
           //console.log('desired Focus', desiredFocus, 'x pos on canvas', x_pos_on_canvas);
-          console.log('mousemove moving')
+          //console.log('mousemove moving')
           move();
         }
       });
 
       function move() {
-        console.log('moving')
+        //console.log('moving')
         function idle_function() {
           // if (curr_place !== 'canvas') {
           //   console.log('stop')
@@ -2949,7 +2946,7 @@
         if (idle) {
           var timer = d3.timer(idle_function)
           if (curr_place == 'canvas') {
-            console.log('stop')
+            //console.log('stop')
             timer.stop()
           } 
           // else {
@@ -3030,7 +3027,6 @@
       let y_pos = cy_graph.nodes(`[id = "${node_qval}"]`).position().y + FISHEYE_NODE_DEPTH;
       let amount_before_x = (Math.floor((curr_children.length) / 2)) * FISHEYE_NODE_SEP;
       let first_x;
-      let first_y = cy_graph.nodes(`[id = "${node_qval}"]`).position().y;
 
       if (curr_children.length % 2 != 0) {
         first_x = curr_x - amount_before_x;
@@ -3097,7 +3093,7 @@
         }
       });
 
-      enableFisheye(cy_graph, curr_children, first_x, first_y);
+      enableFisheye(cy_graph, curr_children, first_x);
       let endTime = new Date().getTime();
       // console.log("Create_fisheye_Node takes milliseconds", endTime - startTime);
     }
