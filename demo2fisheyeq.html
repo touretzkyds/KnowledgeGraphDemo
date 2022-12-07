@@ -2856,7 +2856,7 @@
     }
 
     //NEW ADD_FISHEYE_EFFECT FUNCTION USING THE NY TIMES ALGORITHM
-    function enableFisheye(cy_graph, siblings, first_x_pos) {
+    function enableFisheye(cy_graph, siblings, first_x_pos, first_y_pos) {
       console.log("enableFisheye")
       let startTimee = new Date().getTime();
 
@@ -2880,7 +2880,9 @@
 
       cy_graph.on('mouseover', function (evt) {
         // console.log('mouseover', curr_place)
-        let x_pos_on_canvas;
+        let x_pos_on_canvas, y_pos_on_canvas;
+        y_pos_on_canvas = evt.position.y - first_y_pos;
+        console.log('y', y_pos_on_canvas);
         let evtTarget = evt.target;
         let data = evtTarget._private.data;
 
@@ -3028,6 +3030,7 @@
       let y_pos = cy_graph.nodes(`[id = "${node_qval}"]`).position().y + FISHEYE_NODE_DEPTH;
       let amount_before_x = (Math.floor((curr_children.length) / 2)) * FISHEYE_NODE_SEP;
       let first_x;
+      let first_y = cy_graph.nodes(`[id = "${node_qval}"]`).position().y;
 
       if (curr_children.length % 2 != 0) {
         first_x = curr_x - amount_before_x;
@@ -3094,7 +3097,7 @@
         }
       });
 
-      enableFisheye(cy_graph, curr_children, first_x);
+      enableFisheye(cy_graph, curr_children, first_x, first_y);
       let endTime = new Date().getTime();
       // console.log("Create_fisheye_Node takes milliseconds", endTime - startTime);
     }
