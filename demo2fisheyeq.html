@@ -2843,12 +2843,12 @@
         cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).ungrabify()
 
         cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).style({
-          'width': dx ? dx : normalWidth,
+          'width': dx ? dx : normalWidth*2.5,
           'font-size': dx ? .2 * dx : NORMAL_FONT_SIZE
         });
 
         cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).position({
-          x: dx ? first_x_pos + lastX + dx/2 : first_x_pos + lastX + NORMAL_FONT_SIZE/2
+          x: dx ? first_x_pos + lastX + dx/2 : first_x_pos + lastX + normalWidth+25
         });
         lastX += dx;
       }
