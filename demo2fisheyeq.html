@@ -2833,13 +2833,13 @@
     function render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth, first_x_pos, currentFocus) {
       //console.log("render_nodes")
       let startTime = new Date().getTime();
-
+      lastX = 0;
       for (let i = 0; i < siblings.length; i++) {
+        // console.log('lastX', lastX)
         let curr_node = siblings[i];
-        let x0 = fisheye_fn_instance(i * normalWidth),
+        var x0 = fisheye_fn_instance(i * normalWidth),
           x1 = fisheye_fn_instance((i + 1) * normalWidth),
           dx = Math.min(nodeWidth, x1 - x0);
-        //console.log('new node width', new_node_width)
         cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).ungrabify()
 
         cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).style({
@@ -2848,8 +2848,9 @@
         });
 
         cy_graph.nodes(`[id = "${siblings[i]}-fisheye"]`).position({
-          x: first_x_pos + x0 + normalWidth/2
+          x: dx ? first_x_pos + lastX + dx/2 : first_x_pos + lastX + NORMAL_FONT_SIZE/2
         });
+        lastX += dx;
       }
       let endTime = new Date().getTime();
       // console.log("render_nodes takes milliseconds", endTime - startTime);
@@ -2866,7 +2867,7 @@
 
       // console.log("canvas width", canvas_width);
 
-      let nodeWidth = normalWidth * 7; // Why?
+      let nodeWidth = normalWidth*5; // Why?
       let nodeHeight = 225;
       let desiredDistortion = 0,
         desiredFocus,
@@ -2892,10 +2893,8 @@
           //console.log('desired Distortion', desiredDistortion);
 
           x_pos_on_canvas = evt.position.x - first_x_pos;
+          // console.log('x', x_pos_on_canvas)
           desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
-          //console.log('canvas width', canvas_width)
-          //console.log('desired Focus', desiredFocus, 'x pos on canvas', x_pos_on_canvas);
-          //console.log('mouseover moving 1')
           curr_place = 'canvas';
           move();
         } else {
