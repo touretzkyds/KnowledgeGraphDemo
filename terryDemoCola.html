@@ -173,6 +173,7 @@
         var conceptExpansionDataCache = {};
         var conceptNodeLabelToID = {};
         var initialPositions = {};
+        // var constraints = [];
 
         function propertyQuery(value, perform_query) {
         const prevquery = document.getElementById("sparql2");
@@ -278,6 +279,7 @@
             //node: if it's not a concept: <boltzQnumber of the source>_to_<relationship>
             // if it's a concept: <boltzQnumber>
             //edge: <boltzQnumber of the source>_<relations>
+              console.log(data.type);
             Object.keys(data).forEach(function(key) {
                 var value = data[key];
                 var tempNode = {"data":{}};
@@ -287,6 +289,8 @@
                   tempNode.classes = "readyToCollapse";
                   tempNode.data.id = source;
                   conceptNodeLabelToID[value] = source;
+                  tempNode.data.type = data.type;
+                  console.log(tempNode);
                   nodes.push(tempNode);
                 } else {
                   tempNode.data.class = classifyclass(value);
@@ -300,6 +304,7 @@
 
                 
                   // tempNode.data.id = convertToNodeID(source, key, value);
+                  console.log(tempNode);
                   nodes.push(tempNode);
 
                   var tempEdge = {"data":{}};
@@ -318,7 +323,16 @@
             return [nodes, edges];
         }
 
-        function reLayout(cy) {
+        function reLayoutCola(cy, id) {
+          // let initialPosition = {};
+          // cy.nodes().each(function(node) {
+          //   if(cy.$("#"+node.id()).json().data.sourceID === id) {
+          //     initialPosition[node.id()] = {
+          //     x: cy.$("#"+id).position('x'),
+          //     y: cy.$("#"+id).position('y')
+          //   };
+          //   }
+          // });
           var layout = cy.layout({
             name: 'cola',
             avoidOverlap: true,
@@ -326,8 +340,45 @@
             nodeSpacing: 100,
             nodeDimensionsIncludeLabels: true,
             centerGraph:true,
+            // initialPositions:initialPosition,
+            numIter: 100000,
           });
-          layout.run();
+          // console.log(initialPosition);
+          
+          layout.start();
+        }
+
+        function reLayoutColaRemove(cy, id) {
+          // let constraint = [];
+          // cy.nodes().each(function(node) {
+          //   if(node.id() !== id) {
+          //     constraint.push({
+          //     type: 'lock',
+          //     node: node.id()
+          //   });
+          //   }
+          // });
+          var layout = cy.layout({
+            name: 'cola',
+            avoidOverlap: false,
+            edgeLength: 500,
+            nodeSpacing: 100,
+            nodeDimensionsIncludeLabels: true,
+            centerGraph:true,
+            // constraints:constraint,
+            numIter: 100000,
+          });
+          
+          layout.start();
+        }
+
+        function reLayoutDagre(cy) {
+            var layout = cy.layout({
+            name: 'dagre',
+            rankDir: 'TB', // Top-to-bottom layer direction
+            nodeDimensionsIncludeLabels: true
+          });
+          layout.start();
         }
 
         function visualizeData(data) {
@@ -675,8 +726,8 @@
           // const nodeData = getDataJSON(data);
           conceptExpansionDataCache[id] = nodeData;
           var addedData = [];
-          // const sourceX = cy.$("#" + id).position('x');
-          // const sourceY = cy.$("#" + id).position('y');
+          const sourceX = cy.$("#" + id).position('x');
+          const sourceY = cy.$("#" + id).position('y');
           const radius = 400;
           var numOfKeys = 0;
           
@@ -685,6 +736,7 @@
           }) 
           // console.log(startAngle);
           var count = 1;
+          cy.$("#"+id).data("type", nodeData.type);
           Object.keys(nodeData).forEach(function(key) {
             if(key != "prefLabel") {
               var value = nodeData[key];
@@ -703,12 +755,14 @@
               }
               }
               
+              const radian = (Math.PI * 2 / numOfKeys) * count;  
+              const x = sourceX + radius * Math.sin(radian);
+              const y = sourceY - radius * Math.cos(radian);
+              tempNode.position = {x:x, y:y};
+
               addedData.push(tempNode);
               
-              // const radian = startAngle + (Math.PI * 2 / numOfKeys) * count;  
-              // const x = sourceX + radius * Math.sin(radian);
-              // const y = sourceY - radius * Math.cos(radian);
-              // tempNode.position = {x:x, y:y};
+              
 
               var tempEdge = {"data":{}}
               tempEdge.group = "edges";
@@ -725,7 +779,7 @@
               // console.log(tempEdge.data.id);
             }
           })
-          reLayout(cy);
+          reLayoutCola(cy, id);
         }
 
         function removeConceptNode(cy, id) {
@@ -746,6 +800,7 @@
               }
             }
           })
+          reLayoutColaRemove(cy, id);
           // reLayout(cy);
         }
 
@@ -765,6 +820,7 @@
             }
             // conceptNodeLabelToID
           })
+          reLayoutColaRemove(cy, id);
           // reLayout(cy);
         }
 
@@ -776,8 +832,8 @@
             bnodeData = bnodeData.b1;
           }
           var addedData = [];
-          // const sourceX = cy.$("#" + id).position('x');
-          // const sourceY = cy.$("#" + id).position('y');
+          const sourceX = cy.$("#" + id).position('x');
+          const sourceY = cy.$("#" + id).position('y');
           const radius = 300;
           var numOfKeys = 1;
           Object.keys(bnodeData).forEach(function(key) {
@@ -792,10 +848,10 @@
             const dataID = convertToNodeID(id, key, value);
             tempNode.data = {id: dataID, label: value, class: 'bnode'};
             tempNode.data.sourceID = id;
-            // const radian = startAngle + (Math.PI * 2 / numOfKeys) * count;  
-            // const x = sourceX + radius * Math.sin(radian);
-            // const y = sourceY - radius * Math.cos(radian);
-            // tempNode.position = {x:x, y:y};
+            const radian = (Math.PI * 2 / numOfKeys) * count;  
+            const x = sourceX + radius * Math.sin(radian);
+            const y = sourceY - radius * Math.cos(radian);
+            tempNode.position = {x:x, y:y};
 
             var tempEdge = {}
             tempEdge.group = "edges";
@@ -806,7 +862,7 @@
             addedData = [];
             count++;
           })
-          reLayout(cy);
+          reLayoutCola(cy, id);
         }
 
         function removebNode(cy, id) {
@@ -824,6 +880,7 @@
             cy.remove(cy.$('#' + nodeID));
           })
           // reLayout(cy);
+          reLayoutColaRemove(cy, id);
         }
 
         function convertToEdgeID(id, key) {
