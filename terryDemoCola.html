@@ -279,18 +279,17 @@
             //node: if it's not a concept: <boltzQnumber of the source>_to_<relationship>
             // if it's a concept: <boltzQnumber>
             //edge: <boltzQnumber of the source>_<relations>
-              console.log(data.type);
             Object.keys(data).forEach(function(key) {
                 var value = data[key];
                 var tempNode = {"data":{}};
                 tempNode.data.label = value;
+                tempNode.data.type = data.type;
                 if(key == "prefLabel") {
                   tempNode.data.class = "center";
                   tempNode.classes = "readyToCollapse";
                   tempNode.data.id = source;
                   conceptNodeLabelToID[value] = source;
-                  tempNode.data.type = data.type;
-                  console.log(tempNode);
+                  // tempNode.data.type = data.type;
                   nodes.push(tempNode);
                 } else {
                   tempNode.data.class = classifyclass(value);
@@ -304,7 +303,7 @@
 
                 
                   // tempNode.data.id = convertToNodeID(source, key, value);
-                  console.log(tempNode);
+                  
                   nodes.push(tempNode);
 
                   var tempEdge = {"data":{}};
@@ -317,22 +316,23 @@
                   }
                 }
             })
-            // console.log(nodes);
-            // console.log(edges);
-            // console.log(source);
+            // push dummy nodes to split canvas
+            var tempNode1 = {"data":{}};
+            tempNode1.position = {x:500, y:500};
+            tempNode1.data.id = "d1";
+            tempNode1.data.label = "d1"; 
+
+            var tempNode2 = {"data":{}};
+            tempNode2.position = {x:500, y:2000};
+            tempNode2.data.id = "d2";
+            tempNode2.data.label = "d2"; 
+
+            nodes.push(tempNode1);
+            nodes.push(tempNode2);
             return [nodes, edges];
         }
 
         function reLayoutCola(cy, id) {
-          // let initialPosition = {};
-          // cy.nodes().each(function(node) {
-          //   if(cy.$("#"+node.id()).json().data.sourceID === id) {
-          //     initialPosition[node.id()] = {
-          //     x: cy.$("#"+id).position('x'),
-          //     y: cy.$("#"+id).position('y')
-          //   };
-          //   }
-          // });
           var layout = cy.layout({
             name: 'cola',
             avoidOverlap: true,
@@ -340,45 +340,19 @@
             nodeSpacing: 100,
             nodeDimensionsIncludeLabels: true,
             centerGraph:true,
-            // initialPositions:initialPosition,
+            // gapInequalities: constraints,
             numIter: 100000,
           });
-          // console.log(initialPosition);
           
           layout.start();
         }
 
         function reLayoutColaRemove(cy, id) {
-          // let constraint = [];
-          // cy.nodes().each(function(node) {
-          //   if(node.id() !== id) {
-          //     constraint.push({
-          //     type: 'lock',
-          //     node: node.id()
-          //   });
-          //   }
-          // });
-          var layout = cy.layout({
-            name: 'cola',
-            avoidOverlap: false,
-            edgeLength: 500,
-            nodeSpacing: 100,
-            nodeDimensionsIncludeLabels: true,
-            centerGraph:true,
-            // constraints:constraint,
-            numIter: 100000,
-          });
-          
-          layout.start();
         }
 
-        function reLayoutDagre(cy) {
-            var layout = cy.layout({
-            name: 'dagre',
-            rankDir: 'TB', // Top-to-bottom layer direction
-            nodeDimensionsIncludeLabels: true
-          });
-          layout.start();
+        function reSetType(cy, id) {
+          const idForSourceNode = cy.$("#"+id).json().data.sourceID;
+          cy.$("#"+id).json({data:{type: cy.$("#"+idForSourceNode).json().data.type}});
         }
 
         function visualizeData(data) {
@@ -388,7 +362,6 @@
             }
             
             const nodes = CytoscapeData[0];
-            // console.log(nodes);
             const edges = CytoscapeData[1];
             var cy = cytoscape({
             container: document.getElementById('cy'), // container to render in
@@ -558,7 +531,6 @@
               var node = evt.target;
               if(node.json().data.class === 'qudt') {
                 if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
-                  console.log(node.id());
                   const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
                   const bnodeID = sourceQnumber + "_rel_" + node.json().data.label;
                   const sourceCityName = cy.$('#' + node.json().data.sourceID).json().data.label.split("\nboltz:")[0];
@@ -592,10 +564,8 @@
                   }
 
                   cy.$("#" + node.id()).addClass('readyToCollapse');
-                  console.log(node.json().data);
                 } else {
                   cy.$("#" + node.id()).removeClass('readyToCollapse');
-                  console.log(node.json().data);
                   removeConceptNode(cy, node.id());
                 }
               }
@@ -609,8 +579,6 @@
                 });
 
                 const id = conceptNodeLabelToID[node.json().data.label];
-                console.log("before");
-                console.log(node.json());
                 if(id !== undefined) {
                   cy.nodes(`[id = "${id}"]`).style({
                     'width': cy.$('#'+id).width() * 0.8,
@@ -625,15 +593,12 @@
                 
 
                 const currlabel = node.json().data.label;
-                console.log(currlabel);
                 cy.nodes().forEach(function( ele ){
                   if(ele.json().data.label === currlabel && (ele.json().data.class === 'concept' || ele.json().data.class === 'center')) {
                     ele.json({data:{class:'dummyConcept'}});
                   }
                 });
                 node.json({data:{class:'concept'}});
-                console.log("after");
-                console.log(node.json());
                 conceptNodeLabelToID[node.json().data.label] = node.id();
 
                 if(id !== undefined) {
@@ -720,6 +685,9 @@
                 }
               });
             });
+
+            cy.$("#d1").lock();
+            cy.$("#d2").lock();
         }
 
         function addConceptNode(cy, id, nodeData) {
@@ -734,7 +702,6 @@
           Object.keys(nodeData).forEach(function(key) {
             numOfKeys++;
           }) 
-          // console.log(startAngle);
           var count = 1;
           cy.$("#"+id).data("type", nodeData.type);
           Object.keys(nodeData).forEach(function(key) {
@@ -742,6 +709,7 @@
               var value = nodeData[key];
 
               var tempNode = {"data":{}}
+              tempNode.data.type = nodeData.type;
               tempNode.group = "nodes";
               tempNode.data.label = value;
               tempNode.data.class = classifyclass(value);
@@ -775,8 +743,6 @@
               cy.add(addedData);
               addedData = [];
               count++;
-              // console.log(tempNode.data.id);
-              // console.log(tempEdge.data.id);
             }
           })
           reLayoutCola(cy, id);
@@ -784,7 +750,6 @@
 
         function removeConceptNode(cy, id) {
           const nodeData = conceptExpansionDataCache[id];
-          console.log(nodeData);
           Object.keys(nodeData).forEach(function(key) {
             if(key != "prefLabel") {
               var value = nodeData[key];
@@ -800,14 +765,13 @@
               }
             }
           })
+          reSetType(cy, id);
           reLayoutColaRemove(cy, id);
           // reLayout(cy);
         }
 
         function removeConceptNodeExceptConcept(cy, id) {
-          // console.log(id);
           const nodeData = conceptExpansionDataCache[id];
-          console.log(nodeData);
           Object.keys(nodeData).forEach(function(key) {
             if(key != "prefLabel") {
               var value = nodeData[key];
@@ -820,6 +784,7 @@
             }
             // conceptNodeLabelToID
           })
+          reSetType(cy, id);
           reLayoutColaRemove(cy, id);
           // reLayout(cy);
         }
@@ -845,8 +810,9 @@
             
             var tempNode = {}
             tempNode.group = "nodes";
+            
             const dataID = convertToNodeID(id, key, value);
-            tempNode.data = {id: dataID, label: value, class: 'bnode'};
+            tempNode.data = {id: dataID, label: value, class: 'bnode', type: cy.$("#"+id).json().data.type};
             tempNode.data.sourceID = id;
             const radian = (Math.PI * 2 / numOfKeys) * count;  
             const x = sourceX + radius * Math.sin(radian);
@@ -879,7 +845,6 @@
             cy.remove(cy.$('#' + edgeID));
             cy.remove(cy.$('#' + nodeID));
           })
-          // reLayout(cy);
           reLayoutColaRemove(cy, id);
         }
 
@@ -909,11 +874,10 @@
             const prefLabel = binding[0].prefLabel.value;
             const centerQnumber = binding[0].Q.value.split("/data/")[1];
             const prefLabelValue = prefLabel + "\nboltz:" + centerQnumber;
-            console.log(centerQnumber);
+            
 
             Object.keys(binding).forEach(function(key) {
                 const dataEntry = binding[key];
-                // console.log(dataEntry);
                 var relation = dataEntry.r.value;
                 if(relation.includes("skos")) {
                   relation = relation.split("core#")[1];
@@ -935,7 +899,6 @@
                 if(dataEntry.y.type == 'bnode') {
 
                   var bnodeID = finalValue;
-                  // console.log(bnodeID);
                   if(!bnodeData.hasOwnProperty(bnodeID)) {
                     // bnodeExpansionDataCache[bnodeID] = {};
                     bnodeData[bnodeID] = {};
@@ -959,9 +922,6 @@
 
             
             resultData["prefLabel"] = prefLabelValue
-            console.log('bnodedata is');
-            console.log(bnodeData);
-            console.log(resultData);
             return [resultData, bnodeData];
         }
     </script>
