@@ -2879,10 +2879,22 @@
 
       let curr_place = 'background';
 
+      function idle_function() {
+        console.log('idle function')
+        var currentDistortion = fisheye_fn_instance.distortion(),
+          currentFocus = currentDistortion ? fisheye_fn_instance.focus() : desiredFocus;
+        idle = Math.abs(desiredDistortion - currentDistortion) < .01 && Math.abs(desiredFocus - currentFocus) < .5;
+        
+        fisheye_fn_instance.distortion(idle ? desiredDistortion : currentDistortion + (desiredDistortion - currentDistortion) * .14);
+        fisheye_fn_instance.focus(idle ? desiredFocus : currentFocus + (desiredFocus - currentFocus) * .14);
+        render_nodes(cy_graph, siblings, fisheye_fn_instance, normalWidth, nodeWidth, first_x_pos, currentFocus);
+        return idle;
+      }
+
       cy_graph.on('mousemove', function (evt) {
         // console.log('mouseover', curr_place)
         let x_pos_on_canvas = evt.position.x - first_x_pos;
-        console.log('x_pos', x_pos_on_canvas, 'canvas_width', canvas_width)
+        // console.log('x_pos', x_pos_on_canvas, 'canvas_width', canvas_width)
         let evtTarget = evt.target;
         let data = evtTarget._private.data;
         if (data.type == 'fisheye-child' && x_pos_on_canvas < canvas_width && x_pos_on_canvas > 0) {
@@ -2895,8 +2907,15 @@
           // x_pos_on_canvas = evt.position.x - first_x_pos;
           // console.log('x', x_pos_on_canvas)
           desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
+          if (idle) {
+            var timer = d3.timer(idle_function)
+            if (curr_place == 'background') {
+              console.log('stop background')
+              timer.stop()
+            }
+          }
           curr_place = 'canvas';
-          move();
+          // idle_function()
         } else {
           //we've moved out of the canvas so it's mimicking the mouseout function
           curr_place = 'background';
@@ -2905,7 +2924,15 @@
           desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
           desiredDistortion = 0;
           //console.log('mouseover moving 2')
-          move();
+          console.log('idle', idle)
+          idle_function()
+          // if (idle) {
+          //   var timer = d3.timer(idle_function)
+          //   if (curr_place == 'canvas') {
+          //     console.log('stop background')
+          //     timer.stop()
+          //   } 
+          // }
         }
       });
 
@@ -2949,11 +2976,6 @@
             //console.log('stop')
             timer.stop()
           } 
-          // else {
-          //   console.log('restart')
-          //   d3.timerFlush()
-          //   var timer = d3.timer(idle_function)
-          // }
         };
         // let render_func = function () {
         //   console.log("Render at ", new Date().getTime())
