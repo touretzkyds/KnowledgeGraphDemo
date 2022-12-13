@@ -317,22 +317,107 @@
                 }
             })
             // push dummy nodes to split canvas
+            const p = 1500;
+            const factor = 5;
             var tempNode1 = {"data":{}};
-            tempNode1.position = {x:500, y:500};
+            tempNode1.position = {x:0, y:0};
             tempNode1.data.id = "d1";
             tempNode1.data.label = "d1"; 
+            tempNode1.data.class = "dummy"; 
 
             var tempNode2 = {"data":{}};
-            tempNode2.position = {x:500, y:2000};
+            tempNode2.position = {x:factor*p, y:0};
             tempNode2.data.id = "d2";
             tempNode2.data.label = "d2"; 
+            tempNode2.data.class = "dummy"; 
+
+            var tempNode3 = {"data":{}};
+            tempNode3.position = {x:0, y:p};
+            tempNode3.data.id = "d3";
+            tempNode3.data.label = "d3"; 
+            tempNode3.data.class = "dummy"; 
+
+            var tempNode4 = {"data":{}};
+            tempNode4.position = {x:factor*p, y:p};
+            tempNode4.data.id = "d4";
+            tempNode4.data.label = "d4"; 
+            tempNode4.data.class = "dummy"; 
+
+            var tempNode5 = {"data":{}};
+            tempNode5.position = {x:0, y:2*p};
+            tempNode5.data.id = "d5";
+            tempNode5.data.label = "d5"; 
+            tempNode5.data.class = "dummy"; 
+
+            var tempNode6 = {"data":{}};
+            tempNode6.position = {x:factor*p, y:2*p};
+            tempNode6.data.id = "d6";
+            tempNode6.data.label = "d6"; 
+            tempNode6.data.class = "dummy"; 
+
+            var tempNode7 = {"data":{}};
+            tempNode7.position = {x:0, y:3*p};
+            tempNode7.data.id = "d7";
+            tempNode7.data.label = "d7"; 
+            tempNode7.data.class = "dummy"; 
+
+            var tempNode8 = {"data":{}};
+            tempNode8.position = {x:factor*p, y:3*p};
+            tempNode8.data.id = "d8";
+            tempNode8.data.label = "d8"; 
+            tempNode8.data.class = "dummy"; 
 
             nodes.push(tempNode1);
             nodes.push(tempNode2);
+            nodes.push(tempNode3);
+            nodes.push(tempNode4);
+            nodes.push(tempNode5);
+            nodes.push(tempNode6);
+            nodes.push(tempNode7);
+            nodes.push(tempNode8);
             return [nodes, edges];
         }
 
-        function reLayoutCola(cy, id) {
+        function reLayoutCola(cy) {
+          var constraints = []
+          const idArray = ["d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8"]
+          const gap = 500;
+          cy.nodes().forEach(function(ele){
+            if(!idArray.includes(ele.id())) {
+              if(ele.json().data.type == "State") {
+                constraints.push({ axis: 'x', left: cy.$("#d1"), right: ele, gap: gap });
+                constraints.push({ axis: 'y', left: cy.$("#d1"), right: ele, gap: gap });
+                constraints.push({ axis: 'x', left: ele, right: cy.$("#d4"), gap: gap });
+                constraints.push({ axis: 'y', left: ele, right: cy.$("#d4"), gap: gap });
+
+                // constraints.push({ axis: 'x', left: cy.$("#d3"), right: ele, gap: gap });
+                // constraints.push({ axis: 'y', left: cy.$("#d3"), right: ele, gap: gap });
+                // constraints.push({ axis: 'x', left: ele, right: cy.$("#d2"), gap: gap });
+                // constraints.push({ axis: 'y', left: ele, right: cy.$("#d2"), gap: gap });
+              } else if(ele.json().data.type == "County") {
+                constraints.push({ axis: 'x', left: cy.$("#d3"), right: ele, gap: gap });
+                constraints.push({ axis: 'y', left: cy.$("#d3"), right: ele, gap: gap });
+                constraints.push({ axis: 'x', left: ele, right: cy.$("#d6"), gap: gap });
+                constraints.push({ axis: 'y', left: ele, right: cy.$("#d6"), gap: gap });
+
+                // constraints.push({ axis: 'x', left: cy.$("#d5"), right: ele, gap: gap });
+                // constraints.push({ axis: 'y', left: cy.$("#d5"), right: ele, gap: gap });
+                // constraints.push({ axis: 'x', left: ele, right: cy.$("#d4"), gap: gap });
+                // constraints.push({ axis: 'y', left: ele, right: cy.$("#d4"), gap: gap });
+              } else {
+                console.log(ele.id());
+                constraints.push({ axis: 'x', left: cy.$("#d5"), right: ele, gap: gap });
+                constraints.push({ axis: 'y', left: cy.$("#d5"), right: ele, gap: gap });
+                constraints.push({ axis: 'x', left: ele, right: cy.$("#d8"), gap: gap });
+                constraints.push({ axis: 'y', left: ele, right: cy.$("#d8"), gap: gap });
+
+                // constraints.push({ axis: 'x', left: cy.$("#d7"), right: ele, gap: gap });
+                // constraints.push({ axis: 'y', left: cy.$("#d7"), right: ele, gap: gap });
+                // constraints.push({ axis: 'x', left: ele, right: cy.$("#d6"), gap: gap });
+                // constraints.push({ axis: 'y', left: ele, right: cy.$("#d6"), gap: gap });
+              }
+            }
+          });
           var layout = cy.layout({
             name: 'cola',
             avoidOverlap: true,
@@ -340,14 +425,11 @@
             nodeSpacing: 100,
             nodeDimensionsIncludeLabels: true,
             centerGraph:true,
-            // gapInequalities: constraints,
+            gapInequalities: constraints,
             numIter: 100000,
           });
           
           layout.start();
-        }
-
-        function reLayoutColaRemove(cy, id) {
         }
 
         function reSetType(cy, id) {
@@ -506,6 +588,22 @@
                 }
             },
             {
+                selector: 'node[class = "dummy"]',
+                style: {
+                  'shape': 'ellipse',
+                  'border-style': 'solid',
+                  'width':100,
+                  'height':100,
+                  "background-color": 'red',
+                  'text-max-width': 80,
+                  'label': 'data(label)',
+                  'font-size': 30,
+                  'font-family': 'Garamond',
+                  'line-height': 1.15,
+                  'text-valign': 'center',
+                }
+            },
+            {
                 selector: 'edge',
                 style: {
                   'curve-style': 'bezier',
@@ -517,7 +615,8 @@
                   'label': 'data(label)'
                 } 
             }
-            ],
+            ]
+            ,
             layout: {
               name: 'cola',
               avoidOverlap: true,
@@ -688,6 +787,13 @@
 
             cy.$("#d1").lock();
             cy.$("#d2").lock();
+            cy.$("#d3").lock();
+            cy.$("#d4").lock();
+            cy.$("#d5").lock();
+            cy.$("#d6").lock();
+            cy.$("#d7").lock();
+            cy.$("#d8").lock();
+            // reLayoutCola(cy);
         }
 
         function addConceptNode(cy, id, nodeData) {
@@ -745,7 +851,7 @@
               count++;
             }
           })
-          reLayoutCola(cy, id);
+          reLayoutCola(cy);
         }
 
         function removeConceptNode(cy, id) {
@@ -766,7 +872,6 @@
             }
           })
           reSetType(cy, id);
-          reLayoutColaRemove(cy, id);
           // reLayout(cy);
         }
 
@@ -785,7 +890,6 @@
             // conceptNodeLabelToID
           })
           reSetType(cy, id);
-          reLayoutColaRemove(cy, id);
           // reLayout(cy);
         }
 
@@ -828,7 +932,7 @@
             addedData = [];
             count++;
           })
-          reLayoutCola(cy, id);
+          reLayoutCola(cy);
         }
 
         function removebNode(cy, id) {
@@ -845,7 +949,6 @@
             cy.remove(cy.$('#' + edgeID));
             cy.remove(cy.$('#' + nodeID));
           })
-          reLayoutColaRemove(cy, id);
         }
 
         function convertToEdgeID(id, key) {
