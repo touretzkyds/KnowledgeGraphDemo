@@ -180,6 +180,9 @@
         let graph_type;
         let global_node_qval;
         let fisheye_enabled = false;
+        let timerCount = 0;
+        let timer;
+        let timerArray;
 
         const ROOT_QVAL = "Q729";
         const ROOT_NAME = "Animalia";
@@ -3016,7 +3019,7 @@
         //NEW ADD_FISHEYE_EFFECT FUNCTION USING THE NY TIMES ALGORITHM
         function enableFisheye(cy_graph, siblings, first_x_pos) {
             console.log("enableFisheye")
-            let startTimee = new Date().getTime();
+            // let startTimee = new Date().getTime();
 
             let canvas_width = (FISHEYE_NODE_SIZE * (siblings.length));
             let canvas_height = FISHEYE_NODE_SEP;
@@ -3037,6 +3040,7 @@
             let curr_place = 'background';
 
             function idle_function() {
+                // console.log('timerCount', timerCount)
                 // console.log('idle val', idle)
                 var currentDistortion = fisheye_fn_instance.distortion(),
                     currentFocus = currentDistortion ? fisheye_fn_instance.focus() : desiredFocus;
@@ -3065,7 +3069,12 @@
                     // console.log('x', x_pos_on_canvas)
                     desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
                     if (idle) {
-                        var timer = d3.timer(idle_function)
+                        timer = d3.timer(idle_function);
+                        if (timerArray == undefined) {
+                            timerArray = [timer];
+                        } else {
+                            timerArray.push(timer);
+                        }
                     }
                     curr_place = 'canvas';
                     // idle_function()
@@ -3077,7 +3086,7 @@
                     desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
                     desiredDistortion = 0;
                     //console.log('mouseover moving 2')
-                    idle_function()
+                    //  idle_function()
 
                     // if (idle) {
                     //   var timer = d3.timer(idle_function)
@@ -3088,8 +3097,6 @@
                     // }
                 }
             });
-
-
 
             // cy_graph.on('mousemove', function (evt) {
             //   // console.log('mousemove', curr_place)
@@ -3754,6 +3761,13 @@
                 cy.remove(`node[type = "bnode"]`);
                 cy.remove(`node[type = "image"]`);
                 cy.remove("node[width = 120]");
+
+                if (timerArray != undefined) {
+                    timerArray.forEach(timer => {
+                        timer.stop();
+                    });
+                    timerArray = []
+                }
 
                 if (Object.keys(data).length == 0) {
                     //USER CLICKED THE BACKGROUND
