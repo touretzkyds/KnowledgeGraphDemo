@@ -179,6 +179,7 @@
         let data_obj;
         let graph_type;
         let global_node_qval;
+        let old_global_node_qval;
         let fisheye_enabled = false;
         let timerCount = 0;
         let timer;
@@ -1683,7 +1684,6 @@
         function create_property_nodes_intermediate(node_qval, data, cy_graph,
             pos, pc_edges, prop_node_diam, graphType_pc_edges, taxon_qvals,
             all_ranks, given_taxon, parent_and_all_children, nodes_we_came_from) {
-
             let node_name = taxon_qvals[node_qval];
             let url = box_node_query(node_name, true);
             d3.json(url).then(function (json_result) {
@@ -1700,7 +1700,6 @@
         function create_property_nodes(node_qval, data, cy_graph, pos, pc_edges,
             prop_node_diam, graphType_pc_edges, all_bnodes, taxon_qvals, all_ranks,
             given_taxon, parent_and_all_children, nodes_we_came_from) {
-
 
             let node_name = taxon_qvals[node_qval]
             let prop_node_height = prop_node_diam;
@@ -2122,7 +2121,6 @@
             create_property_nodes_intermediate(node_qval, data, cy_graph, pos, pc_edges,
                 prop_node_diam, graphType_pc_edges, taxon_qvals, all_ranks, given_taxon,
                 parent_and_all_children, nodes_we_came_from);
-
         }
 
 
@@ -2485,12 +2483,6 @@
             let navDisplayParent = document.getElementById("navigation-history");
             navDisplayParent.innerHTML = "";
 
-            let id_label = `[id = '${given_taxon}']`;
-            cy_graph.nodes(id_label).style({
-                "background-color": "red",
-                'border-width': 0
-            });
-
             let node_name = taxon_qvals[node_qval];
 
             children.forEach(qval => {
@@ -2512,6 +2504,7 @@
             pc_edges, prop_node_diam, graphType_pc_edges, id_lastclicked_node, taxon_qvals,
             parent_and_all_children, nodes_we_came_from) {
 
+            console.log('get_properties');
             let four_relationships_qvals = display_nav_buttons(node_qval, graphType_pc_edges, taxon_qvals, parent_and_all_children, nodes_we_came_from);
             let relationships = ["nav-down", "nav-left", "nav-right", "nav-up", "nav-down-left", "nav-down-right"];
             //relationships needs to be in the same order as is returned by the function display nav buttons
@@ -2529,8 +2522,24 @@
                 }
                 if (qval != " ") {
                     document.getElementById(`${curr_relationship_id}`).addEventListener('click', function () {
+                        old_global_node_qval = global_node_qval;
                         global_node_qval = qval;
                         // console.log("Current node_qval", global_node_qval)
+                        cy_graph.nodes(`[id = "${old_global_node_qval}"]`).style({
+                            "background-color": TAXON_NODE_COLOR,
+                            'width': TAXON_NODE_SIZE,
+                            'height': TAXON_NODE_SIZE,
+                            'font-size': NORMAL_FONT_SIZE,
+                            'border-width': 0
+                        });
+                        cy_graph.nodes(`[id = "${global_node_qval}"]`).style({
+                            "background-color": "red",
+                            'border-width': 0
+                        });
+                        cy_graph.nodes(`[id = '${global_node_qval}']`).on('click', function (evt) {
+                            console.log('2');
+                            get_hierarchy(global_node_qval, nodes_we_came_from)
+                        });
                         get_properties(given_taxon, qval, cy_graph, all_ranks,
                             pc_edges, prop_node_diam, graphType_pc_edges, node_qval, taxon_qvals, parent_and_all_children, nodes_lst);
                     })
@@ -2553,9 +2562,6 @@
             let node_name = taxon_qvals[node_qval];
 
             console.log('id_label', id_label);
-            cy_graph.nodes(`[id = '${global_node_qval}']`).on('click', function (evt) {
-                get_hierarchy(global_node_qval, nodes_we_came_from)
-            });
 
             cy_graph.remove(`node[type = "subTaxProp"]`);
             cy_graph.remove(`node[type = "overlayRank"]`);
@@ -3238,7 +3244,6 @@
         //givenData is an object {given_data: 'null'} if we're not going to be given anything, otherwise
         //{given_data: {...}} where {...} is what convert_to_cytoscape(data) would print out
         function display_hierarchy(data, givenData, given_taxon, nodes_we_came_from) {
-
             // console.log("Hierarchy nodes from", nodes_we_came_from)
 
             let user_entered_taxon = givenData.taxon_value;
@@ -3675,20 +3680,22 @@
                 );
 
                 if (Object.keys(data).length == 0) {
-                    if (zoomedInOnNode) {
+                    console.log('1')
+                    get_hierarchy(global_node_qval, nodes_we_came_from);
+                    // if (zoomedInOnNode) {
 
-                        return_to_normal(id_lastclicked_node, cy, given_taxon, false, farthest_second_left_child_pos);
+                    // return_to_normal(id_lastclicked_node, cy, given_taxon, false, farthest_second_left_child_pos);
 
-                        //when we're not displaying the navigation history we want the display height to 
-                        //go back to normal
+                    //when we're not displaying the navigation history we want the display height to 
+                    //go back to normal
 
-                        let cy_container = document.getElementById("cy");
-                        cy_container.style.height = "67vh";
+                    // let cy_container = document.getElementById("cy");
+                    // cy_container.style.height = "67vh";
 
-                        id_lastclicked_node = "";
-                        zoomedInOnNode = false;
-                        prev_nodes_clicked = [];
-                    }
+                    // id_lastclicked_node = "";
+                    // zoomedInOnNode = false;
+                    // prev_nodes_clicked = [];
+                    // }
                 } else {
                     //OTHERWISE WE CLICKED A NODE
                     if (data.type == "taxon") {
@@ -3712,13 +3719,27 @@
                                     prev_nodes_clicked = [];
                                 }
                             }
+
+                            old_global_node_qval = global_node_qval;
                             global_node_qval = data.id;
-                            // console.log('new_gloabl_node_qval', global_node_qval);
                             get_properties(given_taxon, data.id, cy, all_ranks,
                                 pc_edges, prop_node_diam, graphType_pc_edges,
                                 id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
 
-                            zoomedInOnNode = true;
+                            cy.nodes(`[id = "${old_global_node_qval}"]`).style({
+                                "background-color": TAXON_NODE_COLOR,
+                                'width': TAXON_NODE_SIZE,
+                                'height': TAXON_NODE_SIZE,
+                                'font-size': NORMAL_FONT_SIZE,
+                                'border-width': 0
+                            });
+                            cy.nodes(`[id = "${global_node_qval}"]`).style({
+                                "background-color": "red",
+                                'border-width': 0
+                            });
+
+                            // console.log('new_gloabl_node_qval', global_node_qval);
+                            // zoomedInOnNode = true;
                             id_lastclicked_node = data.id;
 
                         }
@@ -3812,13 +3833,15 @@
                 } else {
                     //OTHERWISE WE CLICKED A NODE
                     if (data.type == "taxon") {
+                        old_global_node_qval = global_node_qval;
                         // global_node_qval = data.id;
                         // get_hierarchy(global_node_qval, nodes_we_came_from);
                         global_node_qval = data.id;
                         // console.log('new_gloabl_node_qval', global_node_qval);
                         fisheye_enabled = true;
                         create_fisheye_nodes(data.id, parent_and_all_children, cy, taxon_qvals);
-                        cy.nodes(`[id = "${data.id}"]`).style({
+                        console.log(global_node_qval)
+                        cy.nodes(`[id = "${global_node_qval}"]`).style({
                             'width': TAXON_NODE_SIZE,
                             'height': TAXON_NODE_SIZE,
                             'font-size': NORMAL_FONT_SIZE,
@@ -3832,6 +3855,15 @@
                         update_nav_buttons(given_taxon, data.id, cy, all_ranks,
                             pc_edges, prop_node_diam, graphType_pc_edges,
                             id_lastclicked_node, taxon_qvals, parent_and_all_children, prev_nodes_clicked);
+                        if (old_global_node_qval != global_node_qval) {
+                            cy.nodes(`[id = "${old_global_node_qval}"]`).style({
+                                "background-color": TAXON_NODE_COLOR,
+                                'width': TAXON_NODE_SIZE,
+                                'height': TAXON_NODE_SIZE,
+                                'font-size': NORMAL_FONT_SIZE,
+                                'border-width': 0
+                            });
+                        }
                     }
                 }
 
@@ -3987,7 +4019,6 @@
 
             //so we've updated our edges and nodes to include the ones above the root we queried, so 
             //now we want to display the graph.
-
 
             change_buttons(nodes_we_came_from);
             display_hierarchy(full_json, {
@@ -4164,6 +4195,7 @@
             document.getElementById("hierarchySpecies").value = "";
 
             d3.json(full_data_url).then(function (full_data_json) {
+
                 get_hierarchy_intermediate(full_data_json, hierarchyVal, nodes_we_came_from)
             });
         }
