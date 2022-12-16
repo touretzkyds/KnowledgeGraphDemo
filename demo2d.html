@@ -182,8 +182,7 @@
         let old_global_node_qval;
         let fisheye_enabled = false;
         let timerCount = 0;
-        let timer;
-        let timerArray;
+        let timer = undefined;
 
         const ROOT_QVAL = "Q729";
         const ROOT_NAME = "Animalia";
@@ -3047,7 +3046,7 @@
 
             function idle_function() {
                 // console.log('timerCount', timerCount)
-                // console.log('idle val', idle)
+                //console.log('idle_function', self, 'idle val', idle)
                 var currentDistortion = fisheye_fn_instance.distortion(),
                     currentFocus = currentDistortion ? fisheye_fn_instance.focus() : desiredFocus;
                 idle = Math.abs(desiredDistortion - currentDistortion) < .01 && Math.abs(desiredFocus - currentFocus) < .5;
@@ -3075,12 +3074,10 @@
                     // console.log('x', x_pos_on_canvas)
                     desiredFocus = Math.max(0, Math.min(canvas_width, x_pos_on_canvas));
                     if (idle) {
-                        timer = d3.timer(idle_function);
-                        if (timerArray == undefined) {
-                            timerArray = [timer];
-                        } else {
-                            timerArray.push(timer);
+                        if (timer != undefined) {
+                            timer.stop();
                         }
+                        timer = d3.timer(idle_function);
                     }
                     curr_place = 'canvas';
                     // idle_function()
@@ -3783,11 +3780,8 @@
                 cy.remove(`node[type = "image"]`);
                 cy.remove("node[width = 120]");
 
-                if (timerArray != undefined) {
-                    timerArray.forEach(timer => {
-                        timer.stop();
-                    });
-                    timerArray = []
+                if (timer != undefined) {
+                    timer.stop();
                 }
 
                 if (Object.keys(data).length == 0) {
