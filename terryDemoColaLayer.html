@@ -173,7 +173,6 @@
         var conceptExpansionDataCache = {};
         var conceptNodeLabelToID = {};
         var initialPositions = {};
-        var prevImagePositions = {};
         // var constraints = [];
 
         function propertyQuery(value, perform_query) {
@@ -258,10 +257,7 @@
             d3.json(url).then(function(data) {visualizeData(data);});
         }
 
-        function classifyclass(key, value) {
-          if(key === "image") {
-            return "image";
-          }
+        function classifyclass(value) {
           if(value.startsWith('b')) {
             return "qudt";
           }
@@ -296,7 +292,7 @@
                   // tempNode.data.type = data.type;
                   nodes.push(tempNode);
                 } else {
-                  tempNode.data.class = classifyclass(key, value);
+                  tempNode.data.class = classifyclass(value);
                   tempNode.data.id = convertToNodeID(source, key, value);
                   tempNode.data.sourceID = source;
                   if(tempNode.data.class == "concept") {
@@ -320,10 +316,108 @@
                   }
                 }
             })
+            // push dummy nodes to split canvas
+            const p = 1500;
+            const factor = 5;
+            var tempNode1 = {"data":{}};
+            tempNode1.position = {x:0, y:0};
+            tempNode1.data.id = "d1";
+            tempNode1.data.label = "d1"; 
+            tempNode1.data.class = "dummy"; 
+
+            var tempNode2 = {"data":{}};
+            tempNode2.position = {x:factor*p, y:0};
+            tempNode2.data.id = "d2";
+            tempNode2.data.label = "d2"; 
+            tempNode2.data.class = "dummy"; 
+
+            var tempNode3 = {"data":{}};
+            tempNode3.position = {x:0, y:p};
+            tempNode3.data.id = "d3";
+            tempNode3.data.label = "d3"; 
+            tempNode3.data.class = "dummy"; 
+
+            var tempNode4 = {"data":{}};
+            tempNode4.position = {x:factor*p, y:p};
+            tempNode4.data.id = "d4";
+            tempNode4.data.label = "d4"; 
+            tempNode4.data.class = "dummy"; 
+
+            var tempNode5 = {"data":{}};
+            tempNode5.position = {x:0, y:2*p};
+            tempNode5.data.id = "d5";
+            tempNode5.data.label = "d5"; 
+            tempNode5.data.class = "dummy"; 
+
+            var tempNode6 = {"data":{}};
+            tempNode6.position = {x:factor*p, y:2*p};
+            tempNode6.data.id = "d6";
+            tempNode6.data.label = "d6"; 
+            tempNode6.data.class = "dummy"; 
+
+            var tempNode7 = {"data":{}};
+            tempNode7.position = {x:0, y:3*p};
+            tempNode7.data.id = "d7";
+            tempNode7.data.label = "d7"; 
+            tempNode7.data.class = "dummy"; 
+
+            var tempNode8 = {"data":{}};
+            tempNode8.position = {x:factor*p, y:3*p};
+            tempNode8.data.id = "d8";
+            tempNode8.data.label = "d8"; 
+            tempNode8.data.class = "dummy"; 
+
+            nodes.push(tempNode1);
+            nodes.push(tempNode2);
+            nodes.push(tempNode3);
+            nodes.push(tempNode4);
+            nodes.push(tempNode5);
+            nodes.push(tempNode6);
+            nodes.push(tempNode7);
+            nodes.push(tempNode8);
             return [nodes, edges];
         }
 
         function reLayoutCola(cy) {
+          var constraints = []
+          const idArray = ["d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8"]
+          const gap = 500;
+          cy.nodes().forEach(function(ele){
+            if(!idArray.includes(ele.id())) {
+              if(ele.json().data.type == "State") {
+                constraints.push({ axis: 'x', left: cy.$("#d1"), right: ele, gap: gap });
+                constraints.push({ axis: 'y', left: cy.$("#d1"), right: ele, gap: gap });
+                constraints.push({ axis: 'x', left: ele, right: cy.$("#d4"), gap: gap });
+                constraints.push({ axis: 'y', left: ele, right: cy.$("#d4"), gap: gap });
+
+                // constraints.push({ axis: 'x', left: cy.$("#d3"), right: ele, gap: gap });
+                // constraints.push({ axis: 'y', left: cy.$("#d3"), right: ele, gap: gap });
+                // constraints.push({ axis: 'x', left: ele, right: cy.$("#d2"), gap: gap });
+                // constraints.push({ axis: 'y', left: ele, right: cy.$("#d2"), gap: gap });
+              } else if(ele.json().data.type == "County") {
+                constraints.push({ axis: 'x', left: cy.$("#d3"), right: ele, gap: gap });
+                constraints.push({ axis: 'y', left: cy.$("#d3"), right: ele, gap: gap });
+                constraints.push({ axis: 'x', left: ele, right: cy.$("#d6"), gap: gap });
+                constraints.push({ axis: 'y', left: ele, right: cy.$("#d6"), gap: gap });
+
+                // constraints.push({ axis: 'x', left: cy.$("#d5"), right: ele, gap: gap });
+                // constraints.push({ axis: 'y', left: cy.$("#d5"), right: ele, gap: gap });
+                // constraints.push({ axis: 'x', left: ele, right: cy.$("#d4"), gap: gap });
+                // constraints.push({ axis: 'y', left: ele, right: cy.$("#d4"), gap: gap });
+              } else {
+                console.log(ele.id());
+                constraints.push({ axis: 'x', left: cy.$("#d5"), right: ele, gap: gap });
+                constraints.push({ axis: 'y', left: cy.$("#d5"), right: ele, gap: gap });
+                constraints.push({ axis: 'x', left: ele, right: cy.$("#d8"), gap: gap });
+                constraints.push({ axis: 'y', left: ele, right: cy.$("#d8"), gap: gap });
+
+                // constraints.push({ axis: 'x', left: cy.$("#d7"), right: ele, gap: gap });
+                // constraints.push({ axis: 'y', left: cy.$("#d7"), right: ele, gap: gap });
+                // constraints.push({ axis: 'x', left: ele, right: cy.$("#d6"), gap: gap });
+                // constraints.push({ axis: 'y', left: ele, right: cy.$("#d6"), gap: gap });
+              }
+            }
+          });
           var layout = cy.layout({
             name: 'cola',
             avoidOverlap: true,
@@ -331,6 +425,7 @@
             nodeSpacing: 100,
             nodeDimensionsIncludeLabels: true,
             centerGraph:true,
+            gapInequalities: constraints,
             numIter: 100000,
           });
           
@@ -343,11 +438,7 @@
         }
 
         function visualizeData(data) {
-            const jsonData = getDataJSON(data);
-            if(jsonData === undefined) {
-              return ;
-            }
-            const CytoscapeData = convertToCytoscape(jsonData[0]);
+            const CytoscapeData = convertToCytoscape(getDataJSON(data)[0]);
             if(CytoscapeData === undefined) {
                 return;
             }
@@ -513,20 +604,6 @@
                 }
             },
             {
-                selector: 'node[class = "image"]',
-                style: {
-                  'shape': 'rectangle',
-                  'width':600,
-                  'height':380,
-                  'background-image': function(node) {
-                    return 'url(' + node.data('label') + ')';
-                  },
-                  'background-fit': 'cover',
-                  'background-color': 'white',
-                  'z-index': '10',
-                }
-            },
-            {
                 selector: 'edge',
                 style: {
                   'curve-style': 'bezier',
@@ -653,14 +730,6 @@
                     cy.$("#"+id).json({data:{class:'greenConcept'}});
                   }
                 }
-              } else if(node.json().data.class === 'image') {
-                prevImagePositions.x = node.position('x');
-                prevImagePositions.y = node.position('y');
-                cy.nodes(`[id = "${node.id()}"]`).style({
-                    'width': node.width() * 10,
-                    'height': node.height() * 10,
-                    'z-index': '20',
-                });
               }
             });
             cy.on('mouseout', function(evt) {
@@ -681,16 +750,6 @@
                 } else if(cy.$("#" + id).json().data.class === 'greenConcept') {
                   cy.$("#"+id).json({data:{class:'concept'}});
                 }
-              } else if(node.json().data.class === 'image') {
-                cy.nodes(`[id = "${node.id()}"]`).style({
-                    'width': node.width() * 0.1,
-                    'height': node.height() * 0.1,
-                    'z-index': '10',
-                });
-                node.position({
-                    x: prevImagePositions.x,
-                    y: prevImagePositions.y
-                  });
               }
             });
             cy.on('grab', function(evt){
@@ -726,6 +785,15 @@
               });
             });
 
+            cy.$("#d1").lock();
+            cy.$("#d2").lock();
+            cy.$("#d3").lock();
+            cy.$("#d4").lock();
+            cy.$("#d5").lock();
+            cy.$("#d6").lock();
+            cy.$("#d7").lock();
+            cy.$("#d8").lock();
+            // reLayoutCola(cy);
         }
 
         function addConceptNode(cy, id, nodeData) {
@@ -750,7 +818,7 @@
               tempNode.data.type = nodeData.type;
               tempNode.group = "nodes";
               tempNode.data.label = value;
-              tempNode.data.class = classifyclass(key, value);
+              tempNode.data.class = classifyclass(value);
               tempNode.data.id = convertToNodeID(id, key, value);
               tempNode.data.sourceID = id;
               if(tempNode.data.class == "concept") {
@@ -892,7 +960,7 @@
           //   value = value.split("boltz:")[1];
           //   return value;
           // } else 
-          if(classifyclass(key, value) == "qudt") {
+          if(classifyclass(value) == "qudt") {
             return id + "_rel_" + value;
           }
           return id + "_rel_" + key;
@@ -978,7 +1046,6 @@
           
           <div id ="hierarchy-entry">
             <input id="cityName" class="input-species" placeholder="Enter City Name">
-            <!-- <button id="reLayout">Re-Layout</button> -->
           </div>
     
           <div id ="navigation-history" class="nav-history">
@@ -1005,17 +1072,12 @@
     <script>
       const defaultCityName = 'Pittsburgh';
       getDataResponse(defaultCityName);
-      let cityName = document.getElementById("cityName");
-      cityName.addEventListener("keypress", function (e) {
-          if (e.key == "Enter") {
-              getDataResponse(cityName.value);
-          }
-      });
-      // let layoutBtn = document.getElementById("reLayout");
-      // let cy = document.getElementById("cy");
-      // layoutBtn.addEventListener("click", function(e) {
-      //   reLayoutCola(cy);
-      // })
+        let cityName = document.getElementById("cityName");
+        cityName.addEventListener("keypress", function (e) {
+            if (e.key == "Enter") {
+                getDataResponse(cityName.value);
+            }
+        });
 
     </script> 
       

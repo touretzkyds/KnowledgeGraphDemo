@@ -1,30 +1,41 @@
-function convertbnodeJSONToCytoscape(data) {
-    if(data === undefined) {
-        return undefined;
-    }
-    var nodes = [];
-    var edges = [];
-    var source = data["prefLabel"];
-    Object.keys(data).forEach(function(key) {
-        var value = data[key];
-        var tempNode = {"data":{}};
-        var tempEdge = {"data":{}};
-        
-        tempNode["data"]["id"] = value;
-        if(key == "prefLabel") {
-          tempNode["data"]["type"] = "center";
-        } else {
-          tempNode["data"]["type"] = classifyType(value);
-        }
-        nodes.push(tempNode);
+<!DOCTYPE html>
+ <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<html>
+  <head>
+    <title>Demo map data</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+    integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI="
+    crossorigin=""/>
+    <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
+    integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM="
+    crossorigin=""></script>
+  </head>
+  <body>
+    <div id="map" style="height: 800px;"></div>
+    <script>
+      var map = L.map('map').setView([51.505, -0.09], 13);
 
-        tempEdge["data"]["id"] = key;
-        if(value !== source) {
-            tempEdge["data"]["source"] = source;
-            tempEdge["data"]["target"] = value;
-            edges.push(tempEdge);
-        }
-    })
-    console.log(nodes);
-    return [nodes, edges];
-}
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      }).addTo(map);
+
+      var marker = L.marker([34.1141,-118.4068]).addTo(map);
+      map.panTo(marker.getLatLng());
+      marker.bindPopup("<b>Hello world!</b><br>I am a popup.").openPopup();
+
+      var popup = L.popup();
+
+      function onMapClick(e) {
+          popup
+              .setLatLng(e.latlng)
+              .setContent("You clicked the map at " + e.latlng.toString())
+              .openOn(map);
+      }
+
+      map.on('click', onMapClick);
+    </script>
+
+  </body>
+</html>
