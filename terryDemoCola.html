@@ -15,6 +15,7 @@
     <script src="https://unpkg.com/webcola/WebCola/cola.min.js"></script>
     <script src="external/cytoscape-cola/cytoscape-cola.js"></script>
     <script src="newDagre.js"></script>
+    <script src="countyData.js"></script>
 
 
 
@@ -174,6 +175,7 @@
         var conceptNodeLabelToID = {};
         var initialPositions = {};
         var prevImagePositions = {};
+        var mycy;
         // var constraints = [];
 
         function propertyQuery(value, perform_query) {
@@ -340,6 +342,25 @@
         function reSetType(cy, id) {
           const idForSourceNode = cy.$("#"+id).json().data.sourceID;
           cy.$("#"+id).json({data:{type: cy.$("#"+idForSourceNode).json().data.type}});
+        }
+
+        function distanceBetween(x1, y1, x2, y2) {
+          return Math.sqrt(Math.pow((x2-x1), 2)+Math.pow((y2-y1),2));
+        }
+
+        function getNearestCounty(stateName, normalizedX, normalizedY) {
+          var data = countyData[stateName];
+          var shortestDistance = Number.MAX_SAFE_INTEGER;
+          var nearestCounty = "";
+          for(let i = 0; i < data.length; i++) {
+            var currCounty = data[i];
+            var currDistance = distanceBetween(normalizedX, normalizedY, currCounty.x, currCounty.y);
+            if(currDistance < shortestDistance) {
+              shortestDistance = currDistance;
+              nearestCounty = currCounty.countyName;
+            }
+          }
+          return nearestCounty;
         }
 
         function visualizeData(data) {
@@ -517,9 +538,10 @@
                 style: {
                   'shape': 'rectangle',
                   'width':600,
-                  'height':380,
+                  'height':286,
                   'background-image': function(node) {
-                    return 'url(' + node.data('label') + ')';
+                    // return 'url(' + node.data('label') + ')';
+                    return 'url(https://upload.wikimedia.org/wikipedia/commons/8/83/Pennsylvania_counties_map.png)'
                   },
                   'background-fit': 'cover',
                   'background-color': 'white',
@@ -594,6 +616,7 @@
             });
             cy.on('cxttap', function(evt) {
               var node = evt.target;
+              
               if(node.json().data.class === 'dummyConcept') {
                 cy.nodes(`[id = "${node.id()}"]`).style({
                     'width': node.width() * 1.25,
@@ -630,6 +653,29 @@
                   }
                 }
                 
+              } else if(node.json().data.class === 'image') {
+                var node = evt.target;
+                // get the coordinates of the tap event relative to the node
+                var renderedBoundingBox = node.renderedBoundingBox();
+                var renderedPosition = evt.renderedPosition;
+                var x1 = renderedBoundingBox.x1;
+                var x2 = renderedBoundingBox.x2;
+                var y1 = renderedBoundingBox.y1;
+                var y2 = renderedBoundingBox.y2;
+                var x = renderedPosition.x;
+                var y = renderedPosition.y;
+
+                var relativeX = x - x1; 
+                var relativeY = y - y1;
+
+                var normalizedX = relativeX / (x2 - x1);
+                var normalizedY = relativeY / (y2 - y1);
+
+                var stateName = "Pennsylvania"
+
+                var countyName = getNearestCounty(stateName,normalizedX, normalizedY)
+
+                console.log("countyName", countyName);
               }
               
             });
@@ -653,7 +699,8 @@
                     cy.$("#"+id).json({data:{class:'greenConcept'}});
                   }
                 }
-              } else if(node.json().data.class === 'image') {
+              } 
+              else if(node.json().data.class === 'image') {
                 prevImagePositions.x = node.position('x');
                 prevImagePositions.y = node.position('y');
                 cy.nodes(`[id = "${node.id()}"]`).style({
@@ -681,7 +728,8 @@
                 } else if(cy.$("#" + id).json().data.class === 'greenConcept') {
                   cy.$("#"+id).json({data:{class:'concept'}});
                 }
-              } else if(node.json().data.class === 'image') {
+              } 
+              else if(node.json().data.class === 'image') {
                 cy.nodes(`[id = "${node.id()}"]`).style({
                     'width': node.width() * 0.1,
                     'height': node.height() * 0.1,

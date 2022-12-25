@@ -10,6 +10,7 @@
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
     integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM="
     crossorigin=""></script>
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
   </head>
   <body>
     <div id="map" style="height: 800px;"></div>
@@ -35,6 +36,7 @@
       }
 
       map.on('click', onMapClick);
+      L.shapefile('shapes.zip').addTo(map);
     </script>
 
   </body>
