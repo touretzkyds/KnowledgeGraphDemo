@@ -540,8 +540,8 @@
                   'width':600,
                   'height':286,
                   'background-image': function(node) {
-                    // return 'url(' + node.data('label') + ')';
-                    return 'url(https://upload.wikimedia.org/wikipedia/commons/8/83/Pennsylvania_counties_map.png)'
+                    return 'url(' + node.data('label') + ')';
+                    // return 'url(https://upload.wikimedia.org/wikipedia/commons/8/83/Pennsylvania_counties_map.png)';
                   },
                   'background-fit': 'cover',
                   'background-color': 'white',
@@ -582,7 +582,7 @@
                       addbNode(cy, node.id(), bnodeExpansionDataCache[node.id()]);
                     } else {
                       const url = propertyQuery(sourceCityName, true);
-                      d3.json(url).then(function(data) {addbNode(cy, node.id(), getDataJSON(data)[1]);});
+                      d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; addbNode(cy, node.id(), jsonData[1]);});
                     }
                   
                   cy.$("#" + node.id()).addClass('readyToCollapse');
@@ -604,7 +604,7 @@
                     addConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()]);
                   } else {
                     const url = propertyQuery(cityName, true);
-                    d3.json(url).then(function(data) {addConceptNode(cy, node.id(), getDataJSON(data)[0]);});
+                    d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; addConceptNode(cy, node.id(), jsonData[0]);});
                   }
 
                   cy.$("#" + node.id()).addClass('readyToCollapse');
@@ -670,12 +670,51 @@
 
                 var normalizedX = relativeX / (x2 - x1);
                 var normalizedY = relativeY / (y2 - y1);
+                var id = node.json().data.sourceID;
 
-                var stateName = "Pennsylvania"
+                var stateName = cy.$("#"+id).json().data.label.split("\nboltz:")[0];
+                console.log(stateName);
 
-                var countyName = getNearestCounty(stateName,normalizedX, normalizedY)
+                var countyName = getNearestCounty("Pennsylvania",normalizedX, normalizedY);
+                
+                //add new county node
+                var addedData = [];
+                
+                var key = "hasCounty"
+                var value = countyName;
+                var tempNode = {"data":{}};
+                tempNode.data.type = "County";
+                tempNode.group = "nodes";
+                tempNode.data.label = value;
+                tempNode.data.class = classifyclass(key, value);
+                tempNode.data.id = convertToNodeID(id, key, value);
+                tempNode.data.sourceID = id;
+                if(tempNode.data.class == "concept") {
+                  if(!conceptNodeLabelToID.hasOwnProperty(value)) {
+                    conceptNodeLabelToID[value] = tempNode.data.id;
+                  } else {
+                    tempNode.data.class = "dummyConcept";
+                  }
+                }
+                const radius = 400; 
+                const sourceX = cy.$("#" + id).position('x');
+                const sourceY = cy.$("#" + id).position('y');
+                tempNode.position = {x:sourceX + radius, y:sourceY - radius};
+                addedData.push(tempNode);
+                var tempEdge = {"data":{}}
+                tempEdge.group = "edges";
+                tempEdge.data.id = convertToEdgeID(id, key)
+                tempEdge.data.label = key;
+                tempEdge.data.source = id;
+                tempEdge.data.target = tempNode.data.id;
+                addedData.push(tempEdge);
+
+                cy.add(addedData);
+                reLayoutCola(cy);
 
                 console.log("countyName", countyName);
+                alert(countyName.split("\nboltz:")[0] + " has been added to graph.");
+                
               }
               
             });
@@ -803,10 +842,10 @@
               tempNode.data.sourceID = id;
               if(tempNode.data.class == "concept") {
                 if(!conceptNodeLabelToID.hasOwnProperty(value)) {
-                conceptNodeLabelToID[value] = tempNode.data.id;
-              } else {
-                tempNode.data.class = "dummyConcept";
-              }
+                  conceptNodeLabelToID[value] = tempNode.data.id;
+                } else {
+                  tempNode.data.class = "dummyConcept";
+                }
               }
               
               const radian = (Math.PI * 2 / numOfKeys) * count;  
