@@ -264,6 +264,9 @@
           if(key === "image") {
             return "image";
           }
+          if(key === "hasCounties") {
+            return "countyImage";
+          }
           if(value.startsWith('b')) {
             return "qudt";
           }
@@ -549,6 +552,21 @@
                 }
             },
             {
+                selector: 'node[class = "countyImage"]',
+                style: {
+                  'shape': 'rectangle',
+                  'width':600,
+                  'height':286,
+                  'background-image': function(node) {
+                    return 'url(' + node.data('label') + ')';
+                    // return 'url(https://upload.wikimedia.org/wikipedia/commons/8/83/Pennsylvania_counties_map.png)';
+                  },
+                  'background-fit': 'cover',
+                  'background-color': 'white',
+                  'z-index': '10',
+                }
+            },
+            {
                 selector: 'edge',
                 style: {
                   'curve-style': 'bezier',
@@ -597,7 +615,7 @@
                 const id = conceptNodeLabelToID[node.json().data.label];
                 cy.center("#" + id);
               } else if(node.json().data.class === 'concept') {
-                const cityName = node.json().data.label.split("\nboltz")[0]
+                const cityName = node.json().data.label.split("\nboltz")[0];
                 if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
                   cy.center("#" + node.id());
                   if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
@@ -653,7 +671,7 @@
                   }
                 }
                 
-              } else if(node.json().data.class === 'image') {
+              } else if(node.json().data.class === 'countyImage') {
                 var node = evt.target;
                 // get the coordinates of the tap event relative to the node
                 var renderedBoundingBox = node.renderedBoundingBox();
@@ -673,14 +691,13 @@
                 var id = node.json().data.sourceID;
 
                 var stateName = cy.$("#"+id).json().data.label.split("\nboltz:")[0];
-                console.log(stateName);
 
-                var countyName = getNearestCounty("Pennsylvania",normalizedX, normalizedY);
+                var countyName = getNearestCounty(stateName,normalizedX, normalizedY);
                 
                 //add new county node
                 var addedData = [];
                 
-                var key = "hasCounty"
+                var key = "hasCounty" + countyName.split("\nboltz:")[0];
                 var value = countyName;
                 var tempNode = {"data":{}};
                 tempNode.data.type = "County";
@@ -711,8 +728,6 @@
 
                 cy.add(addedData);
                 reLayoutCola(cy);
-
-                console.log("countyName", countyName);
                 alert(countyName.split("\nboltz:")[0] + " has been added to graph.");
                 
               }
@@ -739,7 +754,7 @@
                   }
                 }
               } 
-              else if(node.json().data.class === 'image') {
+              else if(node.json().data.class === 'image' || node.json().data.class === 'countyImage') {
                 prevImagePositions.x = node.position('x');
                 prevImagePositions.y = node.position('y');
                 cy.nodes(`[id = "${node.id()}"]`).style({
@@ -768,7 +783,7 @@
                   cy.$("#"+id).json({data:{class:'concept'}});
                 }
               } 
-              else if(node.json().data.class === 'image') {
+              else if(node.json().data.class === 'image' || node.json().data.class === 'countyImage') {
                 cy.nodes(`[id = "${node.id()}"]`).style({
                     'width': node.width() * 0.1,
                     'height': node.height() * 0.1,
