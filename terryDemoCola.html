@@ -169,6 +169,41 @@
     </style>
 
     <script>
+      // already solved
+      // 1. left click to zoom in image (solved)
+      // 2. when mouseout back to original (solved)
+      // 8. relayout when we add new county nodes (solved)
+      // 4. use left click to add counties (solved)
+      // 5. the label for those edges should be "hasCounty" (solved)
+      // Q: has county id still problematic, need to examine everywhere about ID (solved)
+
+      // next TODO:
+      // center / concept class things
+      // 3. when I navigate to PA, it should be red, pitt should not
+      // Q: when I set dummy Pitt to be real, it raises error, first make pittsburgh a concept and ditch the center class / then give red color for every expansion
+      // Q: when I make PA center, Pitt not center, it cannot be closed -> it should be able to close at the first place. Dont care about center type, just make it red.
+
+      // image size things
+      // 10. adjust image w / h, using the original w / h to set size
+
+      // data.ttl things
+      // 6. add hasCounty links for a state in data.ttl -> (don't display it, if(key == hasCounty) { continue: })
+      // 7. add comments in knowledge graph for Q numbers
+      // 9. add regions (Northeast region)/ country as a node (US) / north america (above US)
+      // 11. fix indentation
+      // 14. add definitions in ontology files
+      // 12. add locatedInAdministrativeRegion link / ontology wikipedia (Pitt -> Allegheny -> PA -> MidWest Region -> US -> North America)
+      // first make those things manually, then think about web scrape for other data
+
+      // finally, build the nav bar
+      // 13. see how demo2d did for navigation / use single query find every parent nodes and order (find that query)
+
+      //Q: when closing PA, those newly added counties were still there
+
+
+      
+      
+      
 
         var bnodeExpansionDataCache = {};
         var conceptExpansionDataCache = {};
@@ -176,7 +211,6 @@
         var initialPositions = {};
         var prevImagePositions = {};
         var mycy;
-        // var constraints = [];
 
         function propertyQuery(value, perform_query) {
         const prevquery = document.getElementById("sparql2");
@@ -366,6 +400,74 @@
           return nearestCounty;
         }
 
+        // get the coordinates of the tap event relative to the node
+        function getNormalizedPositions(evt) {
+          var node = evt.target;
+          var renderedBoundingBox = node.renderedBoundingBox();
+          var renderedPosition = evt.renderedPosition;
+          var x1 = renderedBoundingBox.x1;
+          var x2 = renderedBoundingBox.x2;
+          var y1 = renderedBoundingBox.y1;
+          var y2 = renderedBoundingBox.y2;
+          var x = renderedPosition.x;
+          var y = renderedPosition.y;
+
+          var relativeX = x - x1; 
+          var relativeY = y - y1;
+
+          var normalizedX = relativeX / (x2 - x1);
+          var normalizedY = relativeY / (y2 - y1);
+          return {'x': normalizedX, 'y': normalizedY};
+        }
+
+        function addCounties(evt, cy) {
+          var node = evt.target;
+          
+          var normalizedX = getNormalizedPositions(evt).x;
+          var normalizedY = getNormalizedPositions(evt).y;
+
+          var id = node.json().data.sourceID;
+
+          var stateName = cy.$("#"+id).json().data.label.split("\nboltz:")[0];
+
+          var countyName = getNearestCounty(stateName, normalizedX, normalizedY);
+          
+          //add new county node
+          var addedData = [];
+          
+          var key = "hasCounty" + countyName.split("\nboltz:")[0];
+          var value = countyName;
+          var tempNode = {"data":{}};
+          tempNode.data.type = "County";
+          tempNode.group = "nodes";
+          tempNode.data.label = value;
+          tempNode.data.class = classifyclass(key, value);
+          tempNode.data.id = convertToNodeID(id, key, value);
+          tempNode.data.sourceID = id;
+          if(tempNode.data.class == "concept") {
+            if(!conceptNodeLabelToID.hasOwnProperty(value)) {
+              conceptNodeLabelToID[value] = tempNode.data.id;
+            } else {
+              tempNode.data.class = "dummyConcept";
+            }
+          }
+          const radius = 400; 
+          const sourceX = cy.$("#" + id).position('x');
+          const sourceY = cy.$("#" + id).position('y');
+          tempNode.position = {x:sourceX + radius, y:sourceY - radius};
+          addedData.push(tempNode);
+          var tempEdge = {"data":{}}
+          tempEdge.group = "edges";
+          tempEdge.data.id = convertToEdgeID(id, key, value)
+          tempEdge.data.label = "hasCounty";
+          tempEdge.data.source = id;
+          tempEdge.data.target = tempNode.data.id;
+          addedData.push(tempEdge);
+
+          cy.add(addedData);
+          reLayoutCola(cy);
+        }
+
         function visualizeData(data) {
             const jsonData = getDataJSON(data);
             if(jsonData === undefined) {
@@ -540,6 +642,7 @@
                 selector: 'node[class = "image"]',
                 style: {
                   'shape': 'rectangle',
+                  // fix the image ratio
                   'width':600,
                   'height':286,
                   'background-image': function(node) {
@@ -594,7 +697,6 @@
               if(node.json().data.class === 'qudt') {
                 if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
                   const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
-                  const bnodeID = sourceQnumber + "_rel_" + node.json().data.label;
                   const sourceCityName = cy.$('#' + node.json().data.sourceID).json().data.label.split("\nboltz:")[0];
                     if(bnodeExpansionDataCache.hasOwnProperty(node.id())) {
                       addbNode(cy, node.id(), bnodeExpansionDataCache[node.id()]);
@@ -606,7 +708,6 @@
                   cy.$("#" + node.id()).addClass('readyToCollapse');
                 } else {
                   const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
-                  const bnodeID = sourceQnumber + "_rel_" + node.json().data.label;
                   removebNode(cy, node.id());
                   cy.$("#" + node.id()).removeClass('readyToCollapse');
                   
@@ -617,18 +718,31 @@
               } else if(node.json().data.class === 'concept') {
                 const cityName = node.json().data.label.split("\nboltz")[0];
                 if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
-                  cy.center("#" + node.id());
                   if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
                     addConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()]);
                   } else {
                     const url = propertyQuery(cityName, true);
                     d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; addConceptNode(cy, node.id(), jsonData[0]);});
                   }
-
                   cy.$("#" + node.id()).addClass('readyToCollapse');
                 } else {
                   cy.$("#" + node.id()).removeClass('readyToCollapse');
                   removeConceptNode(cy, node.id());
+                }
+              } else if(node.json().data.class === 'image' || node.json().data.class === 'countyImage') {
+                if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
+                  prevImagePositions.x = node.position('x');
+                  prevImagePositions.y = node.position('y');
+                  cy.nodes(`[id = "${node.id()}"]`).style({
+                      'width': node.width() * 10,
+                      'height': node.height() * 10,
+                      'z-index': '20',
+                  });
+                  cy.$("#" + node.id()).addClass('readyToCollapse');
+                } else {
+                  if(node.json().data.class === 'countyImage') {
+                    addCounties(evt, cy);
+                  }
                 }
               }
             });
@@ -672,64 +786,7 @@
                 }
                 
               } else if(node.json().data.class === 'countyImage') {
-                var node = evt.target;
-                // get the coordinates of the tap event relative to the node
-                var renderedBoundingBox = node.renderedBoundingBox();
-                var renderedPosition = evt.renderedPosition;
-                var x1 = renderedBoundingBox.x1;
-                var x2 = renderedBoundingBox.x2;
-                var y1 = renderedBoundingBox.y1;
-                var y2 = renderedBoundingBox.y2;
-                var x = renderedPosition.x;
-                var y = renderedPosition.y;
-
-                var relativeX = x - x1; 
-                var relativeY = y - y1;
-
-                var normalizedX = relativeX / (x2 - x1);
-                var normalizedY = relativeY / (y2 - y1);
-                var id = node.json().data.sourceID;
-
-                var stateName = cy.$("#"+id).json().data.label.split("\nboltz:")[0];
-
-                var countyName = getNearestCounty(stateName,normalizedX, normalizedY);
-                
-                //add new county node
-                var addedData = [];
-                
-                var key = "hasCounty" + countyName.split("\nboltz:")[0];
-                var value = countyName;
-                var tempNode = {"data":{}};
-                tempNode.data.type = "County";
-                tempNode.group = "nodes";
-                tempNode.data.label = value;
-                tempNode.data.class = classifyclass(key, value);
-                tempNode.data.id = convertToNodeID(id, key, value);
-                tempNode.data.sourceID = id;
-                if(tempNode.data.class == "concept") {
-                  if(!conceptNodeLabelToID.hasOwnProperty(value)) {
-                    conceptNodeLabelToID[value] = tempNode.data.id;
-                  } else {
-                    tempNode.data.class = "dummyConcept";
-                  }
-                }
-                const radius = 400; 
-                const sourceX = cy.$("#" + id).position('x');
-                const sourceY = cy.$("#" + id).position('y');
-                tempNode.position = {x:sourceX + radius, y:sourceY - radius};
-                addedData.push(tempNode);
-                var tempEdge = {"data":{}}
-                tempEdge.group = "edges";
-                tempEdge.data.id = convertToEdgeID(id, key)
-                tempEdge.data.label = key;
-                tempEdge.data.source = id;
-                tempEdge.data.target = tempNode.data.id;
-                addedData.push(tempEdge);
-
-                cy.add(addedData);
-                reLayoutCola(cy);
-                alert(countyName.split("\nboltz:")[0] + " has been added to graph.");
-                
+                addCounties(evt, cy);
               }
               
             });
@@ -754,15 +811,15 @@
                   }
                 }
               } 
-              else if(node.json().data.class === 'image' || node.json().data.class === 'countyImage') {
-                prevImagePositions.x = node.position('x');
-                prevImagePositions.y = node.position('y');
-                cy.nodes(`[id = "${node.id()}"]`).style({
-                    'width': node.width() * 10,
-                    'height': node.height() * 10,
-                    'z-index': '20',
-                });
-              }
+              // else if(node.json().data.class === 'image' || node.json().data.class === 'countyImage') {
+              //   prevImagePositions.x = node.position('x');
+              //   prevImagePositions.y = node.position('y');
+              //   cy.nodes(`[id = "${node.id()}"]`).style({
+              //       'width': node.width() * 10,
+              //       'height': node.height() * 10,
+              //       'z-index': '20',
+              //   });
+              // }
             });
             cy.on('mouseout', function(evt) {
               var node = evt.target;
@@ -784,15 +841,22 @@
                 }
               } 
               else if(node.json().data.class === 'image' || node.json().data.class === 'countyImage') {
-                cy.nodes(`[id = "${node.id()}"]`).style({
+                if(cy.$("#" + node.id()).hasClass('readyToCollapse')) {
+                  cy.nodes(`[id = "${node.id()}"]`).style({
                     'width': node.width() * 0.1,
                     'height': node.height() * 0.1,
                     'z-index': '10',
-                });
-                node.position({
+                  });
+                  node.position({
                     x: prevImagePositions.x,
                     y: prevImagePositions.y
                   });
+                  cy.$("#" + node.id()).removeClass('readyToCollapse');
+                  if(node.json().data.class === 'countyImage') {
+                    reLayoutCola(cy);
+                  }
+                }
+                
               }
             });
             cy.on('grab', function(evt){
@@ -874,7 +938,7 @@
 
               var tempEdge = {"data":{}}
               tempEdge.group = "edges";
-              tempEdge.data.id = convertToEdgeID(id, key)
+              tempEdge.data.id = convertToEdgeID(id, key, value)
               tempEdge.data.label = key;
               tempEdge.data.source = id;
               tempEdge.data.target = tempNode.data.id;
@@ -894,7 +958,7 @@
             if(key != "prefLabel") {
               var value = nodeData[key];
               const nodeID = convertToNodeID(id, key, value);
-              const edgeID = convertToEdgeID(id, key);
+              const edgeID = convertToEdgeID(id, key, value);
               if(cy.$('#' + nodeID).outgoers().length == 0) {
                 const label = cy.$('#' + nodeID).json().data.label;
                 if(conceptNodeLabelToID[label] == nodeID) {
@@ -915,7 +979,7 @@
             if(key != "prefLabel") {
               var value = nodeData[key];
               const nodeID = convertToNodeID(id, key, value);
-              const edgeID = convertToEdgeID(id, key);
+              const edgeID = convertToEdgeID(id, key, value);
               if(cy.$('#' + nodeID).json().data.class != "concept") {
                 cy.remove(cy.$('#' + edgeID));
                 cy.remove(cy.$('#' + nodeID));
@@ -959,7 +1023,7 @@
 
             var tempEdge = {}
             tempEdge.group = "edges";
-            tempEdge.data = {id: convertToEdgeID(id, key), label: key, source: id, target: dataID};
+            tempEdge.data = {id: convertToEdgeID(id, key, value), label: key, source: id, target: dataID};
             addedData.push(tempNode);
             addedData.push(tempEdge);
             cy.add(addedData);
@@ -979,24 +1043,20 @@
           Object.keys(bnodeData).forEach(function(key) {
             const value = bnodeData[key];
             const nodeID = convertToNodeID(id, key, value);
-            const edgeID = convertToEdgeID(id, key);
+            const edgeID = convertToEdgeID(id, key, value);
             cy.remove(cy.$('#' + edgeID));
             cy.remove(cy.$('#' + nodeID));
           })
         }
 
-        function convertToEdgeID(id, key) {
+        // note: the case for hasCounty edge is special: the label is hasCounty but the id is hasCounty + county name
+        // e.g. hasCountyAllegheny, because otherwise every edge has id 'hasCounty', which leads to duplicates
+        function convertToEdgeID(id, key, value) {
           return id + "_" + key;
+          // return id + "_" + key + "_" + value;
         }
 
         function convertToNodeID(id, key, value) {
-          // if(classifyclass(value) == "concept") {
-          //   value = value.split("boltz:")[1];
-          //   return value;
-          // } else 
-          if(classifyclass(key, value) == "qudt") {
-            return id + "_rel_" + value;
-          }
           return id + "_rel_" + key;
         }
 
