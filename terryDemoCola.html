@@ -189,7 +189,7 @@
 
       // next TODO:
       // 13. see how demo2d did for navigation / use single query find every parent nodes and order (find that query)
-
+      // Q1342 -> Q156291 -> Q1400 -> Q7057970 -> Q30 -> Q49
 
       
       //later
@@ -212,6 +212,7 @@
         var conceptNodeLabelToID = {};
         var initialPositions = {};
         var prevImagePositions = {};
+        var mycy;
         var imageWidth = 600;
         var imageHeight = 300;
 
@@ -613,10 +614,12 @@
                 style: {
                   'shape': 'rectangle',
                   'background-image': function(node) {
+                    console.log('making new Image');
                     const image = new Image();
                     image.src = node.data('label');
 
                     image.onload = function() {
+                      console.log('Image loaded');
                       imageWidth = image.naturalWidth;
                       imageHeight = image.naturalHeight;
                     };
@@ -678,6 +681,7 @@
             } 
             });
 
+            mycy = cy;
             cy.nodes(`[id = "${source}"]`).style({
                 "background-color": 'red'
             });
