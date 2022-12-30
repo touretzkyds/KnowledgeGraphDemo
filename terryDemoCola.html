@@ -184,20 +184,21 @@
       // 7. add comments in knowledge graph for Q numbers (solved)
       // 11. fix indentation (solved)
       // 9. add regions (Northeast region)/ country as a node (US) / north america (above US) (solved)
+      // 12. add locatedInAdministrativeRegion link / ontology wikipedia (Pitt -> Allegheny -> PA -> MidWest Region -> US -> North America) (solved)
+      // 10. adjust image w / h, using the original w / h to set size (solved)
 
       // next TODO:
-      // image size things
-      // 10. adjust image w / h, using the original w / h to set size
+      // 13. see how demo2d did for navigation / use single query find every parent nodes and order (find that query)
 
-      // data.ttl things
+
       
-      
+      //later
       // 14. add definitions in ontology files for corporate
-      // 12. add locatedInAdministrativeRegion link / ontology wikipedia (Pitt -> Allegheny -> PA -> MidWest Region -> US -> North America)
-      // first make those things manually, then think about web scrape for other data
+      // 15. think about web scrape for other data
 
       // finally, build the nav bar
-      // 13. see how demo2d did for navigation / use single query find every parent nodes and order (find that query)
+      
+
 
       //Q: when closing PA, those newly added counties were still there
 
@@ -211,7 +212,8 @@
         var conceptNodeLabelToID = {};
         var initialPositions = {};
         var prevImagePositions = {};
-        var mycy;
+        var imageWidth = 600;
+        var imageHeight = 300;
 
         function propertyQuery(value, perform_query) {
         const prevquery = document.getElementById("sparql2");
@@ -331,27 +333,25 @@
                   conceptNodeLabelToID[value] = source;
                   nodes.push(tempNode);
                 } else {
-                  if(key !== "hasCounty") {
-                    tempNode.data.class = classifyclass(key, value);
-                    tempNode.data.id = convertToNodeID(source, key, value);
-                    tempNode.data.sourceID = source;
-                    tempNode.class = "readyToCollapse";
-                    if(tempNode.data.class == "concept") {
-                      if(!conceptNodeLabelToID.hasOwnProperty(value)) {
-                        conceptNodeLabelToID[value] = tempNode.data.id;
-                      }
+                  tempNode.data.class = classifyclass(key, value);
+                  tempNode.data.id = convertToNodeID(source, key, value);
+                  tempNode.data.sourceID = source;
+                  tempNode.class = "readyToCollapse";
+                  if(tempNode.data.class == "concept") {
+                    if(!conceptNodeLabelToID.hasOwnProperty(value)) {
+                      conceptNodeLabelToID[value] = tempNode.data.id;
                     }
-                    
-                    nodes.push(tempNode);
+                  }
+                  
+                  nodes.push(tempNode);
 
-                    var tempEdge = {"data":{}};
-                    tempEdge.data.label = key;
-                    tempEdge.data.id = convertToEdgeID(source, key);
-                    if(value !== source) {
-                        tempEdge.data.source = source;
-                        tempEdge.data.target = tempNode.data.id;
-                        edges.push(tempEdge);
-                    }
+                  var tempEdge = {"data":{}};
+                  tempEdge.data.label = key;
+                  tempEdge.data.id = convertToEdgeID(source, key);
+                  if(value !== source) {
+                      tempEdge.data.source = source;
+                      tempEdge.data.target = tempNode.data.id;
+                      edges.push(tempEdge);
                   }
                 }
             })
@@ -479,6 +479,7 @@
             const nodes = CytoscapeData[0];
             const edges = CytoscapeData[1];
             const source = CytoscapeData[2];
+            
             var cy = cytoscape({
             container: document.getElementById('cy'), // container to render in
             
@@ -611,13 +612,20 @@
                 selector: 'node[class = "image"]',
                 style: {
                   'shape': 'rectangle',
-                  // fix the image ratio
-                  'width':600,
-                  'height':286,
                   'background-image': function(node) {
+                    const image = new Image();
+                    image.src = node.data('label');
+
+                    image.onload = function() {
+                      imageWidth = image.naturalWidth;
+                      imageHeight = image.naturalHeight;
+                    };
+
                     return 'url(' + node.data('label') + ')';
                     // return 'url(https://upload.wikimedia.org/wikipedia/commons/8/83/Pennsylvania_counties_map.png)';
                   },
+                  'width':imageWidth,
+                  'height':imageHeight,
                   'background-fit': 'cover',
                   'background-color': 'white',
                   'z-index': '10',
@@ -627,12 +635,20 @@
                 selector: 'node[class = "countyImage"]',
                 style: {
                   'shape': 'rectangle',
-                  'width':600,
-                  'height':286,
                   'background-image': function(node) {
+                    const image = new Image();
+                    image.src = node.data('label');
+
+                    image.onload = function() {
+                      imageWidth = image.naturalWidth;
+                      imageHeight = image.naturalHeight;
+                    };
+
                     return 'url(' + node.data('label') + ')';
                     // return 'url(https://upload.wikimedia.org/wikipedia/commons/8/83/Pennsylvania_counties_map.png)';
                   },
+                  'width':imageWidth,
+                  'height':imageHeight,
                   'background-fit': 'cover',
                   'background-color': 'white',
                   'z-index': '10',
@@ -724,7 +740,6 @@
                 } else {
                   const style = cy.$('#'+node.id()).style();
                   if (style['background-color'] === "rgb(255,0,0)") {
-                    console.log('here');
                     cy.nodes().forEach(function( ele ){
                     if(ele.json().data.class === 'concept') {
                         cy.nodes(`[id = "${ele.id()}"]`).style({
@@ -919,7 +934,7 @@
           var count = 1;
           cy.$("#"+id).data("type", nodeData.type);
           Object.keys(nodeData).forEach(function(key) {
-            if(key != "prefLabel" && key != "hasCounty") {
+            if(key != "prefLabel") {
               var value = nodeData[key];
 
               var tempNode = {"data":{}}
@@ -1124,7 +1139,10 @@
 
                 }
 
-                resultData[relation] = finalValue;
+                if(relation !== "hasCounty") {
+                  resultData[relation] = finalValue;
+                }
+                
             })
 
             
