@@ -191,10 +191,10 @@
 
       
       //1. use mycy._private.renderer.imageCache to get image height and width, and style image height width to a reasonable size e.g. fix width = 600 and calculate height (solved)
-
+      //2. re generate normalized center coordinate in countyData.js (solved)
 
       //TODO:
-      //2. re generate normalized center coordinate in countyData.js
+      
       //3. use the query and algorithm https://github.com/touretzkyds/KnowledgeGraphDemo/issues/59 to generate the correct list
       // first see how demo2d did with the nav bar
       //4. make the list into buttons. nav history: from right to left / same as animal demo2d / when click on buttons add nodes or open nodes if it already exists
@@ -463,30 +463,39 @@
           reLayoutCola(cy);
         }
 
+        function styleImageSize(imgCache, ele, cy) {
+          const url = ele.json().data.label;
+          const img = imgCache[url].image;
+          var imageWidth = img.naturalWidth;
+          var imageHeight = img.naturalHeight;
+          const maxH = 600;
+          const maxW = 600;
+          if(imageWidth > maxW) {
+            imageWidth = maxW;
+            imageHeight = (img.naturalHeight / img.naturalWidth) * imageWidth;
+          } else if(imageHeight > maxH) {
+            imageHeight = maxW;
+            imageWidth = (img.naturalWidth / img.naturalHeight) * imageHeight;
+          }
+          cy.nodes(`[id = "${ele.id()}"]`).style({
+            'width':imageWidth,
+            'height':imageHeight,
+          });
+        }
+
         function adjustImageSize(cy) {
           cy.nodes().forEach(function( ele ){
             if(ele.json().data.class === 'image' || ele.json().data.class === 'countyImage') {
-              ele.on('background', function(evt) {
-                const imgObject = cy._private.renderer.imageCache;
-                const url = ele.json().data.label;
-                const img = imgObject[url].image;
-                var imageWidth = img.naturalWidth;
-                var imageHeight = img.naturalHeight;
-                const maxH = 600;
-                const maxW = 600;
-                if(imageWidth > maxW) {
-                  imageWidth = maxW;
-                  imageHeight = (img.naturalHeight / img.naturalWidth) * imageWidth;
-                } else if(imageHeight > maxH) {
-                  imageHeight = maxW;
-                  imageWidth = (img.naturalWidth / img.naturalHeight) * imageHeight;
-                }
-                  
-                cy.nodes(`[id = "${ele.id()}"]`).style({
-                  'width':imageWidth,
-                  'height':imageHeight,
+              const url = ele.json().data.label;
+              var imgCache = cy._private.renderer.imageCache;
+              if(imgCache === undefined || imgCache[url] === undefined) {
+                ele.on('background', function(evt) {
+                  imgCache = cy._private.renderer.imageCache;
+                  styleImageSize(imgCache, ele, cy);
                 });
-              });
+              } else {
+                styleImageSize(imgCache, ele, cy);
+              }
             }
           });
         }
@@ -670,22 +679,13 @@
                 } 
             }
             ]
-            ,
-            layout: {
-              name: 'cola',
-              avoidOverlap: true,
-              edgeLength: 500,
-              nodeSpacing: 100,
-              nodeDimensionsIncludeLabels: true,
-              centerGraph:true,
-            } 
             });
 
             mycy = cy;
             cy.nodes(`[id = "${source}"]`).style({
                 "background-color": 'red'
             });
-
+            reLayoutCola(cy);
             adjustImageSize(cy);
 
             cy.on('tap', function(evt) {
@@ -730,7 +730,7 @@
                           "background-color": '#ADD8E6',
                           "border-color": '#00008B'
                       });
-                    }else if(ele.json().data.class === 'dummyConcept') {
+                    } else if(ele.json().data.class === 'dummyConcept') {
                       cy.nodes(`[id = "${ele.id()}"]`).style({
                         "background-color": '#FFFFFF',
                         "border-color": '#ADD8E6',
@@ -823,11 +823,7 @@
                   }
                 }
                 
-              } else if(node.json().data.class === 'countyImage') {
-                const p = getNormalizedPositions(evt);
-                console.log('x', p.x, 'y', p.y);
               }
-              
             });
             cy.on('mouseover', function(evt) {
               var node = evt.target;
