@@ -192,10 +192,11 @@
       
       //1. use mycy._private.renderer.imageCache to get image height and width, and style image height width to a reasonable size e.g. fix width = 600 and calculate height (solved)
       //2. re generate normalized center coordinate in countyData.js (solved)
+      //3. use the query and algorithm https://github.com/touretzkyds/KnowledgeGraphDemo/issues/59 to generate the correct list (solved)
 
       //TODO:
       
-      //3. use the query and algorithm https://github.com/touretzkyds/KnowledgeGraphDemo/issues/59 to generate the correct list
+      
       // first see how demo2d did with the nav bar
       //4. make the list into buttons. nav history: from right to left / same as animal demo2d / when click on buttons add nodes or open nodes if it already exists
       //5. also do the navigation tool on the top right corner. first think how to nav up and down then sibling
@@ -288,10 +289,98 @@
 
         }
 
+        function navListQuery(value, perform_query) {
+          const prevquery = document.getElementById("sparql2");
+        prevquery.innerHTML = 
+           `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+            PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+            PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+            PREFIX qudt:  <http://qudt.org/schema/qudt/>
+            PREFIX unit:  <http://qudt.org/vocab/unit/> 
+            PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+            PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
+            PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
+            PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
+            PREFIX la: <https://linked.art/ns/terms/>
+            PREFIX un: <http://www.w3.org/2007/ont/unit#> 
+            PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
+            SELECT ?xLabel ?yLabel
+            WHERE {
+              BIND ( '${value}'@en AS ?prefLabel).
+              ?Q skos:prefLabel ?prefLabel .
+              ?Q kgo:locatedInAdministrativeRegion* ?y.
+              ?x kgo:locatedInAdministrativeRegion ?y.
+              ?x rdfs:label|skos:prefLabel ?xLabel.
+              ?y rdfs:label|skos:prefLabel ?yLabel.
+            }`; 
+
+            
+            if (perform_query) {
+            const endpoint = d3.select("#endpoint2").property("value")
+            const sparql = d3.select("#sparql2").property("value")
+            const url = endpoint + "?query=" + encodeURIComponent(sparql)
+            return url
+            } else {
+            return false
+            }
+        }
+
+        function getRankedNavList(data) {
+          const binding = data.results.bindings;
+          if(binding.length === 0) {
+              console.log("undefined");
+              return undefined;
+          }
+          var pairs = [];
+          Object.keys(binding).forEach(function(key) {
+            pairs.push(binding[key])
+          })
+          var nodes = {}
+          var done = false
+          while(!done) {
+            done = true
+            for(let i = 0; i < pairs.length; i++) {
+              var curr = pairs[i];
+              var p = curr.xLabel.value;
+              var q = curr.yLabel.value;
+              if(!nodes.hasOwnProperty(p)) {
+                nodes[p] = 0;
+                nodes[q] = 0;
+              }
+              if(nodes[q] < nodes[p] + 1) {
+                nodes[q] = nodes[p] + 1
+                done = false
+              }
+            }
+          }
+          var navList = [];
+          Object.keys(nodes).forEach(function(key) {
+            var value = nodes[key];
+            var temp = {};
+            temp.order = value;
+            temp.name = key;
+            navList.push(temp);
+          })
+          navList = navList.sort((a, b) => {
+            if (a.order < b.order) {
+              return -1;
+            }
+          });
+          for(let i = 0; i < navList.length; i++) {
+            navList[i] = navList[i].name;
+          }
+          console.log(navList);
+          return navList;
+        }
+
         function getDataResponse(value) {
             const url = propertyQuery(value, true);
+            const navListPairsUrl = navListQuery(value, true);
             conceptNodeLabelToID = {};
             d3.json(url).then(function(data) {visualizeData(data);});
+            d3.json(navListPairsUrl).then(function(data) {getRankedNavList(data)});
         }
 
         function classifyclass(key, value) {
@@ -1207,12 +1296,6 @@
               getDataResponse(cityName.value);
           }
       });
-      // let layoutBtn = document.getElementById("reLayout");
-      // let cy = document.getElementById("cy");
-      // layoutBtn.addEventListener("click", function(e) {
-      //   reLayoutCola(cy);
-      // })
-
     </script> 
       
   </body>
