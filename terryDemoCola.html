@@ -170,23 +170,6 @@
 
     <script>
       // already solved
-      // 1. left click to zoom in image (solved)
-      // 2. when mouseout back to original (solved)
-      // 8. relayout when we add new county nodes (solved)
-      // 4. use left click to add counties (solved)
-      // 5. the label for those edges should be "hasCounty" (solved)
-      // Q: has county id still problematic, need to examine everywhere about ID (solved)
-      // center / concept class things
-      // 3. when I navigate to PA, it should be red, pitt should not (solved)
-      // Q: when I set dummy Pitt to be real, it raises error, first make pittsburgh a concept and ditch the center class / then give red color for every expansion (solved)
-      // Q: when I make PA center, Pitt not center, it cannot be closed -> it should be able to close at the first place. Dont care about center type, just make it red. (solved)
-      // 6. add hasCounty links for a state in data.ttl -> (don't display it, if(key == hasCounty) { continue: }) (solved)
-      // 7. add comments in knowledge graph for Q numbers (solved)
-      // 11. fix indentation (solved)
-      // 9. add regions (Northeast region)/ country as a node (US) / north america (above US) (solved)
-      // 12. add locatedInAdministrativeRegion link / ontology wikipedia (Pitt -> Allegheny -> PA -> MidWest Region -> US -> North America) (solved)
-      // 10. adjust image w / h, using the original w / h to set size (solved)
-
       // next TODO:
       // 13. see how demo2d did for navigation / use single query find every parent nodes and order (find that query)
       // Q1342 -> Q156291 -> Q1400 -> Q7057970 -> Q30 -> Q49
@@ -202,7 +185,22 @@
 
       //Q: when closing PA, those newly added counties were still there
 
+      //mycy._private.renderer.imageCache -> fix image size
+      //https://en.wikipedia.org/wiki/List_of_regions_of_the_United_States use U.S Bureau source to add region data -> call then divisions
 
+
+      
+      //1. use mycy._private.renderer.imageCache to get image height and width, and style image height width to a reasonable size e.g. fix width = 600 and calculate height (solved)
+
+
+      //TODO:
+      //2. re generate normalized center coordinate in countyData.js
+      //3. use the query and algorithm https://github.com/touretzkyds/KnowledgeGraphDemo/issues/59 to generate the correct list
+      // first see how demo2d did with the nav bar
+      //4. make the list into buttons. nav history: from right to left / same as animal demo2d / when click on buttons add nodes or open nodes if it already exists
+      //5. also do the navigation tool on the top right corner. first think how to nav up and down then sibling
+      //6. add regions data according to https://en.wikipedia.org/wiki/List_of_regions_of_the_United_States census bureau
+      //7. research about Deya's python file to get data
       
       
       
@@ -213,8 +211,6 @@
         var initialPositions = {};
         var prevImagePositions = {};
         var mycy;
-        var imageWidth = 600;
-        var imageHeight = 300;
 
         function propertyQuery(value, perform_query) {
         const prevquery = document.getElementById("sparql2");
@@ -467,6 +463,34 @@
           reLayoutCola(cy);
         }
 
+        function adjustImageSize(cy) {
+          cy.nodes().forEach(function( ele ){
+            if(ele.json().data.class === 'image' || ele.json().data.class === 'countyImage') {
+              ele.on('background', function(evt) {
+                const imgObject = cy._private.renderer.imageCache;
+                const url = ele.json().data.label;
+                const img = imgObject[url].image;
+                var imageWidth = img.naturalWidth;
+                var imageHeight = img.naturalHeight;
+                const maxH = 600;
+                const maxW = 600;
+                if(imageWidth > maxW) {
+                  imageWidth = maxW;
+                  imageHeight = (img.naturalHeight / img.naturalWidth) * imageWidth;
+                } else if(imageHeight > maxH) {
+                  imageHeight = maxW;
+                  imageWidth = (img.naturalWidth / img.naturalHeight) * imageHeight;
+                }
+                  
+                cy.nodes(`[id = "${ele.id()}"]`).style({
+                  'width':imageWidth,
+                  'height':imageHeight,
+                });
+              });
+            }
+          });
+        }
+
         function visualizeData(data) {
             const jsonData = getDataJSON(data);
             if(jsonData === undefined) {
@@ -614,21 +638,8 @@
                 style: {
                   'shape': 'rectangle',
                   'background-image': function(node) {
-                    console.log('making new Image');
-                    const image = new Image();
-                    image.src = node.data('label');
-
-                    image.onload = function() {
-                      console.log('Image loaded');
-                      imageWidth = image.naturalWidth;
-                      imageHeight = image.naturalHeight;
-                    };
-
                     return 'url(' + node.data('label') + ')';
-                    // return 'url(https://upload.wikimedia.org/wikipedia/commons/8/83/Pennsylvania_counties_map.png)';
                   },
-                  'width':imageWidth,
-                  'height':imageHeight,
                   'background-fit': 'cover',
                   'background-color': 'white',
                   'z-index': '10',
@@ -639,19 +650,8 @@
                 style: {
                   'shape': 'rectangle',
                   'background-image': function(node) {
-                    const image = new Image();
-                    image.src = node.data('label');
-
-                    image.onload = function() {
-                      imageWidth = image.naturalWidth;
-                      imageHeight = image.naturalHeight;
-                    };
-
                     return 'url(' + node.data('label') + ')';
-                    // return 'url(https://upload.wikimedia.org/wikipedia/commons/8/83/Pennsylvania_counties_map.png)';
                   },
-                  'width':imageWidth,
-                  'height':imageHeight,
                   'background-fit': 'cover',
                   'background-color': 'white',
                   'z-index': '10',
@@ -685,6 +685,8 @@
             cy.nodes(`[id = "${source}"]`).style({
                 "background-color": 'red'
             });
+
+            adjustImageSize(cy);
 
             cy.on('tap', function(evt) {
               var node = evt.target;
@@ -821,6 +823,9 @@
                   }
                 }
                 
+              } else if(node.json().data.class === 'countyImage') {
+                const p = getNormalizedPositions(evt);
+                console.log('x', p.x, 'y', p.y);
               }
               
             });
@@ -979,6 +984,7 @@
             }
           })
           reLayoutCola(cy);
+          adjustImageSize(cy);
         }
 
         function removeConceptNode(cy, id) {
