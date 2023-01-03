@@ -5,7 +5,7 @@
     <title>Demo for city data</title>
     <script src="external/d3.v7.min.js"></script>
     <script src="external/cytoscape.min.js"></script>
-
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
     <script src="external/dagre.js"></script>
     <script src="external/cytoscape-dagre.js"></script>
     <script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.js"></script>
@@ -35,59 +35,8 @@
       .title {
         text-align: center;
       }
-      
-      #nav-up,
-      #nav-down,
-      #nav-left,
-      #nav-right{
-        border-radius: 50px;
-        background-color: white;
-        font-weight: 600;
-        width: 140px;
-        height: 40px;
-        text-align: center;
-        margin: 2px;
-      }
-      #southwest-arrow,
-      #southeast-arrow{
-        background-color: white;
-        font-weight: 600;
-        border-width: 0px;
-        width: 40px;
-        height: 40px;
-        text-align: center;
-        margin: 2px;
-      }
 
-      #middle-nav{
-        border-radius: 50px;
-        background-color: #f08080;
-        border: 0px;
-        font-weight: 600;
-        width: 130px;
-        height: 40px;
-        text-align: center;
-        margin: 2px;
-      }
-  
-
-      .btn {
-        background-color: black;
-        color: white;
-        padding: 10px;
-        width: 100px;
-      }
-
-
-
-      .btn2 {
-        background-color: green;
-        color: white;
-        padding: 10px;
-        width: 100px;
-      }
-
-      .input-species {
+      .input-geoData {
         background-color: white;
         color: black;
         margin-top: 20px;
@@ -97,75 +46,41 @@
         width: 150px;
       }
 
-      .hierarchy-entry-button {
-        background-color: white;
-        margin-top: 20px;
-        margin-bottom: 20px;
-        width: 100px; 
-        height: 30px;
-      }
-
       .nav-history{
         display: flex;
       }
-      
-      /* CONTEXT MENUS */
-      .cy-context-menus-cxt-menu {
-          display:none;
-          z-index: 1000;
-          position:absolute;
-          border:1px solid #A0A0A0;
-          padding: 0;
-          margin: 0;
-          width:auto;
+
+      .nav-button{
+        background-color: white;
+        font-weight: 550;
+        color: rgb(255, 105, 180);
+        border-radius: 50px;
+        border: 0px;
       }
 
-      .cy-context-menus-cxt-menuitem {
-          display:block;
-          width: 100%;
-          padding: 3px 20px;
-          position:relative;
-          margin:0;
-          background-color:#f8f8f8;
-          font-weight:normal;
-          font-size: 12px;
-          white-space:nowrap;
-          border: 0;
-          text-align: left;
+      .nav-button:hover{
+        background-color: white;
+        font-weight: 700;
+        color: rgb(170, 51, 106);
+        border-radius: 50px;
+        border: 0px;
       }
 
-      .cy-context-menus-cxt-menuitem:enabled {
-          color: #000000;
+      .nav-button.selected{
+        background-color: white;
+        font-weight: 550;
+        color: rgb(3, 169, 244);
+        border-radius: 50px;
+        border: 0px;
       }
 
-      .cy-context-menus-ctx-operation:focus {
-        outline: none;
+      .nav-button.selected:hover{
+        background-color: white;
+        font-weight: 700;
+        color: rgb(3, 1, 140);
+        border-radius: 50px;
+        border: 0px;
       }
-
-      .cy-context-menus-cxt-menuitem:hover {
-          color: #ffffff;
-          text-decoration: none;
-          background-color: #fdd3ef;
-          background-image: none;
-          cursor: pointer;
-      }
-
-      .cy-context-menus-cxt-menuitem[content]:before {
-          content:attr(content);
-      }
-
-      .cy-context-menus-divider {
-        border-bottom:1px solid #A0A0A0;
-      }
-
-      .cy-context-menus-submenu-indicator {
-          position: absolute;
-          right: 2px;
-          top: 50%;
-          transform: translateY(-50%);
-      }
-
-      
     </style>
 
     <script>
@@ -195,8 +110,6 @@
       //3. use the query and algorithm https://github.com/touretzkyds/KnowledgeGraphDemo/issues/59 to generate the correct list (solved)
 
       //TODO:
-      
-      
       // first see how demo2d did with the nav bar
       //4. make the list into buttons. nav history: from right to left / same as animal demo2d / when click on buttons add nodes or open nodes if it already exists
       //5. also do the navigation tool on the top right corner. first think how to nav up and down then sibling
@@ -214,7 +127,7 @@
         var mycy;
 
         function propertyQuery(value, perform_query) {
-        const prevquery = document.getElementById("sparql2");
+        const prevquery = document.getElementById("sparql");
         prevquery.innerHTML = 
            `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
             PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
@@ -241,8 +154,8 @@
 
             
             if (perform_query) {
-            const endpoint = d3.select("#endpoint2").property("value")
-            const sparql = d3.select("#sparql2").property("value")
+            const endpoint = d3.select("#endpoint").property("value")
+            const sparql = d3.select("#sparql").property("value")
             const url = endpoint + "?query=" + encodeURIComponent(sparql)
             return url
             } else {
@@ -252,7 +165,7 @@
         }
 
         function propertyQueryWithQnumber(q, perform_query) {
-        const prevquery = document.getElementById("sparql2");
+        const prevquery = document.getElementById("sparql");
         prevquery.innerHTML = 
            `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
             PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
@@ -279,8 +192,8 @@
 
             
             if (perform_query) {
-            const endpoint = d3.select("#endpoint2").property("value")
-            const sparql = d3.select("#sparql2").property("value")
+            const endpoint = d3.select("#endpoint").property("value")
+            const sparql = d3.select("#sparql").property("value")
             const url = endpoint + "?query=" + encodeURIComponent(sparql)
             return url
             } else {
@@ -290,7 +203,7 @@
         }
 
         function navListQuery(value, perform_query) {
-          const prevquery = document.getElementById("sparql2");
+          const prevquery = document.getElementById("sparql");
         prevquery.innerHTML = 
            `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
             PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
@@ -318,8 +231,8 @@
 
             
             if (perform_query) {
-            const endpoint = d3.select("#endpoint2").property("value")
-            const sparql = d3.select("#sparql2").property("value")
+            const endpoint = d3.select("#endpoint").property("value")
+            const sparql = d3.select("#sparql").property("value")
             const url = endpoint + "?query=" + encodeURIComponent(sparql)
             return url
             } else {
@@ -330,7 +243,7 @@
         function getRankedNavList(data) {
           const binding = data.results.bindings;
           if(binding.length === 0) {
-              console.log("undefined");
+              alert("undefined");
               return undefined;
           }
           var pairs = [];
@@ -367,20 +280,42 @@
             if (a.order < b.order) {
               return -1;
             }
-          });
+          }).reverse();
           for(let i = 0; i < navList.length; i++) {
             navList[i] = navList[i].name;
           }
-          console.log(navList);
           return navList;
         }
 
+        function appendNavButtons(navList) {
+            for(let i = 0; i < navList.length; i++) {
+              var name = navList[i];
+              var btn = $(`<button class="nav-button">${name} ◀</button>`);
+              if(i == navList.length - 1) {
+                btn = $(`<button class="nav-button selected">${name}</button>`);
+              }
+              $("#nav-history").append(btn);
+              (function(btn, name) {
+                btn.on('click', function(e) {
+                  $('.nav-button.selected').removeClass('selected');
+                  if(!btn.hasClass("selected")) {
+                    btn.addClass("selected")
+                  }
+                });
+              })(btn, name);
+            }
+         }
+
         function getDataResponse(value) {
             const url = propertyQuery(value, true);
-            const navListPairsUrl = navListQuery(value, true);
             conceptNodeLabelToID = {};
-            d3.json(url).then(function(data) {visualizeData(data);});
-            d3.json(navListPairsUrl).then(function(data) {getRankedNavList(data)});
+            d3.json(url).then(function(data) {visualizeData(data, value);});
+            
+        }
+
+        function setNavHistoryButtons(cy, value) {
+          const navListPairsUrl = navListQuery(value, true);
+          d3.json(navListPairsUrl).then(function(data) {appendNavButtons(getRankedNavList(data))});
         }
 
         function classifyclass(key, value) {
@@ -589,7 +524,7 @@
           });
         }
 
-        function visualizeData(data) {
+        function visualizeData(data, value) {
             const jsonData = getDataJSON(data);
             if(jsonData === undefined) {
               return ;
@@ -770,6 +705,8 @@
             ]
             });
 
+            setNavHistoryButtons(cy, value)
+            
             mycy = cy;
             cy.nodes(`[id = "${source}"]`).style({
                 "background-color": 'red'
@@ -1256,33 +1193,20 @@
       <h1 class="title">Knowledge Graph Query and Display</h1>
 
         <div class="input-append">
-        
-          <input id="endpoint" class="span5" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
           <div id="show-nav-buttons">
           </div>
           
           <div id ="hierarchy-entry">
-            <input id="cityName" class="input-species" placeholder="Enter City Name">
-            <!-- <button id="reLayout">Re-Layout</button> -->
+            <input id="cityName" class="input-geoData" placeholder="Enter City Name">
           </div>
     
-          <div id ="navigation-history" class="nav-history">
-            
+          <div id ="nav-history">
           </div>
   
         </div>
-        
-      <textarea id="sparql" class="spans9" style="display:none;"></textarea>
-
-      <input id="endpoint2" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
-      <textarea id="sparql2" class="spans10" style="display:none;"></textarea>
-
-      <input id="endpoint3" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
-      <textarea id="sparql3" class="spans10" style="display:none;"></textarea>
-
-      <input id="endpoint4" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
-      <textarea id="sparql4" class="spans10" style="display:none;"></textarea>
-
+  
+      <input id="endpoint" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
+      <textarea id="sparql" class="spans10" style="display:none;"></textarea>
       
     </div>
     <div id="cy"></div>
@@ -1290,12 +1214,13 @@
     <script>
       const defaultCityName = 'Pittsburgh';
       getDataResponse(defaultCityName);
-      let cityName = document.getElementById("cityName");
-      cityName.addEventListener("keypress", function (e) {
-          if (e.key == "Enter") {
-              getDataResponse(cityName.value);
+      $("#cityName").on('keypress',function(e) {
+          if(e.which == 13) {
+            var cityName = $("#cityName").val()
+            getDataResponse(cityName);
           }
       });
+
     </script> 
       
   </body>
