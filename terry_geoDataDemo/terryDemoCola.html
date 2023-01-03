@@ -11,6 +11,7 @@
     <script src="../external/cytoscape-cola/cytoscape-cola.js"></script>
     <script src="js/countyData.js"></script>
     <script src="js/event.js"></script>
+    <script src="js/navHistory.js"></script>
 
     <script>
 
@@ -18,18 +19,17 @@
       //later
       // 14. add definitions in ontology files for corporate
       // 15. think about web scrape for other data
-
       // finally, build the nav bar
       
-      //Q: when closing PA, those newly added counties were still there
+      
 
       //https://en.wikipedia.org/wiki/List_of_regions_of_the_United_States use U.S Bureau source to add region data -> call then divisions
 
 
-      
       //1. use mycy._private.renderer.imageCache to get image height and width, and style image height width to a reasonable size e.g. fix width = 600 and calculate height (solved)
       //2. re generate normalized center coordinate in countyData.js (solved)
       //3. use the query and algorithm https://github.com/touretzkyds/KnowledgeGraphDemo/issues/59 to generate the correct list (solved)
+      //Q: when closing PA, those newly added counties were still there (solved)
       
 
       //TODO:
@@ -125,120 +125,11 @@
 
         }
 
-        function navListQuery(value, perform_query) {
-          const prevquery = document.getElementById("sparql");
-        prevquery.innerHTML = 
-           `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-            PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
-            PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
-            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
-            PREFIX qudt:  <http://qudt.org/schema/qudt/>
-            PREFIX unit:  <http://qudt.org/vocab/unit/> 
-            PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
-            PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
-            PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
-            PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
-            PREFIX la: <https://linked.art/ns/terms/>
-            PREFIX un: <http://www.w3.org/2007/ont/unit#> 
-            PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
-            SELECT ?xLabel ?yLabel
-            WHERE {
-              BIND ( '${value}'@en AS ?prefLabel).
-              ?Q skos:prefLabel ?prefLabel .
-              ?Q kgo:locatedInAdministrativeRegion* ?y.
-              ?x kgo:locatedInAdministrativeRegion ?y.
-              ?x rdfs:label|skos:prefLabel ?xLabel.
-              ?y rdfs:label|skos:prefLabel ?yLabel.
-            }`; 
-
-            
-            if (perform_query) {
-            const endpoint = d3.select("#endpoint").property("value")
-            const sparql = d3.select("#sparql").property("value")
-            const url = endpoint + "?query=" + encodeURIComponent(sparql)
-            return url
-            } else {
-            return false
-            }
-        }
-
-        function getRankedNavList(data) {
-          const binding = data.results.bindings;
-          if(binding.length === 0) {
-              return [];
-          }
-          var pairs = [];
-          Object.keys(binding).forEach(function(key) {
-            pairs.push(binding[key])
-          })
-          var nodes = {}
-          var done = false
-          while(!done) {
-            done = true
-            for(let i = 0; i < pairs.length; i++) {
-              var curr = pairs[i];
-              var p = curr.xLabel.value;
-              var q = curr.yLabel.value;
-              if(!nodes.hasOwnProperty(p)) {
-                nodes[p] = 0;
-                nodes[q] = 0;
-              }
-              if(nodes[q] < nodes[p] + 1) {
-                nodes[q] = nodes[p] + 1
-                done = false
-              }
-            }
-          }
-          var navList = [];
-          Object.keys(nodes).forEach(function(key) {
-            var value = nodes[key];
-            var temp = {};
-            temp.order = value;
-            temp.name = key;
-            navList.push(temp);
-          })
-          navList = navList.sort((a, b) => {
-            if (a.order < b.order) {
-              return -1;
-            }
-          }).reverse();
-          for(let i = 0; i < navList.length; i++) {
-            navList[i] = navList[i].name;
-          }
-          return navList;
-        }
-
-        function appendNavButtons(navList) {
-            for(let i = 0; i < navList.length; i++) {
-              var name = navList[i];
-              var btn = $(`<button class="nav-button">${name} ◀</button>`);
-              if(i == navList.length - 1) {
-                btn = $(`<button class="nav-button selected">${name}</button>`);
-              }
-              $("#nav-history").append(btn);
-              (function(btn, name) {
-                btn.on('click', function(e) {
-                  $('.nav-button.selected').removeClass('selected');
-                  if(!btn.hasClass("selected")) {
-                    btn.addClass("selected")
-                  }
-                  //TODO: add node function here
-                });
-              })(btn, name);
-            }
-         }
-
         function getDataResponse(value) {
             const url = propertyQuery(value, true);
             conceptNodeLabelToID = {};
             d3.json(url).then(function(data) {visualizeData(data, value);});
             
-        }
-
-        function setNavHistoryButtons(cy, value) {
-          const navListPairsUrl = navListQuery(value, true);
-          d3.json(navListPairsUrl).then(function(data) {appendNavButtons(getRankedNavList(data))});
         }
 
         function reSetType(cy, id) {
@@ -262,6 +153,44 @@
             return "concept";
           }
           return "literal";
+        }
+
+        function setAsCurrent(cy, id) {
+          cy.nodes().forEach(function( ele ){
+            if(ele.json().data.class === 'concept') {
+              cy.nodes(`[id = "${ele.id()}"]`).style({
+                "background-color": '#ADD8E6',
+                "border-color": '#00008B'
+              });
+            } else if(ele.json().data.class === 'dummyConcept') {
+              cy.nodes(`[id = "${ele.id()}"]`).style({
+                "background-color": '#FFFFFF',
+                "border-color": '#ADD8E6',
+              });
+            }
+          });
+          cy.nodes(`[id = "${id}"]`).style({
+            "background-color": 'red'
+          });
+        }
+
+        function setSourceAsCurrent(cy, id) {
+          var node = cy.$("#"+id);
+          var style = cy.$('#'+id).style();
+          if (style['background-color'] === "rgb(255,0,0)") {
+            cy.nodes().forEach(function( ele ){
+              if(ele.json().data.class === 'concept') {
+                cy.nodes(`[id = "${ele.id()}"]`).style({
+                  "background-color": '#ADD8E6',
+                  "border-color": '#00008B'
+                });
+              }
+            });
+            const sourceID = node.json().data.sourceID;
+            cy.nodes(`[id = "${sourceID}"]`).style({
+              "background-color": 'red'
+            });
+          }
         }
 
         function reLayoutCola(cy) {
@@ -715,29 +644,26 @@
           })
           reLayoutCola(cy);
           adjustImageSize(cy);
+          setAsCurrent(cy, id);
         }
 
         function removeConceptNode(cy, id) {
           var currNode = cy.$("#"+id);
           //outgoers include both edges and nodes
           var outgoers = currNode.outgoers();
-          console.log(edges);
           for(let i = 0; i < outgoers.length; i++) {
             var outgoer = outgoers[i];
-            console.log(outgoer);
-            if(outgoer.json().group === "edges") {
+            if(outgoer.json().group === "edges" && outgoer.target().outgoers().length == 0) {
               cy.remove(outgoer);
-            } else if(outgoer.json().group === "nodes") {
-              if(outgoer.outgoers().length == 0) {
-              const label = outgoer.json().data.label;
-              if(conceptNodeLabelToID[label] == outgoer.id()) {
+              cy.remove(outgoer.target())
+              const label = outgoer.target().json().data.label;
+              if(conceptNodeLabelToID[label] == outgoer.target().id()) {
                 delete conceptNodeLabelToID[label];
               }
-                cy.remove(outgoer);
-              }
             }
-          }
+          } 
           reSetType(cy, id);
+          setSourceAsCurrent(cy, id);
         }
 
         function addbNode(cy, id, bnodeData) {

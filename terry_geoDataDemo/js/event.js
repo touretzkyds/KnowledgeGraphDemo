@@ -29,39 +29,8 @@ function tap(evt, cy) {
                 const url = propertyQuery(cityName, true);
                 d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; addConceptNode(cy, node.id(), jsonData[0]);});
             }
-            cy.nodes().forEach(function( ele ){
-                if(ele.json().data.class === 'concept') {
-                    cy.nodes(`[id = "${ele.id()}"]`).style({
-                        "background-color": '#ADD8E6',
-                        "border-color": '#00008B'
-                    });
-                } else if(ele.json().data.class === 'dummyConcept') {
-                    cy.nodes(`[id = "${ele.id()}"]`).style({
-                        "background-color": '#FFFFFF',
-                        "border-color": '#ADD8E6',
-                    });
-                }
-            });
-            cy.nodes(`[id = "${node.id()}"]`).style({
-                "background-color": 'red'
-            });
             cy.$("#" + node.id()).addClass('readyToCollapse');
         } else {
-            const style = cy.$('#'+node.id()).style();
-            if (style['background-color'] === "rgb(255,0,0)") {
-                cy.nodes().forEach(function( ele ){
-                    if(ele.json().data.class === 'concept') {
-                        cy.nodes(`[id = "${ele.id()}"]`).style({
-                            "background-color": '#ADD8E6',
-                            "border-color": '#00008B'
-                        });
-                    }
-                });
-                const sourceID = node.json().data.sourceID;
-                cy.nodes(`[id = "${sourceID}"]`).style({
-                    "background-color": 'red'
-                });
-            }
             cy.$("#" + node.id()).removeClass('readyToCollapse');
             removeConceptNode(cy, node.id());
         }
