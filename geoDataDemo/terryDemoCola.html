@@ -3,85 +3,14 @@
 <html>
   <head>
     <title>Demo for city data</title>
-    <script src="external/d3.v7.min.js"></script>
-    <script src="external/cytoscape.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <script src="../external/d3.v7.min.js"></script>
+    <script src="../external/cytoscape.min.js"></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-    <script src="external/dagre.js"></script>
-    <script src="external/cytoscape-dagre.js"></script>
-    <script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.js"></script>
-    <script src="external/cytoscape-popper/cytoscape-popper.js"></script>
-    <script src="external/cytoscape-context-menus/cytoscape-context-menus.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/copy-image-clipboard/dist/index.browser.js"></script>
     <script src="https://unpkg.com/webcola/WebCola/cola.min.js"></script>
-    <script src="external/cytoscape-cola/cytoscape-cola.js"></script>
-    <script src="newDagre.js"></script>
-    <script src="countyData.js"></script>
-
-
-
-    <style type="text/css">
-      .body{
-        margin: 0;
-      }
-
-      #cy {
-        height: 67vh;
-        margin-top:30px;
-        width: 100%;
-        border-style: solid;
-      }
-
- 
-      .title {
-        text-align: center;
-      }
-
-      .input-geoData {
-        background-color: white;
-        color: black;
-        margin-top: 20px;
-        margin-bottom: 20px;
-        margin-right: 5px; 
-        height: 20px;
-        width: 150px;
-      }
-
-      .nav-history{
-        display: flex;
-      }
-
-      .nav-button{
-        background-color: white;
-        font-weight: 550;
-        color: rgb(255, 105, 180);
-        border-radius: 50px;
-        border: 0px;
-      }
-
-      .nav-button:hover{
-        background-color: white;
-        font-weight: 700;
-        color: rgb(170, 51, 106);
-        border-radius: 50px;
-        border: 0px;
-      }
-
-      .nav-button.selected{
-        background-color: white;
-        font-weight: 550;
-        color: rgb(3, 169, 244);
-        border-radius: 50px;
-        border: 0px;
-      }
-
-      .nav-button.selected:hover{
-        background-color: white;
-        font-weight: 700;
-        color: rgb(3, 1, 140);
-        border-radius: 50px;
-        border: 0px;
-      }
-    </style>
+    <script src="../external/cytoscape-cola/cytoscape-cola.js"></script>
+    <script src="js/countyData.js"></script>
+    <script src="js/event.js"></script>
 
     <script>
       // already solved
@@ -243,8 +172,7 @@
         function getRankedNavList(data) {
           const binding = data.results.bindings;
           if(binding.length === 0) {
-              alert("undefined");
-              return undefined;
+              return [];
           }
           var pairs = [];
           Object.keys(binding).forEach(function(key) {
@@ -301,6 +229,7 @@
                   if(!btn.hasClass("selected")) {
                     btn.addClass("selected")
                   }
+                  //TODO: add node function here
                 });
               })(btn, name);
             }
@@ -318,6 +247,13 @@
           d3.json(navListPairsUrl).then(function(data) {appendNavButtons(getRankedNavList(data))});
         }
 
+        function reSetType(cy, id) {
+          const idForSourceNode = cy.$("#"+id).json().data.sourceID;
+          if(idForSourceNode !== undefined) {
+            cy.$("#"+id).json({data:{type: cy.$("#"+idForSourceNode).json().data.type}});
+          }
+        }
+
         function classifyclass(key, value) {
           if(key === "image") {
             return "image";
@@ -332,6 +268,20 @@
             return "concept";
           }
           return "literal";
+        }
+
+        function reLayoutCola(cy) {
+          var layout = cy.layout({
+            name: 'cola',
+            avoidOverlap: true,
+            edgeLength: 500,
+            nodeSpacing: 100,
+            nodeDimensionsIncludeLabels: true,
+            centerGraph:true,
+            numIter: 100000,
+          });
+          
+          layout.start();
         }
 
         function convertToCytoscape(data) {
@@ -377,27 +327,6 @@
                 }
             })
             return [nodes, edges, source];
-        }
-
-        function reLayoutCola(cy) {
-          var layout = cy.layout({
-            name: 'cola',
-            avoidOverlap: true,
-            edgeLength: 500,
-            nodeSpacing: 100,
-            nodeDimensionsIncludeLabels: true,
-            centerGraph:true,
-            numIter: 100000,
-          });
-          
-          layout.start();
-        }
-
-        function reSetType(cy, id) {
-          const idForSourceNode = cy.$("#"+id).json().data.sourceID;
-          if(idForSourceNode !== undefined) {
-            cy.$("#"+id).json({data:{type: cy.$("#"+idForSourceNode).json().data.type}});
-          }
         }
 
         function distanceBetween(x1, y1, x2, y2) {
@@ -715,237 +644,22 @@
             adjustImageSize(cy);
 
             cy.on('tap', function(evt) {
-              var node = evt.target;
-              if(node.json().data.class === 'qudt') {
-                if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
-                  const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
-                  const sourceCityName = cy.$('#' + node.json().data.sourceID).json().data.label.split("\nboltz:")[0];
-                    if(bnodeExpansionDataCache.hasOwnProperty(node.id())) {
-                      addbNode(cy, node.id(), bnodeExpansionDataCache[node.id()]);
-                    } else {
-                      const url = propertyQuery(sourceCityName, true);
-                      d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; addbNode(cy, node.id(), jsonData[1]);});
-                    }
-                  
-                  cy.$("#" + node.id()).addClass('readyToCollapse');
-                } else {
-                  const sourceQnumber = cy.$('#' + node.json().data.sourceID).json().data.label.split("boltz:")[1];
-                  removebNode(cy, node.id());
-                  cy.$("#" + node.id()).removeClass('readyToCollapse');
-                  
-                }
-              } else if(node.json().data.class === 'dummyConcept') {
-                const id = conceptNodeLabelToID[node.json().data.label];
-                if(id !== undefined) {
-                  cy.center("#" + id);
-                }
-                
-              } else if(node.json().data.class === 'concept') {
-                const cityName = node.json().data.label.split("\nboltz")[0];
-                if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
-                  if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
-                    addConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()]);
-                  } else {
-                    const url = propertyQuery(cityName, true);
-                    d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; addConceptNode(cy, node.id(), jsonData[0]);});
-                  }
-
-                  cy.nodes().forEach(function( ele ){
-                    if(ele.json().data.class === 'concept') {
-                      cy.nodes(`[id = "${ele.id()}"]`).style({
-                          "background-color": '#ADD8E6',
-                          "border-color": '#00008B'
-                      });
-                    } else if(ele.json().data.class === 'dummyConcept') {
-                      cy.nodes(`[id = "${ele.id()}"]`).style({
-                        "background-color": '#FFFFFF',
-                        "border-color": '#ADD8E6',
-                      });
-                    }
-
-                  });
-                  cy.nodes(`[id = "${node.id()}"]`).style({
-                      "background-color": 'red'
-                  });
-
-                  cy.$("#" + node.id()).addClass('readyToCollapse');
-                } else {
-                  const style = cy.$('#'+node.id()).style();
-                  if (style['background-color'] === "rgb(255,0,0)") {
-                    cy.nodes().forEach(function( ele ){
-                    if(ele.json().data.class === 'concept') {
-                        cy.nodes(`[id = "${ele.id()}"]`).style({
-                            "background-color": '#ADD8E6',
-                            "border-color": '#00008B'
-                        });
-                      }
-                    });
-                    const sourceID = node.json().data.sourceID;
-                    cy.nodes(`[id = "${sourceID}"]`).style({
-                        "background-color": 'red'
-                    });
-                  }
-                  
-                  cy.$("#" + node.id()).removeClass('readyToCollapse');
-                  removeConceptNode(cy, node.id());
-                }
-              } else if(node.json().data.class === 'image' || node.json().data.class === 'countyImage') {
-                if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
-                  prevImagePositions.x = node.position('x');
-                  prevImagePositions.y = node.position('y');
-                  cy.nodes(`[id = "${node.id()}"]`).style({
-                      'width': node.width() * 10,
-                      'height': node.height() * 10,
-                      'z-index': '20',
-                  });
-                  cy.$("#" + node.id()).addClass('readyToCollapse');
-                } else if(node.json().data.class === 'countyImage') {
-                  addCounties(evt, cy);
-                }
-              }
+              tap(evt, cy);
             });
             cy.on('cxttap', function(evt) {
-              var node = evt.target;
-              
-              if(node.json().data.class === 'dummyConcept') {
-                cy.nodes(`[id = "${node.id()}"]`).style({
-                    'width': node.width() * 1.25,
-                    'height': node.height() * 1.25
-                });
-
-                const id = conceptNodeLabelToID[node.json().data.label];
-                if(id !== undefined) {
-                  cy.nodes(`[id = "${id}"]`).style({
-                    'width': cy.$('#'+id).width() * 0.8,
-                    'height': cy.$('#'+id).height() * 0.8
-                  });
-                  if(cy.$("#" + id).json().data.class === 'greenConcept') {
-                    cy.$("#"+id).json({data:{class:'concept'}});
-                  }
-                }
-                
-
-                const currlabel = node.json().data.label;
-                cy.nodes().forEach(function( ele ){
-                  if(ele.json().data.label === currlabel && (ele.json().data.class === 'concept')) {
-                    ele.json({data:{class:'dummyConcept'}});
-                    cy.nodes(`[id = "${ele.id()}"]`).style({
-                        "background-color": '#FFFFFF',
-                        "border-color": '#ADD8E6',
-                    });
-                  }
-                });
-                node.json({data:{class:'concept'}});
-                cy.nodes(`[id = "${node.id()}"]`).style({
-                  "background-color": '#ADD8E6',
-                  "border-color": '#00008B',
-                });
-                conceptNodeLabelToID[node.json().data.label] = node.id();
-
-                if(id !== undefined) {
-                  if(cy.$("#" + id).hasClass('readyToCollapse')) {
-                    removeConceptNode(cy, id);
-                    cy.$("#" + id).removeClass('readyToCollapse');
-                  }
-                }
-                
-              }
+              cxttap(evt, cy);
             });
             cy.on('mouseover', function(evt) {
-              var node = evt.target;
-              if(node.json().data.class === 'qudt' || node.json().data.class === 'concept') {
-                cy.nodes(`[id = "${node.id()}"]`).style({
-                    'width': node.width() * 1.25,
-                    'height': node.height() * 1.25
-                });
-              } else if(node.json().data.class === 'dummyConcept') {
-                const id = conceptNodeLabelToID[node.json().data.label];
-                if(id !== undefined) {
-                  cy.nodes(`[id = "${conceptNodeLabelToID[node.json().data.label]}"]`).style({
-                      'width': cy.$('#'+id).width() * 1.25,
-                      'height': cy.$('#'+id).height() * 1.25,
-                  });
-                  if(cy.$("#" + id).json().data.class === 'concept') {
-                    cy.$("#"+id).json({data:{class:'greenConcept'}});
-                    cy.nodes(`[id = "${id}"]`).style({
-                      "background-color": '#00FF00',
-                    });
-                  }
-                }
-              }
+              mouseover(evt, cy);
             });
             cy.on('mouseout', function(evt) {
-              var node = evt.target;
-              if(node.json().data.class === 'qudt' || node.json().data.class === 'concept') {
-                cy.nodes(`[id = "${node.id()}"]`).style({
-                    'width': node.width() * 0.8,
-                    'height': node.height() * 0.8
-                });
-              } else if(node.json().data.class === 'dummyConcept') {
-                const id = conceptNodeLabelToID[node.json().data.label];
-                if(id !== undefined) {
-                  cy.nodes(`[id = "${id}"]`).style({
-                    'width': cy.$('#'+id).width() * 0.8,
-                    'height': cy.$('#'+id).height() * 0.8,
-                  });
-                  if(cy.$("#" + id).json().data.class === 'greenConcept') {
-                    cy.$("#"+id).json({data:{class:'concept'}});
-                    cy.nodes(`[id = "${id}"]`).style({
-                        "background-color": '#ADD8E6',
-                        "border-color": '#00008B'
-                    });
-                  }
-                }
-              } 
-              else if(node.json().data.class === 'image' || node.json().data.class === 'countyImage') {
-                if(cy.$("#" + node.id()).hasClass('readyToCollapse')) {
-                  cy.nodes(`[id = "${node.id()}"]`).style({
-                    'width': node.width() * 0.1,
-                    'height': node.height() * 0.1,
-                    'z-index': '10',
-                  });
-                  node.position({
-                    x: prevImagePositions.x,
-                    y: prevImagePositions.y
-                  });
-                  cy.$("#" + node.id()).removeClass('readyToCollapse');
-                  if(node.json().data.class === 'countyImage') {
-                    reLayoutCola(cy);
-                  }
-                }
-              }
+              mouseout(evt, cy);
             });
             cy.on('grab', function(evt){
-              var draggedNode = evt.target;
-              initialPositions[draggedNode.id()] = {
-                x: draggedNode.position('x'),
-                y: draggedNode.position('y')
-              };
-              var connectedNodes = draggedNode.neighborhood();
-              connectedNodes.forEach(function(node){
-                if(node.id() !== draggedNode.id()){
-                  initialPositions[node.id()] = {
-                    x: node.position('x'),
-                    y: node.position('y')
-                  };
-                }
-              });
+              grab(evt);
             });
             cy.on('drag', function(evt){
-              var draggedNode = evt.target;
-              var connectedNodes = draggedNode.neighborhood();
-              connectedNodes.forEach(function(node){
-                if(node.id() !== draggedNode.id() && node.outgoers().length == 0){
-                  var dx = draggedNode.position('x') - initialPositions[draggedNode.id()].x; 
-                  var dy = draggedNode.position('y') - initialPositions[draggedNode.id()].y; 
-                  var newX = dx + initialPositions[node.id()].x;
-                  var newY = dy + initialPositions[node.id()].y;
-                  node.position({
-                    x: newX,
-                    y: newY
-                  });
-                }
-              });
+              drag(evt);
             });
 
         }

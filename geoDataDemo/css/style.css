@@ -1,0 +1,61 @@
+.body{
+    margin: 0;
+}
+
+#cy {
+    height: 67vh;
+    margin-top:30px;
+    width: 100%;
+    border-style: solid;
+}
+
+
+.title {
+    text-align: center;
+}
+
+.input-geoData {
+    background-color: white;
+    color: black;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    margin-right: 5px; 
+    height: 20px;
+    width: 150px;
+}
+
+.nav-history{
+    display: flex;
+}
+
+.nav-button{
+    background-color: white;
+    font-weight: 550;
+    color: rgb(255, 105, 180);
+    border-radius: 50px;
+    border: 0px;
+}
+
+.nav-button:hover{
+    background-color: white;
+    font-weight: 700;
+    color: rgb(170, 51, 106);
+    border-radius: 50px;
+    border: 0px;
+}
+
+.nav-button.selected{
+    background-color: white;
+    font-weight: 550;
+    color: rgb(3, 169, 244);
+    border-radius: 50px;
+    border: 0px;
+}
+
+.nav-button.selected:hover{
+    background-color: white;
+    font-weight: 700;
+    color: rgb(3, 1, 140);
+    border-radius: 50px;
+    border: 0px;
+}
