@@ -13,10 +13,6 @@
     <script src="js/event.js"></script>
 
     <script>
-      // already solved
-      // next TODO:
-      // 13. see how demo2d did for navigation / use single query find every parent nodes and order (find that query)
-      // Q1342 -> Q156291 -> Q1400 -> Q7057970 -> Q30 -> Q49
 
       
       //later
@@ -25,11 +21,8 @@
 
       // finally, build the nav bar
       
-
-
       //Q: when closing PA, those newly added counties were still there
 
-      //mycy._private.renderer.imageCache -> fix image size
       //https://en.wikipedia.org/wiki/List_of_regions_of_the_United_States use U.S Bureau source to add region data -> call then divisions
 
 
@@ -37,6 +30,7 @@
       //1. use mycy._private.renderer.imageCache to get image height and width, and style image height width to a reasonable size e.g. fix width = 600 and calculate height (solved)
       //2. re generate normalized center coordinate in countyData.js (solved)
       //3. use the query and algorithm https://github.com/touretzkyds/KnowledgeGraphDemo/issues/59 to generate the correct list (solved)
+      
 
       //TODO:
       // first see how demo2d did with the nav bar
@@ -724,42 +718,26 @@
         }
 
         function removeConceptNode(cy, id) {
-          const nodeData = conceptExpansionDataCache[id];
-          Object.keys(nodeData).forEach(function(key) {
-            if(key != "prefLabel") {
-              var value = nodeData[key];
-              const nodeID = convertToNodeID(id, key, value);
-              const edgeID = convertToEdgeID(id, key, value);
-              if(cy.$('#' + nodeID).outgoers().length == 0) {
-                const label = cy.$('#' + nodeID).json().data.label;
-                if(conceptNodeLabelToID[label] == nodeID) {
-                  delete conceptNodeLabelToID[label];
-                }
-                cy.remove(cy.$('#' + edgeID));
-                cy.remove(cy.$('#' + nodeID));
+          var currNode = cy.$("#"+id);
+          //outgoers include both edges and nodes
+          var outgoers = currNode.outgoers();
+          console.log(edges);
+          for(let i = 0; i < outgoers.length; i++) {
+            var outgoer = outgoers[i];
+            console.log(outgoer);
+            if(outgoer.json().group === "edges") {
+              cy.remove(outgoer);
+            } else if(outgoer.json().group === "nodes") {
+              if(outgoer.outgoers().length == 0) {
+              const label = outgoer.json().data.label;
+              if(conceptNodeLabelToID[label] == outgoer.id()) {
+                delete conceptNodeLabelToID[label];
+              }
+                cy.remove(outgoer);
               }
             }
-          })
+          }
           reSetType(cy, id);
-          // reLayout(cy);
-        }
-
-        function removeConceptNodeExceptConcept(cy, id) {
-          const nodeData = conceptExpansionDataCache[id];
-          Object.keys(nodeData).forEach(function(key) {
-            if(key != "prefLabel") {
-              var value = nodeData[key];
-              const nodeID = convertToNodeID(id, key, value);
-              const edgeID = convertToEdgeID(id, key, value);
-              if(cy.$('#' + nodeID).json().data.class != "concept") {
-                cy.remove(cy.$('#' + edgeID));
-                cy.remove(cy.$('#' + nodeID));
-              }
-            }
-            // conceptNodeLabelToID
-          })
-          reSetType(cy, id);
-          // reLayout(cy);
         }
 
         function addbNode(cy, id, bnodeData) {

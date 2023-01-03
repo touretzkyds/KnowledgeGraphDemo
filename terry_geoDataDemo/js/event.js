@@ -221,8 +221,8 @@ function drag(evt) {
         var newX = dx + initialPositions[node.id()].x;
         var newY = dy + initialPositions[node.id()].y;
         node.position({
-        x: newX,
-        y: newY
+            x: newX,
+            y: newY
         });
     }
     });
