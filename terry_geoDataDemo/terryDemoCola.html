@@ -20,6 +20,7 @@
       // 14. add definitions in ontology files for corporate
       // 15. think about web scrape for other data
       // finally, build the nav bar
+      // refactor more: separate every js to independent file from html
       
       
 
@@ -193,6 +194,19 @@
           }
         }
 
+        // search for a node in graph by label
+        // return that node if found
+        // otherwise retun undefined
+        function searchConceptByLabel(cy, name) {
+          var node = undefined;
+          cy.nodes().forEach(function(ele){
+            if(ele.json().data.label === name && ele.json().data.class === "concept") {
+              node = ele;
+            }
+          });
+          return node;
+        }
+
         function reLayoutCola(cy) {
           var layout = cy.layout({
             name: 'cola',
@@ -360,7 +374,7 @@
         }
 
         function adjustImageSize(cy) {
-          cy.nodes().forEach(function( ele ){
+          cy.nodes().forEach(function(ele){
             if(ele.json().data.class === 'image' || ele.json().data.class === 'countyImage') {
               const url = ele.json().data.label;
               var imgCache = cy._private.renderer.imageCache;
@@ -838,7 +852,6 @@
             getDataResponse(cityName);
           }
       });
-
     </script> 
       
   </body>
