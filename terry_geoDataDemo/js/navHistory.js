@@ -1,4 +1,6 @@
 
+// expand the node and set it to be current node
+// or just set it to be current if it's already expanded
 function expandHelper(cy, node) {
     const cityName = node.json().data.label.split("\nboltz")[0];
     if(!node.hasClass('readyToCollapse')) {
@@ -14,14 +16,14 @@ function expandHelper(cy, node) {
     }
 }
 
+// add a link "locatedInAdministrativeRegion" and target node with label = label
+// connecting to prevNode
 function addNodeHelper(cy, label, prevNode) {
-    //add this node and expand
-    //need to find Q # / type
     var addedData = [];
     var key = "locatedInAdministrativeRegion";
     var value = label;
     var tempNode = {"data":{}};
-    // tempNode.data.type = "County";
+    // tempNode.data.type = "County"; ? 
     tempNode.group = "nodes";
     tempNode.data.label = value;
     tempNode.data.class = classifyclass(key, value);
@@ -54,7 +56,6 @@ function addNodeHelper(cy, label, prevNode) {
 
 function navigateTo(cy, name, navList) {
     var node = searchConceptByLabel(cy, name);
-    console.log("name", name);
     if(node !== undefined) {
         expandHelper(cy, node);
         return;
@@ -99,70 +100,6 @@ function navigateThrough(cy, name, navList) {
     expandHelper(cy, currNode);
 }
 
-function navigateTo2(cy, name, navList) {
-    var prevNode = searchByLabel(cy, navList[0]);
-    if(prevNode === undefined) {
-        throw new Error('prevNode is undefined!');
-    }
-    for(let i = 1; i < navList.length; i++) {
-        var label = navList[i];
-        var node = searchByLabel(cy, label);
-        if(node === undefined) {
-            //add this node and expand
-            //need to find Q # / type
-            var addedData = [];
-            var key = "locatedInAdministrativeRegion";
-            var value = label;
-            var tempNode = {"data":{}};
-            // tempNode.data.type = "County";
-            tempNode.group = "nodes";
-            tempNode.data.label = value;
-            tempNode.data.class = classifyclass(key, value);
-            tempNode.data.id = convertToNodeID(prevNode.id(), key, value);
-            tempNode.data.sourceID = prevNode.id();
-            if(tempNode.data.class == "concept") {
-                if(!conceptNodeLabelToID.hasOwnProperty(value)) {
-                    conceptNodeLabelToID[value] = tempNode.data.id;
-                } else {
-                    tempNode.data.class = "dummyConcept";
-                }
-            }
-            const radius = 400; 
-            const sourceX = cy.$("#" + prevNode.id()).position('x');
-            const sourceY = cy.$("#" + prevNode.id()).position('y');
-            tempNode.position = {x:sourceX + radius, y:sourceY - radius};
-            addedData.push(tempNode);
-            var tempEdge = {"data":{}}
-            tempEdge.group = "edges";
-            tempEdge.data.id = convertToEdgeID(prevNode.id(), key, value)
-            tempEdge.data.label = key;
-            tempEdge.data.source = prevNode.id();
-            tempEdge.data.target = tempNode.data.id;
-            addedData.push(tempEdge);
-
-            cy.add(addedData);
-            prevNode = cy.$("#"+tempNode.data.id);
-            reLayoutCola(cy);
-        } else {
-            prevNode = node;
-            if(label === name) {
-                if(!node.hasClass('readyToCollapse')) {
-                    if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
-                        addConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()]);
-                    } else {
-                        const url = propertyQuery(name, true);
-                        d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; addConceptNode(cy, node.id(), jsonData[0]);});
-                    }
-                    cy.$("#" + node.id()).addClass('readyToCollapse');
-                } else {
-                    setAsCurrent(cy, node.id());
-                }
-                break;
-            };
-        }
-    };
-}
-
 // append nav history buttons in div whose id = nav-history
 // according to the navList
 function appendNavButtons(cy, navList) {
@@ -179,7 +116,6 @@ function appendNavButtons(cy, navList) {
           if(!btn.hasClass("selected")) {
             btn.addClass("selected")
           }
-          //TODO: add node function here
           try { 
             navigateTo(cy, name, navList.slice().reverse());
           } catch (e) {
@@ -237,7 +173,6 @@ function appendNavButtons(cy, navList) {
     for(let i = 0; i < navList.length; i++) {
       navList[i] = navList[i].name + "\nboltz:" + nameToQnumber[navList[i].name];
     }
-    console.log(navList);
     return navList;
   }
 
