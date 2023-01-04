@@ -14,7 +14,11 @@
     text-align: center;
 }
 
-.input-geoData {
+#top-elements {
+    margin-bottom: 60px;
+}
+
+#entryName {
     background-color: white;
     color: black;
     margin-top: 20px;

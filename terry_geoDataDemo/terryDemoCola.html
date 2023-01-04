@@ -820,18 +820,17 @@
     <div id="query" style="margin: 10px">
       <h1 class="title">Knowledge Graph Query and Display</h1>
 
-        <div class="input-append">
+        <div id="top-elements">
           <div id="show-nav">
           </div>
           <!-- <div style="clear: both;"></div> -->
           
           <div id ="hierarchy-entry">
-            <input id="cityName" class="input-geoData" style="width: 16rem;" placeholder="Enter Name For U.S Administrative Region">
+            <input id="entryName" class="input-geoData" style="width: 16rem;" placeholder="Enter Name For U.S Administrative Region">
           </div>
     
           <div id ="nav-history">
           </div>
-  
         </div>
   
       <input id="endpoint" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
@@ -843,9 +842,9 @@
     <script>
       const defaultCityName = 'Pittsburgh';
       getDataResponse(defaultCityName);
-      $("#cityName").on('keypress',function(e) {
+      $("#entryName").on('keypress',function(e) {
           if(e.which == 13) {
-            var cityName = $("#cityName").val()
+            var cityName = $("#entryName").val()
             getDataResponse(cityName);
           }
       });
