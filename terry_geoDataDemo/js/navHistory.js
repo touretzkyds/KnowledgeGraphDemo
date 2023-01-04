@@ -103,6 +103,7 @@ function navigateThrough(cy, name, navList) {
 // append nav history buttons in div whose id = nav-history
 // according to the navList
 function appendNavButtons(cy, navList) {
+    $('.nav-button').remove();
     for(let i = 0; i < navList.length; i++) {
       var name = navList[i];
       var btn = $(`<button class="nav-button">${name.split("\nboltz")[0]} ◀</button>`);
@@ -127,10 +128,10 @@ function appendNavButtons(cy, navList) {
  }
 
  // start from the first place, get the navigation list
- function getRankedNavList(data) {
+ function getRankedNavList(data, value) {
     const binding = data.results.bindings;
     if(binding.length === 0) {
-        return [];
+        return [value];
     }
     // construct mapping from name to Qnumber
     var nameToQnumber = {};
@@ -149,6 +150,8 @@ function appendNavButtons(cy, navList) {
         var q = curr.yLabel.value;
         if(!nodes.hasOwnProperty(p)) {
           nodes[p] = 0;
+        }
+        if(!nodes.hasOwnProperty(q)) {
           nodes[q] = 0;
         }
         if(nodes[q] < nodes[p] + 1) {
@@ -173,6 +176,7 @@ function appendNavButtons(cy, navList) {
     for(let i = 0; i < navList.length; i++) {
       navList[i] = navList[i].name + "\nboltz:" + nameToQnumber[navList[i].name];
     }
+    console.log("navList", navList);
     return navList;
   }
 
@@ -199,7 +203,7 @@ function appendNavButtons(cy, navList) {
       WHERE {
         BIND ( '${value}'@en AS ?prefLabel).
         ?Q skos:prefLabel ?prefLabel .
-        ?Q kgo:locatedInAdministrativeRegion* ?y.
+        ?Q kgo:locatedInAdministrativeRegion+ ?y.
         ?x kgo:locatedInAdministrativeRegion ?y.
         ?x rdfs:label|skos:prefLabel ?xLabel.
         ?y rdfs:label|skos:prefLabel ?yLabel.
@@ -216,8 +220,8 @@ function appendNavButtons(cy, navList) {
       }
   }
 
-  // set nav history buttons
+  // set nav history buttons, value is the start city
   function setNavHistoryButtons(cy, value) {
     const navListPairsUrl = navListQuery(value, true);
-    d3.json(navListPairsUrl).then(function(data) {appendNavButtons(cy, getRankedNavList(data))});
+    d3.json(navListPairsUrl).then(function(data) {appendNavButtons(cy, getRankedNavList(data, value))});
   }
