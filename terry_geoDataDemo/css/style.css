@@ -24,11 +24,11 @@
     width: 150px;
 }
 
-.nav-history{
-    display: flex;
+.hidden {
+    display: none;
 }
 
-.nav-button{
+.nav-history-button{
     background-color: white;
     font-weight: 550;
     color: rgb(255, 105, 180);
@@ -36,7 +36,7 @@
     border: 0px;
 }
 
-.nav-button:hover{
+.nav-history-button:hover{
     background-color: white;
     font-weight: 700;
     color: rgb(170, 51, 106);
@@ -44,7 +44,7 @@
     border: 0px;
 }
 
-.nav-button.selected{
+.nav-history-button.selected{
     background-color: white;
     font-weight: 550;
     color: rgb(3, 169, 244);
@@ -52,10 +52,59 @@
     border: 0px;
 }
 
-.nav-button.selected:hover{
+.nav-history-button.selected:hover{
     background-color: white;
     font-weight: 700;
     color: rgb(3, 1, 140);
     border-radius: 50px;
     border: 0px;
+}
+
+#show-nav {
+    display: flex;
+    flex-direction: column;
+    float: right;
+    text-align: center;
+    margin-right: 70px;
+    clear: left;
+}
+
+.show-nav-button{
+    font-size:15px; 
+    color:rgb(0, 170, 255);
+    border-width:0px;
+    border-color: rgb(173, 216, 230);
+    border-radius: 50px;
+    font-weight: 600;
+    width: 140px;
+    height: 40px;
+    text-align: center;
+    margin: 2px;
+}
+
+.show-nav-button:hover{
+    font-size:15px; 
+    background-color: rgb(212, 241, 244);
+    color:rgb(0, 170, 255);
+    border-width:1px; 
+    border-color: rgb(173, 216, 230);
+    border-radius: 50px;
+    font-weight: 600;
+    width: 140px;
+    height: 40px;
+    text-align: center;
+    margin: 2px;
+}
+
+.show-nav-button.selected{
+    font-size: 15px; 
+    background-color: #f08080;
+    color:#fff3f4; 
+    border-width:0px; 
+    border-radius: 50px;
+    font-weight: 600;
+    width:140px;
+    height: 40px;
+    text-align: center;
+    margin: 2px;
 }

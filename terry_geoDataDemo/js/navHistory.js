@@ -106,24 +106,63 @@ function appendNavButtons(cy, navList) {
     $('.nav-button').remove();
     for(let i = 0; i < navList.length; i++) {
       var name = navList[i];
-      var btn = $(`<button class="nav-button">${name.split("\nboltz")[0]} ◀</button>`);
-      if(i == navList.length - 1) {
-        btn = $(`<button class="nav-button selected">${name.split("\nboltz")[0]}</button>`);
+      var btn1 = $(`<button class="nav-button nav-history-button" value = "${i}">${name.split("\nboltz")[0]} ◀</button>`);
+      var btn2 = $(`<button class="nav-button show-nav-button hidden" value = "${i}">${name.split("\nboltz")[0]}</button>`);
+      if(i === navList.length - 2) {
+        btn2 = $(`<button class="nav-button show-nav-button" value = "${i}">${name.split("\nboltz")[0]}</button>`);
       }
-      $("#nav-history").append(btn);
-      (function(btn, name) {
-        btn.on('click', function(e) {
+      if(i === navList.length - 1) {
+        btn1 = $(`<button class="nav-button nav-history-button selected" value = "${i}">${name.split("\nboltz")[0]}</button>`);
+        btn2 = $(`<button class="nav-button show-nav-button selected" value = "${i}">${name.split("\nboltz")[0]}</button>`);
+      }
+      $("#nav-history").append(btn1);
+      $("#show-nav").append(btn2);
+      (function(btn1, btn2, name, length) {
+        btn1.on('click', function(e) {
+          //highlight the selected button
           $('.nav-button.selected').removeClass('selected');
-          if(!btn.hasClass("selected")) {
-            btn.addClass("selected")
+          btn1.addClass("selected");
+          btn2.addClass("selected");
+          //create rolling effect for show nav buttons
+          $('.show-nav-button').addClass('hidden');
+          var btn2Val = parseInt(btn2.val());
+          $('.show-nav-button[value="' + btn2Val.toString() + '"]').removeClass('hidden');
+          if(btn2Val - 1 >= 0) {
+            $('.show-nav-button[value="' + (btn2Val - 1).toString() + '"]').removeClass('hidden');
           }
+          if(btn2Val + 1 < length) {
+            $('.show-nav-button[value="' + (btn2Val + 1).toString() + '"]').removeClass('hidden');
+          }
+          //navigate nodes
           try { 
             navigateTo(cy, name, navList.slice().reverse());
           } catch (e) {
             console.error(e);
           }
         });
-      })(btn, name);
+        btn2.on('click', function(e) {
+          //highlight the selected button
+          $('.nav-button.selected').removeClass('selected');
+          btn1.addClass("selected");
+          btn2.addClass("selected");
+          //create rolling effect for show nav buttons
+          $('.show-nav-button').addClass('hidden');
+          var btn2Val = parseInt(btn2.val());
+          $('.show-nav-button[value="' + btn2Val.toString() + '"]').removeClass('hidden');
+          if(btn2Val - 1 >= 0) {
+            $('.show-nav-button[value="' + (btn2Val - 1).toString() + '"]').removeClass('hidden');
+          }
+          if(btn2Val + 1 < length) {
+            $('.show-nav-button[value="' + (btn2Val + 1).toString() + '"]').removeClass('hidden');
+          }
+          //navigate nodes
+          try { 
+            navigateTo(cy, name, navList.slice().reverse());
+          } catch (e) {
+            console.error(e);
+          }
+        });
+      })(btn1, btn2, name, navList.length);
     }
  }
 
