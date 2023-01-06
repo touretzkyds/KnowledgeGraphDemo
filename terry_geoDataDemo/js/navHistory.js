@@ -104,50 +104,77 @@ function navigateThrough(cy, name) {
 
 // append nav history buttons in div whose id = nav-history
 // according to the navList
-function appendNavButtons(cy) {
-    $('.nav-button').remove();
+function setNavHistory(cy) {
+    $('.nav-history-button').remove();
     var reversedNavList = navList.slice().reverse();
     for(let i = 0; i < reversedNavList.length; i++) {
       var name = reversedNavList[i];
       var btn1 = $(`<button class="nav-button nav-history-button" value = "${i}">${name.split("\nboltz")[0]} ◀</button>`);
+      if(i === reversedNavList.length - 1) {
+        btn1 = $(`<button class="nav-button nav-history-button selected" value = "${i}">${name.split("\nboltz")[0]}</button>`);
+      }
+      $("#nav-history").append(btn1);
+      (function(btn1, name) {
+        btn1.on('click', function(e) {
+          //highlight the selected button
+          $('.nav-button.selected').removeClass('selected');
+          $('.nav-button').filter(function() {
+            var currText = $(this).text();
+              // important: the name check for nav history and 
+              // nav tools are hard coded here
+              // if the name for them changed, here should be changed
+              return  currText === name || currText === (name + " ◀");
+          }).addClass("selected");
+          //create rolling effect for show nav buttons
+          var btn2 = $('.show-nav-button').filter(function() {
+            return $(this).text() === name;
+          });
+          $('.show-nav-button').addClass('hidden');
+          var btn2Val = parseInt(btn2.val());
+          $('.show-nav-button[value="' + btn2Val.toString() + '"]').removeClass('hidden');
+          if(btn2Val - 1 >= 0) {
+            $('.show-nav-button[value="' + (btn2Val - 1).toString() + '"]').removeClass('hidden');
+          }
+          //navList length hsould be length of btn2, use another array!
+          if(btn2Val + 1 < navList.length) {
+            $('.show-nav-button[value="' + (btn2Val + 1).toString() + '"]').removeClass('hidden');
+          }
+          //navigate nodes
+          try { 
+            navigateTo(cy, name);
+          } catch (e) {
+            console.error(e);
+          }
+        });
+      })(btn1, name);
+    }
+ }
+
+// append nav tools buttons in div whose id = show-nav
+function setNavButtons(cy) {
+    $('.show-nav-button').remove();
+    var reversedNavList = navList.slice().reverse();
+    for(let i = 0; i < reversedNavList.length; i++) {
+      var name = reversedNavList[i];
       var btn2 = $(`<div><button class="nav-button show-nav-button hidden" value = "${i}">${name.split("\nboltz")[0]}</button></div>`);
       if(i === reversedNavList.length - 2) {
         btn2 = $(`<div><button class="nav-button show-nav-button" value = "${i}">${name.split("\nboltz")[0]}</button></div>`);
       }
       if(i === reversedNavList.length - 1) {
-        btn1 = $(`<button class="nav-button nav-history-button selected" value = "${i}">${name.split("\nboltz")[0]}</button>`);
         btn2 = $(`<div><button class="nav-button show-nav-button selected" value = "${i}">${name.split("\nboltz")[0]}</button></div>`);
       }
-      $("#nav-history").append(btn1);
       $("#show-nav").append(btn2);
-      (function(btn1, btn2, name, length) {
-        btn1.on('click', function(e) {
-          //highlight the selected button
-          $('.nav-button.selected').removeClass('selected');
-          btn1.addClass("selected");
-          btn2.addClass("selected");
-          //create rolling effect for show nav buttons
-          $('.show-nav-button').addClass('hidden');
-          var btn2Val = parseInt(btn2.val());
-          $('.show-nav-button[value="' + btn2Val.toString() + '"]').removeClass('hidden');
-          if(btn2Val - 1 >= 0) {
-            $('.show-nav-button[value="' + (btn2Val - 1).toString() + '"]').removeClass('hidden');
-          }
-          if(btn2Val + 1 < length) {
-            $('.show-nav-button[value="' + (btn2Val + 1).toString() + '"]').removeClass('hidden');
-          }
-          //navigate nodes
-          try { 
-            navigateTo(cy, name);
-          } catch (e) {
-            console.error(e);
-          }
-        });
+      (function(btn2, name) {
         btn2.on('click', function(e) {
           //highlight the selected button
           $('.nav-button.selected').removeClass('selected');
-          btn1.addClass("selected");
-          btn2.addClass("selected");
+          $('.nav-button').filter(function() {
+            var currText = $(this).text();
+              // important: the name check for nav history and 
+              // nav tools are hard coded here
+              // if the name for them changed, here should be changed
+              return  currText === name || currText === (name + " ◀");
+          }).addClass("selected");
           //create rolling effect for show nav buttons
           $('.show-nav-button').addClass('hidden');
           var btn2Val = parseInt(btn2.val());
@@ -155,7 +182,8 @@ function appendNavButtons(cy) {
           if(btn2Val - 1 >= 0) {
             $('.show-nav-button[value="' + (btn2Val - 1).toString() + '"]').removeClass('hidden');
           }
-          if(btn2Val + 1 < length) {
+          //navList length hsould be length of btn2, use another array!
+          if(btn2Val + 1 < navList.length) {
             $('.show-nav-button[value="' + (btn2Val + 1).toString() + '"]').removeClass('hidden');
           }
           //navigate nodes
@@ -165,7 +193,7 @@ function appendNavButtons(cy) {
             console.error(e);
           }
         });
-      })(btn1, btn2, name, reversedNavList.length);
+      })(btn2, name);
     }
  }
 
@@ -275,7 +303,7 @@ function appendNavButtons(cy) {
   // set nav history buttons, value is the start city
   function setNavHistoryButtons(cy, value) {
     const navListPairsUrl = navListQuery(value, true);
-    d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); appendNavButtons(cy)});
+    d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); setNavHistory(cy); setNavButtons(cy);});
   }
 
   // update the nav history buttons and nav tools
