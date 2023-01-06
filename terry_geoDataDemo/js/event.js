@@ -1,3 +1,6 @@
+
+var initialPositions = {};
+var prevImagePositions = {};
 // function happens after tap event
 function tap(evt, cy) {
     var node = evt.target;

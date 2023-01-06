@@ -7,6 +7,7 @@
     <script src="../external/d3.v7.min.js"></script>
     <script src="../external/cytoscape.min.js"></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <!-- <script src="http://marvl.infotech.monash.edu/webcola/cola.v3.min.js"></script> -->
     <script src="https://unpkg.com/webcola/WebCola/cola.min.js"></script>
     <script src="../external/cytoscape-cola/cytoscape-cola.js"></script>
     <script src="js/countyData.js"></script>
@@ -18,32 +19,36 @@
       
       //later
       // 14. add definitions in ontology files for corporate
-      // 15. think about web scrape for other data
       // finally, build the nav bar
       // refactor more: separate every js to independent file from html
+      //7. research about Deya's python file to get data
       
       
 
-      //https://en.wikipedia.org/wiki/List_of_regions_of_the_United_States use U.S Bureau source to add region data -> call then divisions
+      
 
-
-      //1. use mycy._private.renderer.imageCache to get image height and width, and style image height width to a reasonable size e.g. fix width = 600 and calculate height (solved)
-      //2. re generate normalized center coordinate in countyData.js (solved)
-      //3. use the query and algorithm https://github.com/touretzkyds/KnowledgeGraphDemo/issues/59 to generate the correct list (solved)
-      //Q: when closing PA, those newly added counties were still there (solved)
-      //4. make the list into buttons. nav history: from right to left / same as animal demo2d / when click on buttons add nodes or open nodes if it already exists (solved)
+      // add p131 link to counties in PA (solved)
+      // add 1px black border to general images / same thickness blue color for dummy node  border on clickable map (solved)
+      // fix the nav history color （solved)
       
 
       //TODO:
-      //5. also do the navigation tool on the top right corner. first think how to nav up and down then sibling
+      // first: when navigate through graph, should update nav history and nav tool
+      // when add new nodes thats not on the nav history -> update nav history by regenerating the nav list and re make the nav buttons (just like searched for a new place)
+      // like when I search for pitt I get the history, when I added adam I update the nav history just like I searched for adam
+      // when nav in the graph, should sync nav history and nav tool
+      // right side nav tool: when I nav some nodes thats not in the navList, add to the nav tool, maintain a map of siblings, sorted alphabetically and parent children
       //6. add regions data according to https://en.wikipedia.org/wiki/List_of_regions_of_the_United_States census bureau
-      //7. research about Deya's python file to get data
+      // two links point to the same concept / dummy node -> // first loaded, two allegheny nodes
+      
+      
+
 
         var bnodeExpansionDataCache = {};
         var conceptExpansionDataCache = {};
+        // used to identify dummy node and real node
         var conceptNodeLabelToID = {};
-        var initialPositions = {};
-        var prevImagePositions = {};
+        var currentNode = undefined;
         var mycy;
 
         function propertyQuery(value, perform_query) {
@@ -152,7 +157,7 @@
           return "literal";
         }
 
-        function setAsCurrent(cy, id) {
+        function setAsCurrentNode(cy, id) {
           cy.nodes().forEach(function( ele ){
             if(ele.json().data.class === 'concept') {
               cy.nodes(`[id = "${ele.id()}"]`).style({
@@ -169,25 +174,26 @@
           cy.nodes(`[id = "${id}"]`).style({
             "background-color": 'red'
           });
+          currentNode = cy.$("#"+id);
+          updateNavHistory(cy, currentNode);
         }
 
-        function setSourceAsCurrent(cy, id) {
+        function setSourceAsCurrentNode(cy, id) {
           var node = cy.$("#"+id);
-          var style = cy.$('#'+id).style();
-          if (style['background-color'] === "rgb(255,0,0)") {
-            cy.nodes().forEach(function( ele ){
-              if(ele.json().data.class === 'concept') {
-                cy.nodes(`[id = "${ele.id()}"]`).style({
-                  "background-color": '#ADD8E6',
-                  "border-color": '#00008B'
-                });
-              }
-            });
-            const sourceID = node.json().data.sourceID;
-            cy.nodes(`[id = "${sourceID}"]`).style({
-              "background-color": 'red'
-            });
-          }
+          cy.nodes().forEach(function( ele ){
+            if(ele.json().data.class === 'concept') {
+              cy.nodes(`[id = "${ele.id()}"]`).style({
+                "background-color": '#ADD8E6',
+                "border-color": '#00008B'
+              });
+            }
+          });
+          const sourceID = node.json().data.sourceID;
+          cy.nodes(`[id = "${sourceID}"]`).style({
+            "background-color": 'red'
+          });
+          currentNode = cy.$("#"+sourceID);
+          updateNavHistory(cy, currentNode);
         }
 
         // search for a node in graph by label
@@ -215,6 +221,43 @@
           });
           
           layout.start();
+        }
+
+        function styleImageSize(imgCache, ele, cy) {
+          const url = ele.json().data.label;
+          const img = imgCache[url].image;
+          var imageWidth = img.naturalWidth;
+          var imageHeight = img.naturalHeight;
+          const maxH = 600;
+          const maxW = 600;
+          if(imageWidth > maxW) {
+            imageWidth = maxW;
+            imageHeight = (img.naturalHeight / img.naturalWidth) * imageWidth;
+          } else if(imageHeight > maxH) {
+            imageHeight = maxW;
+            imageWidth = (img.naturalWidth / img.naturalHeight) * imageHeight;
+          }
+          cy.nodes(`[id = "${ele.id()}"]`).style({
+            'width':imageWidth,
+            'height':imageHeight,
+          });
+        }
+
+        function adjustImageSize(cy) {
+          cy.nodes().forEach(function(ele){
+            if(ele.json().data.class === 'image' || ele.json().data.class === 'countyImage') {
+              const url = ele.json().data.label;
+              var imgCache = cy._private.renderer.imageCache;
+              if(imgCache === undefined || imgCache[url] === undefined) {
+                ele.on('background', function(evt) {
+                  imgCache = cy._private.renderer.imageCache;
+                  styleImageSize(imgCache, ele, cy);
+                });
+              } else {
+                styleImageSize(imgCache, ele, cy);
+              }
+            }
+          });
         }
 
         function convertToCytoscape(data) {
@@ -260,130 +303,6 @@
                 }
             })
             return [nodes, edges, source];
-        }
-
-        function distanceBetween(x1, y1, x2, y2) {
-          return Math.sqrt(Math.pow((x2-x1), 2)+Math.pow((y2-y1),2));
-        }
-
-        function getNearestCounty(stateName, normalizedX, normalizedY) {
-          var data = countyData[stateName];
-          var shortestDistance = Number.MAX_SAFE_INTEGER;
-          var nearestCounty = "";
-          for(let i = 0; i < data.length; i++) {
-            var currCounty = data[i];
-            var currDistance = distanceBetween(normalizedX, normalizedY, currCounty.x, currCounty.y);
-            if(currDistance < shortestDistance) {
-              shortestDistance = currDistance;
-              nearestCounty = currCounty.countyName;
-            }
-          }
-          return nearestCounty;
-        }
-
-        // get the coordinates of the tap event relative to the node
-        function getNormalizedPositions(evt) {
-          var node = evt.target;
-          var renderedBoundingBox = node.renderedBoundingBox();
-          var renderedPosition = evt.renderedPosition;
-          var x1 = renderedBoundingBox.x1;
-          var x2 = renderedBoundingBox.x2;
-          var y1 = renderedBoundingBox.y1;
-          var y2 = renderedBoundingBox.y2;
-          var x = renderedPosition.x;
-          var y = renderedPosition.y;
-
-          var relativeX = x - x1; 
-          var relativeY = y - y1;
-
-          var normalizedX = relativeX / (x2 - x1);
-          var normalizedY = relativeY / (y2 - y1);
-          return {'x': normalizedX, 'y': normalizedY};
-        }
-
-        function addCounties(evt, cy) {
-          var node = evt.target;
-          
-          var normalizedX = getNormalizedPositions(evt).x;
-          var normalizedY = getNormalizedPositions(evt).y;
-
-          var id = node.json().data.sourceID;
-
-          var stateName = cy.$("#"+id).json().data.label.split("\nboltz:")[0];
-
-          var countyName = getNearestCounty(stateName, normalizedX, normalizedY);
-          
-          //add new county node
-          var addedData = [];
-          
-          var key = "hasCounty" + countyName.split("\nboltz:")[0];
-          var value = countyName;
-          var tempNode = {"data":{}};
-          tempNode.data.type = "County";
-          tempNode.group = "nodes";
-          tempNode.data.label = value;
-          tempNode.data.class = classifyclass(key, value);
-          tempNode.data.id = convertToNodeID(id, key, value);
-          tempNode.data.sourceID = id;
-          if(tempNode.data.class == "concept") {
-            if(!conceptNodeLabelToID.hasOwnProperty(value)) {
-              conceptNodeLabelToID[value] = tempNode.data.id;
-            } else {
-              tempNode.data.class = "dummyConcept";
-            }
-          }
-          const radius = 400; 
-          const sourceX = cy.$("#" + id).position('x');
-          const sourceY = cy.$("#" + id).position('y');
-          tempNode.position = {x:sourceX + radius, y:sourceY - radius};
-          addedData.push(tempNode);
-          var tempEdge = {"data":{}}
-          tempEdge.group = "edges";
-          tempEdge.data.id = convertToEdgeID(id, key, value)
-          tempEdge.data.label = "hasCounty";
-          tempEdge.data.source = id;
-          tempEdge.data.target = tempNode.data.id;
-          addedData.push(tempEdge);
-
-          cy.add(addedData);
-          reLayoutCola(cy);
-        }
-
-        function styleImageSize(imgCache, ele, cy) {
-          const url = ele.json().data.label;
-          const img = imgCache[url].image;
-          var imageWidth = img.naturalWidth;
-          var imageHeight = img.naturalHeight;
-          const maxH = 600;
-          const maxW = 600;
-          if(imageWidth > maxW) {
-            imageWidth = maxW;
-            imageHeight = (img.naturalHeight / img.naturalWidth) * imageWidth;
-          } else if(imageHeight > maxH) {
-            imageHeight = maxW;
-            imageWidth = (img.naturalWidth / img.naturalHeight) * imageHeight;
-          }
-          cy.nodes(`[id = "${ele.id()}"]`).style({
-            'width':imageWidth,
-            'height':imageHeight,
-          });
-        }
-
-        function adjustImageSize(cy) {
-          cy.nodes().forEach(function(ele){
-            if(ele.json().data.class === 'image' || ele.json().data.class === 'countyImage') {
-              const url = ele.json().data.label;
-              var imgCache = cy._private.renderer.imageCache;
-              if(imgCache === undefined || imgCache[url] === undefined) {
-                ele.on('background', function(evt) {
-                  imgCache = cy._private.renderer.imageCache;
-                  styleImageSize(imgCache, ele, cy);
-                });
-              } else {
-                styleImageSize(imgCache, ele, cy);
-              }
-            }
-          });
         }
 
         function visualizeData(data, value) {
@@ -537,6 +456,8 @@
                   },
                   'background-fit': 'cover',
                   'background-color': 'white',
+                  "border-color": 'black',
+                  "border-width": 1,
                   'z-index': '10',
                 }
             },
@@ -549,6 +470,8 @@
                   },
                   'background-fit': 'cover',
                   'background-color': 'white',
+                  "border-color": '#ADD8E6',
+                  "border-width": 10,
                   'z-index': '10',
                 }
             },
@@ -567,12 +490,9 @@
             ]
             });
 
-            setNavHistoryButtons(cy, value)
-            
             mycy = cy;
-            cy.nodes(`[id = "${source}"]`).style({
-                "background-color": 'red'
-            });
+            setNavHistoryButtons(cy, value)
+            setAsCurrentNode(cy, source);
             reLayoutCola(cy);
             adjustImageSize(cy);
 
@@ -654,7 +574,7 @@
           })
           reLayoutCola(cy);
           adjustImageSize(cy);
-          setAsCurrent(cy, id);
+          setAsCurrentNode(cy, id);
         }
 
         function removeConceptNode(cy, id) {
@@ -673,7 +593,11 @@
             }
           } 
           reSetType(cy, id);
-          setSourceAsCurrent(cy, id);
+          var node = cy.$("#"+id);
+          var style = cy.$('#'+id).style();
+          if (style['background-color'] === "rgb(255,0,0)") {
+            setSourceAsCurrentNode(cy, id);
+          }
         }
 
         function addbNode(cy, id, bnodeData) {
@@ -820,18 +744,17 @@
     <div id="query" style="margin: 10px">
       <h1 class="title">Knowledge Graph Query and Display</h1>
 
-        <div id="top-elements">
-          <div id="show-nav">
-          </div>
-          <!-- <div style="clear: both;"></div> -->
-          
-          <div id ="hierarchy-entry">
-            <input id="entryName" class="input-geoData" style="width: 16rem;" placeholder="Enter Name For U.S Administrative Region">
-          </div>
-    
-          <div id ="nav-history">
-          </div>
+      <div id="top-elements">
+        <div id="show-nav">
         </div>
+        
+        <div id ="hierarchy-entry">
+          <input id="entryName" class="input-geoData" style="width: 16rem;" placeholder="Enter Name For U.S Administrative Region">
+        </div>
+  
+        <div id ="nav-history">
+        </div>
+      </div>
   
       <input id="endpoint" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
       <textarea id="sparql" class="spans10" style="display:none;"></textarea>

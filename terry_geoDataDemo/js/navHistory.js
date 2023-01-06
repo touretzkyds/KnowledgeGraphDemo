@@ -1,4 +1,6 @@
 
+var navList = [];
+
 // expand the node and set it to be current node
 // or just set it to be current if it's already expanded
 function expandHelper(cy, node) {
@@ -12,7 +14,7 @@ function expandHelper(cy, node) {
         }
         cy.$("#" + node.id()).addClass('readyToCollapse');
     } else {
-        setAsCurrent(cy, node.id());
+      setAsCurrentNode(cy, node.id());
     }
 }
 
@@ -54,16 +56,16 @@ function addNodeHelper(cy, label, prevNode) {
     return cy.$("#"+tempNode.data.id)
 }
 
-function navigateTo(cy, name, navList) {
+function navigateTo(cy, name) {
     var node = searchConceptByLabel(cy, name);
     if(node !== undefined) {
         expandHelper(cy, node);
         return;
     }
-    navigateThrough(cy, name, navList);
+    navigateThrough(cy, name);
 }
 
-function navigateThrough(cy, name, navList) {
+function navigateThrough(cy, name) {
     var currNode = searchConceptByLabel(cy, navList[0]);
     // follow the link "locatedInAdministrativeRegion" to the last node
     while(true) {
@@ -102,16 +104,17 @@ function navigateThrough(cy, name, navList) {
 
 // append nav history buttons in div whose id = nav-history
 // according to the navList
-function appendNavButtons(cy, navList) {
+function appendNavButtons(cy) {
     $('.nav-button').remove();
-    for(let i = 0; i < navList.length; i++) {
-      var name = navList[i];
+    var reversedNavList = navList.slice().reverse();
+    for(let i = 0; i < reversedNavList.length; i++) {
+      var name = reversedNavList[i];
       var btn1 = $(`<button class="nav-button nav-history-button" value = "${i}">${name.split("\nboltz")[0]} ◀</button>`);
       var btn2 = $(`<button class="nav-button show-nav-button hidden" value = "${i}">${name.split("\nboltz")[0]}</button>`);
-      if(i === navList.length - 2) {
+      if(i === reversedNavList.length - 2) {
         btn2 = $(`<button class="nav-button show-nav-button" value = "${i}">${name.split("\nboltz")[0]}</button>`);
       }
-      if(i === navList.length - 1) {
+      if(i === reversedNavList.length - 1) {
         btn1 = $(`<button class="nav-button nav-history-button selected" value = "${i}">${name.split("\nboltz")[0]}</button>`);
         btn2 = $(`<button class="nav-button show-nav-button selected" value = "${i}">${name.split("\nboltz")[0]}</button>`);
       }
@@ -135,7 +138,7 @@ function appendNavButtons(cy, navList) {
           }
           //navigate nodes
           try { 
-            navigateTo(cy, name, navList.slice().reverse());
+            navigateTo(cy, name);
           } catch (e) {
             console.error(e);
           }
@@ -157,17 +160,17 @@ function appendNavButtons(cy, navList) {
           }
           //navigate nodes
           try { 
-            navigateTo(cy, name, navList.slice().reverse());
+            navigateTo(cy, name);
           } catch (e) {
             console.error(e);
           }
         });
-      })(btn1, btn2, name, navList.length);
+      })(btn1, btn2, name, reversedNavList.length);
     }
  }
 
  // start from the first place, get the navigation list
- function getRankedNavList(data, value) {
+ function setRankedNavList(data, value) {
     const binding = data.results.bindings;
     if(binding.length === 0) {
         return [value];
@@ -179,8 +182,8 @@ function appendNavButtons(cy, navList) {
         nameToQnumber[curr.xLabel.value] = curr.x.value.split("/data/")[1];
         nameToQnumber[curr.yLabel.value] = curr.y.value.split("/data/")[1];
     }
-    var nodes = {}
-    var done = false
+    var nodes = {};
+    var done = false;
     while(!done) {
       done = true
       for(let i = 0; i < binding.length; i++) {
@@ -195,11 +198,11 @@ function appendNavButtons(cy, navList) {
         }
         if(nodes[q] < nodes[p] + 1) {
           nodes[q] = nodes[p] + 1
-          done = false
+          done = false;
         }
       }
     }
-    var navList = [];
+    navList = [];
     Object.keys(nodes).forEach(function(key) {
       var value = nodes[key];
       var temp = {};
@@ -211,12 +214,10 @@ function appendNavButtons(cy, navList) {
       if (a.order < b.order) {
         return -1;
       }
-    }).reverse();
+    });
     for(let i = 0; i < navList.length; i++) {
       navList[i] = navList[i].name + "\nboltz:" + nameToQnumber[navList[i].name];
     }
-    console.log("navList", navList);
-    return navList;
   }
 
 
@@ -262,5 +263,11 @@ function appendNavButtons(cy, navList) {
   // set nav history buttons, value is the start city
   function setNavHistoryButtons(cy, value) {
     const navListPairsUrl = navListQuery(value, true);
-    d3.json(navListPairsUrl).then(function(data) {appendNavButtons(cy, getRankedNavList(data, value))});
+    d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); appendNavButtons(cy)});
+  }
+
+  // update the history buttons
+  function updateNavHistory(cy, currNode) {
+    var currLabel = currNode.json().data.label;
+
   }
