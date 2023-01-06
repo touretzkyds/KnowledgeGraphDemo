@@ -1,3 +1,4 @@
+var unsortedNavSet = new Set();
 var navList = [];
 
 // expand the node and set it to be current node
@@ -109,13 +110,13 @@ function appendNavButtons(cy) {
     for(let i = 0; i < reversedNavList.length; i++) {
       var name = reversedNavList[i];
       var btn1 = $(`<button class="nav-button nav-history-button" value = "${i}">${name.split("\nboltz")[0]} ◀</button>`);
-      var btn2 = $(`<button class="nav-button show-nav-button hidden" value = "${i}">${name.split("\nboltz")[0]}</button>`);
+      var btn2 = $(`<div><button class="nav-button show-nav-button hidden" value = "${i}">${name.split("\nboltz")[0]}</button></div>`);
       if(i === reversedNavList.length - 2) {
-        btn2 = $(`<button class="nav-button show-nav-button" value = "${i}">${name.split("\nboltz")[0]}</button>`);
+        btn2 = $(`<div><button class="nav-button show-nav-button" value = "${i}">${name.split("\nboltz")[0]}</button></div>`);
       }
       if(i === reversedNavList.length - 1) {
         btn1 = $(`<button class="nav-button nav-history-button selected" value = "${i}">${name.split("\nboltz")[0]}</button>`);
-        btn2 = $(`<button class="nav-button show-nav-button selected" value = "${i}">${name.split("\nboltz")[0]}</button>`);
+        btn2 = $(`<div><button class="nav-button show-nav-button selected" value = "${i}">${name.split("\nboltz")[0]}</button></div>`);
       }
       $("#nav-history").append(btn1);
       $("#show-nav").append(btn2);
@@ -170,10 +171,21 @@ function appendNavButtons(cy) {
 
  // start from the first place, get the navigation list
  function setRankedNavList(data, value) {
-    const binding = data.results.bindings;
+    var binding = data.results.bindings;
     if(binding.length === 0) {
-        return [value];
+        navList = [value];
+        return;
     }
+    unsortedNavSet.clear();
+    unsortedNavSet.add(value);
+    for(let i = 0; i < binding.length; i++) {
+      var curr = binding[i];
+      unsortedNavSet.add(curr.yLabel.value);
+    }
+    binding = binding.filter(function(ele){
+      var curr = ele.xLabel.value;
+      return unsortedNavSet.has(curr);
+    });
     // construct mapping from name to Qnumber
     var nameToQnumber = {};
     for(let i = 0; i < binding.length; i++) {
@@ -201,7 +213,9 @@ function appendNavButtons(cy) {
         }
       }
     }
+    
     navList = [];
+    
     Object.keys(nodes).forEach(function(key) {
       var value = nodes[key];
       var temp = {};
@@ -218,7 +232,6 @@ function appendNavButtons(cy) {
       navList[i] = navList[i].name + "\nboltz:" + nameToQnumber[navList[i].name];
     }
   }
-
 
   // get the url to navigation list query
   function navListQuery(value, perform_query) {
@@ -265,17 +278,21 @@ function appendNavButtons(cy) {
     d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); appendNavButtons(cy)});
   }
 
-  // update the history buttons
-  function updateNavHistory(cy, currNode) {
-    var currLabel = currNode.json().data.label;
+  // update the nav history buttons and nav tools
+  function updateNav(cy) {
+    currLabel = currentNode.json().data.label;
+    var currRegion = currLabel.split("\nboltz:")[0];
     if(navList.includes(currLabel)) {
-      var currRegion = currLabel.split("\nboltz:")[0];
+      // update nav history
       $('.nav-button.selected').removeClass('selected');
       $('.nav-button').filter(function() {
           var currText = $(this).text();
+          // important: the name check for nav history and 
+          // nav tools are hard coded here
+          // if the name for them changed, here should be changed
           return  currText === currRegion || currText === (currRegion + " ◀");
       }).addClass("selected");
-      //create rolling effect for show nav buttons
+      //update nav tool create rolling effect for show nav buttons
       var btn2 = $('.show-nav-button').filter(function() {
         return $(this).text() === currRegion;
       });
@@ -288,8 +305,11 @@ function appendNavButtons(cy) {
       if(btn2Val + 1 < navList.length) {
         $('.show-nav-button[value="' + (btn2Val + 1).toString() + '"]').removeClass('hidden');
       }
+    } else {
+      // only works for left nav history
+      // still need to fix sibling things for nav tools on the right
+      setNavHistoryButtons(cy, currRegion);
     }
-
   }
 
   

@@ -23,28 +23,23 @@
       // refactor more: separate every js to independent file from html
       //7. research about Deya's python file to get data
       
-      
-
-      
-
+      //solved
       // add p131 link to counties in PA (solved)
       // add 1px black border to general images / same thickness blue color for dummy node  border on clickable map (solved)
       // fix the nav history color （solved)
+      // first: when navigate through graph, should update nav history and nav tool (solved)
+      // when add new nodes thats not on the nav history -> update nav history by regenerating the nav list and re make the nav buttons (just like searched for a new place) (solved)
+      // when nav in the graph, should sync nav history and nav tool (solved)
+      // two links point to the same concept / dummy node -> // first loaded, two allegheny nodes (solved)
       
 
       //TODO:
-      // first: when navigate through graph, should update nav history and nav tool
-      // when add new nodes thats not on the nav history -> update nav history by regenerating the nav list and re make the nav buttons (just like searched for a new place)
-      // like when I search for pitt I get the history, when I added adam I update the nav history just like I searched for adam
-      // when nav in the graph, should sync nav history and nav tool
       // right side nav tool: when I nav some nodes thats not in the navList, add to the nav tool, maintain a map of siblings, sorted alphabetically and parent children
+
       //6. add regions data according to https://en.wikipedia.org/wiki/List_of_regions_of_the_United_States census bureau
-      // two links point to the same concept / dummy node -> // first loaded, two allegheny nodes
+      
 
       // add function to toggle between label and region name e.g. pittsburgh VS pittsburgh\nboltz:Q1342
-      
-      
-
 
         var bnodeExpansionDataCache = {};
         var conceptExpansionDataCache = {};
@@ -177,7 +172,7 @@
             "background-color": 'red'
           });
           currentNode = cy.$("#"+id);
-          updateNavHistory(cy, currentNode);
+          updateNav(cy);
         }
 
         function setSourceAsCurrentNode(cy, id) {
@@ -195,7 +190,7 @@
             "background-color": 'red'
           });
           currentNode = cy.$("#"+sourceID);
-          updateNavHistory(cy, currentNode);
+          updateNav(cy, currentNode);
         }
 
         // search for a node in graph by label
@@ -296,7 +291,7 @@
 
                   var tempEdge = {"data":{}};
                   tempEdge.data.label = key;
-                  tempEdge.data.id = convertToEdgeID(source, key);
+                  tempEdge.data.id = convertToEdgeID(source, key, value);
                   if(value !== source) {
                       tempEdge.data.source = source;
                       tempEdge.data.target = tempNode.data.id;
@@ -493,7 +488,7 @@
             });
 
             mycy = cy;
-            setNavHistoryButtons(cy, value)
+            setNavHistoryButtons(cy, value);
             setAsCurrentNode(cy, source);
             reLayoutCola(cy);
             adjustImageSize(cy);
@@ -662,13 +657,13 @@
 
         // note: the case for hasCounty edge is special: the label is hasCounty but the id is hasCounty + county name
         // e.g. hasCountyAllegheny, because otherwise every edge has id 'hasCounty', which leads to duplicates
+        // also, id cannot have special characters
         function convertToEdgeID(id, key, value) {
-          return id + "_" + key;
-          // return id + "_" + key + "_" + value;
+          return (id + "_" + key).replace(/[^\w]/g,"_");
         }
 
         function convertToNodeID(id, key, value) {
-          return id + "_rel_" + key;
+          return (id + "_rel_" + value).replace(/[^\w]/g,"_");
         }
 
         function getDataJSON(data) {
@@ -732,7 +727,7 @@
             })
 
             
-            resultData["prefLabel"] = prefLabelValue
+            resultData["prefLabel"] = prefLabelValue;
             return [resultData, bnodeData];
         }
     </script>
