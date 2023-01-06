@@ -1,4 +1,3 @@
-
 var navList = [];
 
 // expand the node and set it to be current node
@@ -269,5 +268,28 @@ function appendNavButtons(cy) {
   // update the history buttons
   function updateNavHistory(cy, currNode) {
     var currLabel = currNode.json().data.label;
+    if(navList.includes(currLabel)) {
+      var currRegion = currLabel.split("\nboltz:")[0];
+      $('.nav-button.selected').removeClass('selected');
+      $('.nav-button').filter(function() {
+          var currText = $(this).text();
+          return  currText === currRegion || currText === (currRegion + " ◀");
+      }).addClass("selected");
+      //create rolling effect for show nav buttons
+      var btn2 = $('.show-nav-button').filter(function() {
+        return $(this).text() === currRegion;
+      });
+      $('.show-nav-button').addClass('hidden');
+      var btn2Val = parseInt(btn2.val());
+      $('.show-nav-button[value="' + btn2Val.toString() + '"]').removeClass('hidden');
+      if(btn2Val - 1 >= 0) {
+        $('.show-nav-button[value="' + (btn2Val - 1).toString() + '"]').removeClass('hidden');
+      }
+      if(btn2Val + 1 < navList.length) {
+        $('.show-nav-button[value="' + (btn2Val + 1).toString() + '"]').removeClass('hidden');
+      }
+    }
 
   }
+
+  
