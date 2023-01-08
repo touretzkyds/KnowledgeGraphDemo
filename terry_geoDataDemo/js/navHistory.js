@@ -1,5 +1,6 @@
 var unsortedNavSet = new Set();
 var navList = [];
+var navButtons = [];
 
 // expand the node and set it to be current node
 // or just set it to be current if it's already expanded
@@ -116,29 +117,6 @@ function setNavHistory(cy) {
       $("#nav-history").append(btn1);
       (function(btn1, name) {
         btn1.on('click', function(e) {
-          //highlight the selected button
-          $('.nav-button.selected').removeClass('selected');
-          $('.nav-button').filter(function() {
-            var currText = $(this).text();
-              // important: the name check for nav history and 
-              // nav tools are hard coded here
-              // if the name for them changed, here should be changed
-              return  currText === name || currText === (name + " ◀");
-          }).addClass("selected");
-          //create rolling effect for show nav buttons
-          var btn2 = $('.show-nav-button').filter(function() {
-            return $(this).text() === name;
-          });
-          $('.show-nav-button').addClass('hidden');
-          var btn2Val = parseInt(btn2.val());
-          $('.show-nav-button[value="' + btn2Val.toString() + '"]').removeClass('hidden');
-          if(btn2Val - 1 >= 0) {
-            $('.show-nav-button[value="' + (btn2Val - 1).toString() + '"]').removeClass('hidden');
-          }
-          //navList length hsould be length of btn2, use another array!
-          if(btn2Val + 1 < navList.length) {
-            $('.show-nav-button[value="' + (btn2Val + 1).toString() + '"]').removeClass('hidden');
-          }
           //navigate nodes
           try { 
             navigateTo(cy, name);
@@ -154,38 +132,23 @@ function setNavHistory(cy) {
 function setNavButtons(cy) {
     $('.show-nav-button').remove();
     var reversedNavList = navList.slice().reverse();
+    navButtons = reversedNavList.slice();
     for(let i = 0; i < reversedNavList.length; i++) {
       var name = reversedNavList[i];
-      var btn2 = $(`<div><button class="nav-button show-nav-button hidden" value = "${i}">${name.split("\nboltz")[0]}</button></div>`);
+      var div = $(`<div class="sibling-group hidden" value = "${i}"></div>`)
+      var btn2 = $(`<button class="nav-button show-nav-button">${name.split("\nboltz")[0]}</button>`);
       if(i === reversedNavList.length - 2) {
-        btn2 = $(`<div><button class="nav-button show-nav-button" value = "${i}">${name.split("\nboltz")[0]}</button></div>`);
+        div = $(`<div class="sibling-group" value = "${i}"></div>`)
+        btn2 = $(`<button class="nav-button show-nav-button">${name.split("\nboltz")[0]}</button>`);
       }
       if(i === reversedNavList.length - 1) {
-        btn2 = $(`<div><button class="nav-button show-nav-button selected" value = "${i}">${name.split("\nboltz")[0]}</button></div>`);
+        div = $(`<div class="sibling-group" value = "${i}"></div>`)
+        btn2 = $(`<button class="nav-button show-nav-button selected">${name.split("\nboltz")[0]}</button>`);
       }
-      $("#show-nav").append(btn2);
+      $("#show-nav").append(div);
+      $('.sibling-group[value="' + i.toString() + '"]').append(btn2);
       (function(btn2, name) {
         btn2.on('click', function(e) {
-          //highlight the selected button
-          $('.nav-button.selected').removeClass('selected');
-          $('.nav-button').filter(function() {
-            var currText = $(this).text();
-              // important: the name check for nav history and 
-              // nav tools are hard coded here
-              // if the name for them changed, here should be changed
-              return  currText === name || currText === (name + " ◀");
-          }).addClass("selected");
-          //create rolling effect for show nav buttons
-          $('.show-nav-button').addClass('hidden');
-          var btn2Val = parseInt(btn2.val());
-          $('.show-nav-button[value="' + btn2Val.toString() + '"]').removeClass('hidden');
-          if(btn2Val - 1 >= 0) {
-            $('.show-nav-button[value="' + (btn2Val - 1).toString() + '"]').removeClass('hidden');
-          }
-          //navList length hsould be length of btn2, use another array!
-          if(btn2Val + 1 < navList.length) {
-            $('.show-nav-button[value="' + (btn2Val + 1).toString() + '"]').removeClass('hidden');
-          }
           //navigate nodes
           try { 
             navigateTo(cy, name);
@@ -301,19 +264,43 @@ function setNavButtons(cy) {
   }
 
   // set nav history buttons, value is the start city
-  function setNavHistoryButtons(cy, value) {
+  function setNav(cy, value) {
     const navListPairsUrl = navListQuery(value, true);
     d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); setNavHistory(cy); setNavButtons(cy);});
   }
 
+  function setNavHis(cy, value) {
+    const navListPairsUrl = navListQuery(value, true);
+    d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); setNavHistory(cy);});
+  }
+
   // update the nav history buttons and nav tools
-  function updateNav(cy) {
+  function updateNavHistory(cy) {
     currLabel = currentNode.json().data.label;
     var currRegion = currLabel.split("\nboltz:")[0];
     if(navList.includes(currLabel)) {
       // update nav history
-      $('.nav-button.selected').removeClass('selected');
-      $('.nav-button').filter(function() {
+      $('.nav-history-button.selected').removeClass('selected');
+      $('.nav-history-button').filter(function() {
+          var currText = $(this).text();
+          // important: the name check for nav history and 
+          // nav tools are hard coded here
+          // if the name for them changed, here should be changed
+          return  currText === currRegion || currText === (currRegion + " ◀");
+      }).addClass("selected");
+    } else {
+      setNavHis(cy, currRegion);
+    }
+  }
+
+  // need to separate update nav history and update nav buttons
+  function updateNavButtons(cy) {
+    currLabel = currentNode.json().data.label;
+    var currRegion = currLabel.split("\nboltz:")[0];
+    if(navButtons.includes(currLabel)) {
+      // update selected button
+      $('.show-nav-button.selected').removeClass('selected');
+      $('.show-nav-button').filter(function() {
           var currText = $(this).text();
           // important: the name check for nav history and 
           // nav tools are hard coded here
@@ -321,23 +308,63 @@ function setNavButtons(cy) {
           return  currText === currRegion || currText === (currRegion + " ◀");
       }).addClass("selected");
       //update nav tool create rolling effect for show nav buttons
-      var btn2 = $('.show-nav-button').filter(function() {
+      var currBtn = $('.show-nav-button').filter(function() {
         return $(this).text() === currRegion;
       });
-      $('.show-nav-button').addClass('hidden');
-      var btn2Val = parseInt(btn2.val());
-      $('.show-nav-button[value="' + btn2Val.toString() + '"]').removeClass('hidden');
-      if(btn2Val - 1 >= 0) {
-        $('.show-nav-button[value="' + (btn2Val - 1).toString() + '"]').removeClass('hidden');
+      $('.sibling-group').addClass('hidden');
+      var currDiv= currBtn.closest('div');
+      var divVal = parseInt(currDiv.attr('value'));
+      $('.sibling-group[value="' + divVal.toString() + '"]').removeClass('hidden');
+      if(divVal - 1 >= 0) {
+        $('.sibling-group[value="' + (divVal - 1).toString() + '"]').removeClass('hidden');
       }
-      if(btn2Val + 1 < navList.length) {
-        $('.show-nav-button[value="' + (btn2Val + 1).toString() + '"]').removeClass('hidden');
+      if(divVal + 1 < navButtons.length) {
+        $('.sibling-group[value="' + (divVal + 1).toString() + '"]').removeClass('hidden');
       }
     } else {
-      // only works for left nav history
-      // still need to fix sibling things for nav tools on the right
-      setNavHistoryButtons(cy, currRegion);
+      navButtons.push(currLabel);
+      // add the new sibling to the right group
+      var selectedBtn = $('.show-nav-button.selected');
+      var selectedParentDiv= selectedBtn.closest('div');
+      var selectedDivVal = parseInt(selectedParentDiv.attr('value'));
+      var newCurrDiv = $('.sibling-group[value="' + (selectedDivVal + 1).toString() + '"]');
+      var currNewBtn = $(`<button class="nav-button show-nav-button selected">${currRegion}</button>`);
+      console.log(currRegion);
+      newCurrDiv.append(currNewBtn);
+      (function(currNewBtn, currLabel) {
+        currNewBtn.on('click', function(e) {
+          //navigate nodes
+          try { 
+            navigateTo(cy, currLabel);
+          } catch (e) {
+            console.error(e);
+          }
+        });
+      })(currNewBtn, currLabel);
+      // update selected button
+      $('.show-nav-button.selected').removeClass('selected');
+      $('.show-nav-button').filter(function() {
+          var currText = $(this).text();
+          // important: the name check for nav history and 
+          // nav tools are hard coded here
+          // if the name for them changed, here should be changed
+          return  currText === currRegion || currText === (currRegion + " ◀");
+      }).addClass("selected");
+      //update nav tool create rolling effect for show nav buttons
+      var currBtn = currNewBtn;
+      $('.sibling-group').addClass('hidden');
+      var currDiv= currBtn.closest('div');
+      var divVal = parseInt(currDiv.attr('value'));
+      $('.sibling-group[value="' + divVal.toString() + '"]').removeClass('hidden');
+      if(divVal - 1 >= 0) {
+        $('.sibling-group[value="' + (divVal - 1).toString() + '"]').removeClass('hidden');
+      }
+      if(divVal + 1 < navButtons.length) {
+        $('.sibling-group[value="' + (divVal + 1).toString() + '"]').removeClass('hidden');
+      }
+
     }
+
   }
 
   

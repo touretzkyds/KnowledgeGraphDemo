@@ -41,6 +41,12 @@
 
       // add function to toggle between label and region name e.g. pittsburgh VS pittsburgh\nboltz:Q1342
 
+      // add state flags images
+      // city / state / country to be nodes, kgo:boltzQ...
+      // what are the properties for city / state concepts?
+
+      // when search for Los Angeles, choose state or county
+
         var bnodeExpansionDataCache = {};
         var conceptExpansionDataCache = {};
         // used to identify dummy node and real node
@@ -172,7 +178,8 @@
             "background-color": 'red'
           });
           currentNode = cy.$("#"+id);
-          updateNav(cy);
+          updateNavHistory(cy);
+          updateNavButtons(cy);
         }
 
         function setSourceAsCurrentNode(cy, id) {
@@ -190,7 +197,8 @@
             "background-color": 'red'
           });
           currentNode = cy.$("#"+sourceID);
-          updateNav(cy, currentNode);
+          updateNavHistory(cy, currentNode);
+          updateNavButtons(cy);
         }
 
         // search for a node in graph by label
@@ -488,7 +496,7 @@
             });
 
             mycy = cy;
-            setNavHistoryButtons(cy, value);
+            setNav(cy, value);
             setAsCurrentNode(cy, source);
             reLayoutCola(cy);
             adjustImageSize(cy);
