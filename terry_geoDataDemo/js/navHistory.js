@@ -2,6 +2,7 @@ var unsortedNavSet = new Set();
 var navList = [];
 var labelToDivVal = {};
 var navButtons = [];
+var childrenTable = {};
 
 // expand the node and set it to be current node
 // or just set it to be current if it's already expanded
@@ -111,9 +112,9 @@ function setNavHistory(cy) {
     var reversedNavList = navList.slice().reverse();
     for(let i = 0; i < reversedNavList.length; i++) {
       var name = reversedNavList[i];
-      var btn1 = $(`<button class="nav-button nav-history-button" value = "${i}">${name.split("\nboltz")[0]} ◀</button>`);
+      var btn1 = $(`<button class="nav-history-button" value = "${i}">${name.split("\nboltz")[0]} ◀</button>`);
       if(i === reversedNavList.length - 1) {
-        btn1 = $(`<button class="nav-button nav-history-button selected" value = "${i}">${name.split("\nboltz")[0]}</button>`);
+        btn1 = $(`<button class="nav-history-button selected" value = "${i}">${name.split("\nboltz")[0]}</button>`);
       }
       $("#nav-history").append(btn1);
       (function(btn1, name) {
@@ -130,7 +131,7 @@ function setNavHistory(cy) {
  }
 
 // append nav tools buttons in div whose id = show-nav
-function setNavButtons(cy) {
+function setNavButtonsOld(cy) {
     $('.show-nav-button').remove();
     var reversedNavList = navList.slice().reverse();
     navButtons = reversedNavList.slice();
@@ -149,6 +150,7 @@ function setNavButtons(cy) {
       }
       $("#show-nav").append(div);
       $('.sibling-group[value="' + i.toString() + '"]').append(btn2);
+      //name is the label with Q number
       (function(btn2, name) {
         btn2.on('click', function(e) {
           //navigate nodes
@@ -160,6 +162,29 @@ function setNavButtons(cy) {
         });
       })(btn2, name);
     }
+ }
+
+ function setNavButtons(cy) {
+  $(".nav-button").on('click', function(e){
+    //navigate nodes
+    var name = $(this).attr("value");
+    if(name !== undefined && name !== "") {
+      try { 
+        navigateTo(cy, name);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  });
+    var reversedNavList = navList.slice().reverse();
+    var n = reversedNavList.length;
+    var navUp = reversedNavList[n - 2];
+    var navMid = reversedNavList[n - 1];
+    $("#nav-up").attr("value", navUp);
+    $("#nav-up").text(navUp.split("\nboltz")[0]);
+    $("#nav-mid").attr("value", navMid);
+    $("#nav-mid").text(navMid.split("\nboltz")[0]);
+    
  }
 
  // start from the first place, get the navigation list
@@ -268,12 +293,12 @@ function setNavButtons(cy) {
   // set nav history buttons, value is the start city
   function setNav(cy, value) {
     const navListPairsUrl = navListQuery(value, true);
-    d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); setNavHistory(cy); setNavButtons(cy);});
+    d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); setChildrenTable(); setNavHistory(cy); setNavButtons(cy);});
   }
 
   function setNavHis(cy, value) {
     const navListPairsUrl = navListQuery(value, true);
-    d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); setNavHistory(cy);});
+    d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); setChildrenTable(); setNavHistory(cy);});
   }
 
   // update the nav history buttons and nav tools
@@ -296,7 +321,7 @@ function setNavButtons(cy) {
   }
 
   // need to separate update nav history and update nav buttons
-  function updateNavButtons(cy, parentLabel) {
+  function updateNavButtonsOld(cy, parentLabel) {
     currLabel = currentNode.json().data.label;
     var currRegion = currLabel.split("\nboltz:")[0];
     if(navButtons.includes(currLabel)) { 
@@ -361,22 +386,77 @@ function setNavButtons(cy) {
 
   }
 
-  function resetGrid() {
-    $('.show-nav-button.row1-col1').removeClass('row1-col1');
-    $('.show-nav-button.row1-col2').removeClass('row1-col2');
-    $('.show-nav-button.row1-col3').removeClass('row1-col3');
-    $('.show-nav-button.row1-col4').removeClass('row1-col4');
-    $('.show-nav-button.row1-col5').removeClass('row1-col5');
-    $('.show-nav-button.row2-col1').removeClass('row2-col1');
-    $('.show-nav-button.row2-col2').removeClass('row2-col2');
-    $('.show-nav-button.row2-col3').removeClass('row2-col3');
-    $('.show-nav-button.row2-col4').removeClass('row2-col4');
-    $('.show-nav-button.row2-col5').removeClass('row2-col5');
-    $('.show-nav-button.row3-col1').removeClass('row3-col1');
-    $('.show-nav-button.row3-col2').removeClass('row3-col2');
-    $('.show-nav-button.row3-col3').removeClass('row3-col3');
-    $('.show-nav-button.row3-col4').removeClass('row3-col4');
-    $('.show-nav-button.row3-col5').removeClass('row3-col5');
+  function updateNavButtons(cy, parentLabel) {
+    currLabel = currentNode.json().data.label;
+    var currRegion = currLabel.split("\nboltz:")[0];
+    $(".nav-button").text("");
+    if(parentLabel === undefined || parentLabel === "") {
+      console.log(currLabel);
+      parentLabel = getParent(currLabel);
+    }
+    if(parentLabel !== undefined && parentLabel !== "") {
+      var siblings = childrenTable[parentLabel];
+      if(!siblings.includes(currLabel)) {
+        siblings.push(currLabel);
+        siblings.sort();
+      }
+      $("#nav-up").attr("value", parentLabel);
+      $("#nav-up").text(parentLabel.split("\nboltz:")[0]);
+      var index = siblings.indexOf(currLabel);
+      if(index > 0) {
+        $("#nav-left").attr("value", siblings[index - 1]);
+        $("#nav-left").text(siblings[index - 1].split("\nboltz:")[0]);
+      }
+      if(index + 1 < siblings.length) {
+        $("#nav-right").attr("value", siblings[index + 1]);
+        $("#nav-right").text(siblings[index + 1].split("\nboltz:")[0]);
+      }
+    }
+    
+    $("#nav-mid").attr("value", currLabel);
+    $("#nav-mid").text(currRegion);
+    
+    var children = getChildren(currLabel);
+    if(children.length > 0) {
+      $("#nav-down").attr("value", children[0]);
+      $("#nav-down").text(children[0].split("\nboltz:")[0]);
+    }
+    if(children.length > 1) {
+      $("#nav-down-right").attr("value", children[1]);
+      $("#nav-down-right").text(children[1].split("\nboltz:")[0]);
+    }
   }
 
-  
+  function setChildrenTable() {
+    for(let i = 0; i < navList.length; i++) {
+      var curr = navList[i];
+      if(childrenTable.hasOwnProperty(curr)) {
+        continue;
+      }
+      if(i === 0) {
+        childrenTable[curr] = [];
+      } else {
+        var child = navList[i - 1];
+        childrenTable[curr] = [child];
+      }
+    }
+  }
+
+  function getParent(p) {
+    var parent = undefined;
+    Object.keys(childrenTable).forEach(function(key){
+      var siblings = childrenTable[key];
+      if(siblings.includes(p)) {
+        console.log("found");
+        parent = key;
+      }
+    });
+    return parent;
+  }
+
+  function getChildren(p) {
+    if(childrenTable.hasOwnProperty(p)) {
+      return childrenTable[p];
+    }
+    return [];
+  }
