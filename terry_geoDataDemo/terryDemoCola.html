@@ -160,7 +160,7 @@
           return "literal";
         }
 
-        function setAsCurrentNode(cy, id) {
+        function setAsCurrentNode(cy, id, parentLabel="") {
           cy.nodes().forEach(function( ele ){
             if(ele.json().data.class === 'concept') {
               cy.nodes(`[id = "${ele.id()}"]`).style({
@@ -179,7 +179,7 @@
           });
           currentNode = cy.$("#"+id);
           updateNavHistory(cy);
-          updateNavButtons(cy);
+          updateNavButtons(cy, parentLabel);
         }
 
         function setSourceAsCurrentNode(cy, id) {

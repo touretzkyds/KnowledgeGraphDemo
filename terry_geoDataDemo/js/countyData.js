@@ -47,6 +47,8 @@ function getNormalizedPositions(evt) {
 // when click on the county map image, add the county clicked
 function addCounties(evt, cy) {
     var node = evt.target;
+    var sourceStateNode = cy.$("#"+node.json().data.sourceID);
+    var parentLabel = sourceStateNode.json().data.label;
     
     var normalizedX = getNormalizedPositions(evt).x;
     var normalizedY = getNormalizedPositions(evt).y;
@@ -91,5 +93,5 @@ function addCounties(evt, cy) {
 
     cy.add(addedData);
     reLayoutCola(cy);
-    setAsCurrentNode(cy, tempNode.data.id);
+    setAsCurrentNode(cy, tempNode.data.id, parentLabel);
   }

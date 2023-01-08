@@ -1,5 +1,6 @@
 var unsortedNavSet = new Set();
 var navList = [];
+var labelToDivVal = {};
 var navButtons = [];
 
 // expand the node and set it to be current node
@@ -135,6 +136,7 @@ function setNavButtons(cy) {
     navButtons = reversedNavList.slice();
     for(let i = 0; i < reversedNavList.length; i++) {
       var name = reversedNavList[i];
+      labelToDivVal[name] = i;
       var div = $(`<div class="sibling-group hidden" value = "${i}"></div>`)
       var btn2 = $(`<button class="nav-button show-nav-button">${name.split("\nboltz")[0]}</button>`);
       if(i === reversedNavList.length - 2) {
@@ -227,7 +229,7 @@ function setNavButtons(cy) {
   // get the url to navigation list query
   function navListQuery(value, perform_query) {
     const prevquery = document.getElementById("sparql");
-  prevquery.innerHTML = 
+    prevquery.innerHTML = 
      `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
       PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
       PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
@@ -294,23 +296,17 @@ function setNavButtons(cy) {
   }
 
   // need to separate update nav history and update nav buttons
-  function updateNavButtons(cy) {
+  function updateNavButtons(cy, parentLabel) {
     currLabel = currentNode.json().data.label;
     var currRegion = currLabel.split("\nboltz:")[0];
-    if(navButtons.includes(currLabel)) {
-      // update selected button
+    if(navButtons.includes(currLabel)) { 
+      // update selected button & 
       $('.show-nav-button.selected').removeClass('selected');
-      $('.show-nav-button').filter(function() {
-          var currText = $(this).text();
-          // important: the name check for nav history and 
-          // nav tools are hard coded here
-          // if the name for them changed, here should be changed
-          return  currText === currRegion || currText === (currRegion + " ◀");
-      }).addClass("selected");
-      //update nav tool create rolling effect for show nav buttons
       var currBtn = $('.show-nav-button').filter(function() {
         return $(this).text() === currRegion;
       });
+      currBtn.addClass("selected");
+      // update nav tool create rolling effect for show nav buttons
       $('.sibling-group').addClass('hidden');
       var currDiv= currBtn.closest('div');
       var divVal = parseInt(currDiv.attr('value'));
@@ -324,13 +320,11 @@ function setNavButtons(cy) {
     } else {
       navButtons.push(currLabel);
       // add the new sibling to the right group
-      var selectedBtn = $('.show-nav-button.selected');
-      var selectedParentDiv= selectedBtn.closest('div');
-      var selectedDivVal = parseInt(selectedParentDiv.attr('value'));
-      var newCurrDiv = $('.sibling-group[value="' + (selectedDivVal + 1).toString() + '"]');
+      var parentVal = labelToDivVal[parentLabel];
+      var ParentDiv= $('.sibling-group[value="' + parentVal + '"]');
+      var chilDiv = $('.sibling-group[value="' + (parentVal + 1).toString() + '"]');
       var currNewBtn = $(`<button class="nav-button show-nav-button selected">${currRegion}</button>`);
-      console.log(currRegion);
-      newCurrDiv.append(currNewBtn);
+      chilDiv.append(currNewBtn);
       (function(currNewBtn, currLabel) {
         currNewBtn.on('click', function(e) {
           //navigate nodes
@@ -365,6 +359,24 @@ function setNavButtons(cy) {
 
     }
 
+  }
+
+  function resetGrid() {
+    $('.show-nav-button.row1-col1').removeClass('row1-col1');
+    $('.show-nav-button.row1-col2').removeClass('row1-col2');
+    $('.show-nav-button.row1-col3').removeClass('row1-col3');
+    $('.show-nav-button.row1-col4').removeClass('row1-col4');
+    $('.show-nav-button.row1-col5').removeClass('row1-col5');
+    $('.show-nav-button.row2-col1').removeClass('row2-col1');
+    $('.show-nav-button.row2-col2').removeClass('row2-col2');
+    $('.show-nav-button.row2-col3').removeClass('row2-col3');
+    $('.show-nav-button.row2-col4').removeClass('row2-col4');
+    $('.show-nav-button.row2-col5').removeClass('row2-col5');
+    $('.show-nav-button.row3-col1').removeClass('row3-col1');
+    $('.show-nav-button.row3-col2').removeClass('row3-col2');
+    $('.show-nav-button.row3-col3').removeClass('row3-col3');
+    $('.show-nav-button.row3-col4').removeClass('row3-col4');
+    $('.show-nav-button.row3-col5').removeClass('row3-col5');
   }
 
   
