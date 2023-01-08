@@ -199,8 +199,7 @@
             "background-color": 'red'
           });
           currentNode = cy.$("#"+id);
-          updateNavHistory(cy);
-          updateNavButtons(cy, parentLabel);
+          updateNav(cy, parentLabel);
         }
 
         function setSourceAsCurrentNode(cy, id) {
@@ -218,8 +217,7 @@
             "background-color": 'red'
           });
           currentNode = cy.$("#"+sourceID);
-          updateNavHistory(cy, currentNode);
-          updateNavButtons(cy);
+          updateNav(cy, "");
         }
 
         // search for a node in graph by label
@@ -606,12 +604,18 @@
         function removeConceptNode(cy, id) {
           var currNode = cy.$("#"+id);
           //outgoers include both edges and nodes
+          var currIsDelelted = false;
           var outgoers = currNode.outgoers();
           for(let i = 0; i < outgoers.length; i++) {
             var outgoer = outgoers[i];
             if(outgoer.json().group === "edges" && outgoer.target().outgoers().length == 0) {
+              if(outgoer.target().id() === currentNode.id()) {
+                currIsDelelted = true;
+              }
+              deleteFromChildrenTable(outgoer.target().json().data.label);
               cy.remove(outgoer);
               cy.remove(outgoer.target())
+              
               const label = outgoer.target().json().data.label;
               if(conceptNodeLabelToID[label] == outgoer.target().id()) {
                 delete conceptNodeLabelToID[label];
@@ -621,7 +625,7 @@
           reSetType(cy, id);
           var node = cy.$("#"+id);
           var style = cy.$('#'+id).style();
-          if (style['background-color'] === "rgb(255,0,0)") {
+          if (style['background-color'] === "rgb(255,0,0)" || currIsDelelted) {
             setSourceAsCurrentNode(cy, id);
           }
         }
@@ -767,30 +771,37 @@
   <body>
 
 
-    <div id="query" style="margin: 10px">
+    <div id="query">
       <h1 class="title">Knowledge Graph Query and Display</h1>
 
       <div id="top-elements">
         <div class="row">
           <div id ="hierarchy-entry">
-            <input id="entryName" class="input-geoData" style="width: 16rem;" placeholder="Enter Name For U.S Administrative Region">
+            <input id="entryName" class="input-geoData" style="width: 20rem;" placeholder="Enter Name For U.S Administrative Region">
           </div>
         </div>
         
-        <div class="row">
-          <div class="col" id ="nav-history">
+        <div class="row align-items-center">
+          <div class="col-7" id ="nav-history">
           </div>
 
-          <div class="col">
+          <div class="col" id="nav-tool">
             <div class="row">
-              <div class="col-6"></div>
-              <div class="col-2">
-                <button class="nav-button" id="nav-up"></button>
+              <div class="col-1 ellipsis d-flex align-items-center"><span>● ● ●</span></div> <!--never shown-->
+              <div class="col">
+                <button class="nav-button" id="nav-top-left"></button> <!--never shown-->
               </div>
+              <div class="col">
+                <button class="nav-button" id="nav-up">
+                </button>
+              </div>
+              <div class="col">
+                <button class="nav-button" id="nav-top-right"></button> <!--never shown-->
+              </div>
+              <div class="col-1 ellipsis d-flex align-items-center"><span>● ● ●</span></div> <!--never shown-->
             </div>
             <div class="row">
-              <div class="col"></div>
-              <div class="col">...</div>
+              <div class="col-1 ellipsis d-flex align-items-center" id="left-ellipsis"><span>● ● ●</span></div>
               <div class="col">
                 <button class="nav-button" id="nav-left"></button>
               </div>
@@ -800,26 +811,24 @@
               <div class="col">
                 <button class="nav-button" id="nav-right"></button>
               </div>
-              <div class="col">...</div>
+              <div class="col-1 ellipsis d-flex align-items-center" id="right-ellipsis"><span>● ● ●</span></div>
             </div>
             <div class="row">
-              <div class="col"></div>
-              <div class="col">...</div>
+              <div class="col-1 ellipsis d-flex align-items-center" id="down-left-ellipsis"><span>● ● ●</span></div> <!--never shown-->
               <div class="col">
-                <button class="nav-button" id="nav-down-left"></button>
+                <button class="nav-button" id="nav-down-left"></button>  <!--never shown-->
               </div>
               <div class="col">
-                <button class="nav-button" id="nav-down"></button>
+                <button class="nav-button" id="nav-down">
+                </button>
               </div>
               <div class="col">
-                <button class="nav-button" id="nav-down-right"></button>
+                <button class="nav-button" id="nav-down-right">
+                </button>
               </div>
-              <div class="col">...</div>
+              <div class="col-1 ellipsis d-flex align-items-center" id="down-right-ellipsis"><span>● ● ●</span></div>
             </div>
           </div>
-
-          <!-- <div id="show-nav">
-          </div> -->
         </div>
       </div>
   
