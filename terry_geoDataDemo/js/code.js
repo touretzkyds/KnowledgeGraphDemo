@@ -1,14 +1,28 @@
-//cache for bnode and concept node expansion
+// cache for bnode expansion
 var bnodeExpansionDataCache = {};
+
+// cache for concept node expansion
 var conceptExpansionDataCache = {};
-// used to identify dummy node and real node
+
+// mapping from node label to node id
+// used to identify dummy node and real node (if the label of current node is already exist, current node is set to be dummy node
+// and when click / hover on dummy node, will direct user to the real node)
 var conceptNodeLabelToID = {};
-// current node
+
+// current node in the graph, which is red in graph and reflected on nav history and nav tool
 var currentNode = undefined;
-// endpoint to be queried
+
+// endpoint of boltz server to be queried
 const endpoint = "https://solid.boltz.cs.cmu.edu:3031/Devel/sparql";
 
-function propertyQuery(value, perform_query) {
+/**
+ * 
+ * get the url for querying data the region
+ * 
+ * @param {string} value the name for region to be queries. e.g. Pittsburgh
+ * @returns the url for query
+ */
+function propertyQuery(value) {
     const query = 
     `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
         PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
@@ -32,17 +46,18 @@ function propertyQuery(value, perform_query) {
         OPTIONAL {?Q ?r [?s ?z] FILTER isBlank(?y)}.
         OPTIONAL {?y rdfs:label|skos:prefLabel ?yLabel}.
         }`; 
-
     
-    if (perform_query) {
-        const url = endpoint + "?query=" + encodeURIComponent(query);
-        return url;
-    } else {
-        return false;
-    }
-
+    const url = endpoint + "?query=" + encodeURIComponent(query);
+    return url;
 }
 
+/**
+ * 
+ * starting function that performs the query from propertyQuery
+ * calls visualizeData to initialize graph, nav history, and nav tool
+ * 
+ * @param {string} value the name for region to be queries. e.g. Pittsburgh
+ */
 function getDataResponse(value) {
     const url = propertyQuery(value, true);
     conceptNodeLabelToID = {};
@@ -50,51 +65,14 @@ function getDataResponse(value) {
     
 }
 
-function convertToCytoscape(data) {
-    if(data === undefined) {
-        return undefined;
-    }
-    var nodes = [];
-    var edges = [];
-    var source = data.prefLabel.split("boltz:")[1];
-    conceptExpansionDataCache[source] = data;
-    Object.keys(data).forEach(function(key) {
-        var value = data[key];
-        var tempNode = {"data":{}};
-        tempNode.data.label = value;
-        tempNode.data.type = data.type;
-        if(key == "prefLabel") {
-            tempNode.data.class = "concept";
-            tempNode.classes = "readyToCollapse";
-            tempNode.data.id = source;
-            conceptNodeLabelToID[value] = source;
-            nodes.push(tempNode);
-        } else {
-            tempNode.data.class = classifyclass(key, value);
-            tempNode.data.id = convertToNodeID(source, key, value);
-            tempNode.data.sourceID = source;
-            tempNode.class = "readyToCollapse";
-            if(tempNode.data.class == "concept") {
-            if(!conceptNodeLabelToID.hasOwnProperty(value)) {
-                conceptNodeLabelToID[value] = tempNode.data.id;
-            }
-            }
-            
-            nodes.push(tempNode);
-
-            var tempEdge = {"data":{}};
-            tempEdge.data.label = key;
-            tempEdge.data.id = convertToEdgeID(source, key, value);
-            if(value !== source) {
-                tempEdge.data.source = source;
-                tempEdge.data.target = tempNode.data.id;
-                edges.push(tempEdge);
-            }
-        }
-    })
-    return [nodes, edges, source];
-}
-
+/**
+ * 
+ * renders cytoscape graph with data; style it, add event listeners, 
+ * initialize nav history and nav tools
+ * 
+ * @param {JSON} data server data
+ * @param {string} value the name for region to be queries. e.g. Pittsburgh
+ */
 function visualizeData(data, value) {
     const jsonData = getDataJSON(data);
     if(jsonData === undefined) {
@@ -304,9 +282,16 @@ function visualizeData(data, value) {
     cy.on('drag', function(evt){
         drag(evt);
     });
-
 }
 
+/**
+ * 
+ * convert data fetched from server to key value JSON pairs ready
+ * for converting to cytoscape data. e.g. {"cityName": "Pittsburgh", "type": "City"}
+ * 
+ * @param {JSON} data data fetched from server
+ * @returns the key value pairs JSON
+ */
 function getDataJSON(data) {
     const binding = data.results.bindings;
     if(binding.length === 0) {
@@ -370,5 +355,58 @@ function getDataJSON(data) {
     
     resultData["prefLabel"] = prefLabelValue;
     return [resultData, bnodeData];
+}
+
+
+/**
+ * 
+ * convert data fetched from server to cytoscape data
+ * 
+ * @param {JSON} data data fetched from server
+ * @returns cytoscape data for nodes, edges, and the initial Q number for region e.g. Q1342
+ */
+function convertToCytoscape(data) {
+    if(data === undefined) {
+        return undefined;
+    }
+    var nodes = [];
+    var edges = [];
+    var source = data.prefLabel.split("boltz:")[1];
+    conceptExpansionDataCache[source] = data;
+    Object.keys(data).forEach(function(key) {
+        var value = data[key];
+        var tempNode = {"data":{}};
+        tempNode.data.label = value;
+        tempNode.data.type = data.type;
+        if(key == "prefLabel") {
+            tempNode.data.class = "concept";
+            tempNode.classes = "readyToCollapse";
+            tempNode.data.id = source;
+            conceptNodeLabelToID[value] = source;
+            nodes.push(tempNode);
+        } else {
+            tempNode.data.class = classifyclass(key, value);
+            tempNode.data.id = convertToNodeID(source, key, value);
+            tempNode.data.sourceID = source;
+            tempNode.class = "readyToCollapse";
+            if(tempNode.data.class == "concept") {
+            if(!conceptNodeLabelToID.hasOwnProperty(value)) {
+                conceptNodeLabelToID[value] = tempNode.data.id;
+            }
+            }
+            
+            nodes.push(tempNode);
+
+            var tempEdge = {"data":{}};
+            tempEdge.data.label = key;
+            tempEdge.data.id = convertToEdgeID(source, key, value);
+            if(value !== source) {
+                tempEdge.data.source = source;
+                tempEdge.data.target = tempNode.data.id;
+                edges.push(tempEdge);
+            }
+        }
+    })
+    return [nodes, edges, source];
 }
 

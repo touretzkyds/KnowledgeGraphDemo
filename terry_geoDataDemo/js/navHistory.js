@@ -214,7 +214,7 @@ function setNavHistory(cy) {
   }
 
   // get the url to navigation list query
-  function navListQuery(value, perform_query) {
+  function navListQuery(value) {
       const query = 
       `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
         PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
@@ -240,13 +240,8 @@ function setNavHistory(cy) {
           ?y rdfs:label|skos:prefLabel ?yLabel.
         }`; 
 
-      
-      if (perform_query) {
-        const url = endpoint + "?query=" + encodeURIComponent(query);
-        return url;
-      } else {
-        return false;
-      }
+      const url = endpoint + "?query=" + encodeURIComponent(query);
+      return url;
   }
 
   // set nav history and nav tools buttons, value is the start city
@@ -256,7 +251,7 @@ function setNavHistory(cy) {
   }
 
   // update the nav history buttons and nav tools
-  function updateNav(cy, parentLabel) {
+  function updateNav(cy, parentLabel, labelsToBeRemoved=[]) {
     currLabel = currentNode.json().data.label;
     var currRegion = currLabel.split("\nboltz:")[0];
     if(navList.includes(currLabel)) {
@@ -271,12 +266,18 @@ function setNavHistory(cy) {
       }).addClass("selected");
       updateNavButtons(parentLabel);
     } else {
+      console.log(labelsToBeRemoved);
       const navListPairsUrl = navListQuery(currRegion, true);
-      d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, currRegion); updateChildrenTable(); setNavHistory(cy); updateNavButtons(parentLabel)});
+      d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, currRegion); updateChildrenTable(); setNavHistory(cy); updateNavButtons(parentLabel, labelsToBeRemoved)});
     }
   }
 
-  function updateNavButtons(parentLabel) {
+  function updateNavButtons(parentLabel, labelsToBeRemoved=[]) {
+    // when close nodes, remove nodes in children table
+    for(let i = 0; i < labelsToBeRemoved.length; i++) {
+      deleteFromChildrenTable(labelsToBeRemoved[i]);
+    }
+    
     currLabel = currentNode.json().data.label;
     var currRegion = currLabel.split("\nboltz:")[0];
     resetNavButtons();

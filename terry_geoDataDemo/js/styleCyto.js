@@ -1,4 +1,10 @@
 
+/**
+ * 
+ * relayout the whole graph with cola
+ * 
+ * @param {cytoscape object} cy the cytoscape object
+ */
 function reLayoutCola(cy) {
     var layout = cy.layout({
         name: 'cola',
@@ -13,6 +19,14 @@ function reLayoutCola(cy) {
     layout.start();
 }
 
+/**
+ * 
+ * style the image node width and height according to its image cache
+ * 
+ * @param {*} imgCache the imgCache in cy object, can be retrived by cy._private.renderer.imageCache
+ * @param {node} ele the node to be styled
+ * @param {cytoscape object} cy the cytoscape object
+ */
 function styleImageSize(imgCache, ele, cy) {
     const url = ele.json().data.label;
     const img = imgCache[url].image;
@@ -33,6 +47,12 @@ function styleImageSize(imgCache, ele, cy) {
     });
     }
 
+/**
+ * 
+ * find all image nodes and style their dimensions
+ * 
+ * @param {cytoscape object} cy the cytoscape object
+ */
 function adjustImageSize(cy) {
     cy.nodes().forEach(function(ele){
         if(ele.json().data.class === 'image' || ele.json().data.class === 'countyImage') {

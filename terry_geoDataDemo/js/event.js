@@ -1,7 +1,25 @@
 
+// initial positions of grabbed nodes
+// used to achieve dragging nodes in group
 var initialPositions = {};
+
+// initial positions for images
+// used to restore image to the previous position after zooming in and dragging
 var prevImagePositions = {};
-// function happens after tap event
+
+
+/**
+ * 
+ * when left clicking on a node
+ * 1. if it's qudt, if it's not ready to collapse, exnpande it; otherwise close it. In either case toggle the class 'readyToCollapse'
+ * 2. if it's dummyConcept, recenter to the corresponding real node
+ * 3. if it's concept, if it's not ready to collapse, exnpande it; otherwise close it. In either case toggle the class 'readyToCollapse'
+ * 4. if it's image, and it does not have class 'readyToCollapse', store previous position, enlarge it by factor 10 and add class 'readyToCollapse',
+ * this class will be removed when mouseout. If the image is countyImage, add the clicked county
+ * 
+ * @param {event} evt the left click event
+ * @param {cytoscape object} cy the cytoscape object
+ */
 function tap(evt, cy) {
     var node = evt.target;
     if(node.json().data.class === 'qudt') {
@@ -48,11 +66,21 @@ function tap(evt, cy) {
             });
             cy.$("#" + node.id()).addClass('readyToCollapse');
         } else if(node.json().data.class === 'countyImage') {
-            addCounties(evt, cy);
+            addCounty(evt, cy);
         }
     }
 }
-// function happens after cxttap event
+
+/**
+ * 
+ * when right clicking on a node, only has effects on dummyConcept
+ * will change it to be the corresponding real node which is expandable,
+ * adjust size and color and make the original real node be dummy node,
+ * and update global variable conceptNodeLabelToID
+ * 
+ * @param {event} evt the right click event
+ * @param {cytoscape object} cy the cytoscape object
+ */
 function cxttap(evt, cy) {
     var node = evt.target;
     if(node.json().data.class === 'dummyConcept') {
@@ -96,7 +124,16 @@ function cxttap(evt, cy) {
     }
 }
 
-// function happens after mouseover event
+/**
+ * 
+ * when mousing over a node
+ * 1. if it's qudt or concept, enlarge in to 125% of its original size
+ * 2. if it's dummyConcept, expand the corresponding real enlarge to 125% of its original size,
+ * set its type to greenConcept, and set its color to green
+ * 
+ * @param {event} evt the mouseover event
+ * @param {cytoscape object} cy the cytoscape object
+ */
 function mouseover(evt, cy) {
     var node = evt.target;
     if(node.json().data.class === 'qudt' || node.json().data.class === 'concept') {
@@ -121,7 +158,18 @@ function mouseover(evt, cy) {
     }
 }
 
-// function happens after mouseout event
+/**
+ * 
+ * when mousing out a node:
+ * 1. if it's qudt or concept, shrink to 80% of its original size
+ * 2. if it's dummyConcept, shrink the corresponding real node to 80% of its original size
+ * reset its type back to concept, and reset its color to blue
+ * 3. if it's images, shrink to 10% of its original size and go back to previous position stored in 
+ * global variable prevImagePositions. Remove class 'readyToCollapse' and relayout
+ * 
+ * @param {event} evt the mouseout event
+ * @param {cytoscape object} cy the cytoscape object
+ */
 function mouseout(evt, cy) {
     var node = evt.target;
     if(node.json().data.class === 'qudt' || node.json().data.class === 'concept') {
@@ -137,43 +185,48 @@ function mouseout(evt, cy) {
         'height': cy.$('#'+id).height() * 0.8,
         });
         if(cy.$("#" + id).json().data.class === 'greenConcept') {
-        cy.$("#"+id).json({data:{class:'concept'}});
-        cy.nodes(`[id = "${id}"]`).style({
-            "background-color": '#ADD8E6',
-            "border-color": '#00008B'
-        });
+            cy.$("#"+id).json({data:{class:'concept'}});
+            cy.nodes(`[id = "${id}"]`).style({
+                "background-color": '#ADD8E6',
+                "border-color": '#00008B'
+            });
         }
     }
     } 
     else if(node.json().data.class === 'image' || node.json().data.class === 'countyImage') {
     if(cy.$("#" + node.id()).hasClass('readyToCollapse')) {
         cy.nodes(`[id = "${node.id()}"]`).style({
-        'width': node.width() * 0.1,
-        'height': node.height() * 0.1,
-        'z-index': '10',
+            'width': node.width() * 0.1,
+            'height': node.height() * 0.1,
+            'z-index': '10',
         });
         node.position({
-        x: prevImagePositions.x,
-        y: prevImagePositions.y
+            x: prevImagePositions.x,
+            y: prevImagePositions.y
         });
         cy.$("#" + node.id()).removeClass('readyToCollapse');
         if(node.json().data.class === 'countyImage') {
-        reLayoutCola(cy);
+            reLayoutCola(cy);
         }
     }
     }
 }
 
-// function happens after grab event
+/**
+ * 
+ * when grabbing a node, store its positions and neighbors positions to global variable initialPositions
+ * 
+ * @param {event} evt the grab event
+ */
 function grab(evt) {
-    var draggedNode = evt.target;
-    initialPositions[draggedNode.id()] = {
-      x: draggedNode.position('x'),
-      y: draggedNode.position('y')
+    var grabbedNode = evt.target;
+    initialPositions[grabbedNode.id()] = {
+      x: grabbedNode.position('x'),
+      y: grabbedNode.position('y')
     };
-    var connectedNodes = draggedNode.neighborhood();
+    var connectedNodes = grabbedNode.neighborhood();
     connectedNodes.forEach(function(node){
-      if(node.id() !== draggedNode.id()){
+      if(node.id() !== grabbedNode.id()){
         initialPositions[node.id()] = {
           x: node.position('x'),
           y: node.position('y')
@@ -182,7 +235,12 @@ function grab(evt) {
     });
 }
 
-// function happens after drag event
+/**
+ * 
+ * when dragging a node, move its neighbors who has zero outgoers to move together
+ * 
+ * @param {event} evt the drag event
+ */
 function drag(evt) {
     var draggedNode = evt.target;
     var connectedNodes = draggedNode.neighborhood();

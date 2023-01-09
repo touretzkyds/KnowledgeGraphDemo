@@ -1,6 +1,11 @@
-// search for a node in graph by label
-// return that node if found
-// otherwise retun undefined
+/**
+ * 
+ * search for a node by label
+ * 
+ * @param {cytoscape object} cy     the cytoscape object
+ * @param {string} name             the label to be searched
+ * @returns the node with label = {name}; or undefined if not found
+ */
 function searchConceptByLabel(cy, name) {
     var node = undefined;
     cy.nodes().forEach(function(ele){
@@ -11,6 +16,18 @@ function searchConceptByLabel(cy, name) {
     return node;
 }
 
+/**
+ * 
+ * set the node as current node:
+ * 1. restore color for every node 
+ * 2. update its color be red 
+ * 3. update global variable currentNode
+ * 4. update nav history and nav tool
+ * 
+ * @param {cytoscape object} cy     the cytoscape object
+ * @param {string} id       id of the node to be set as current
+ * @param {string} parentLabel      label of parent of the node to be set
+ */
 function setAsCurrentNode(cy, id, parentLabel="") {
     cy.nodes().forEach(function( ele ){
         if(ele.json().data.class === 'concept') {
@@ -32,7 +49,21 @@ function setAsCurrentNode(cy, id, parentLabel="") {
     updateNav(cy, parentLabel);
 }
 
-function setSourceAsCurrentNode(cy, id) {
+
+/**
+ * 
+ * set the source node as current node:
+ * 1. restore color for every node 
+ * 2. if has source node, update source node color be red 
+ * 3. if has source node, update global variable currentNode
+ * 4. if has source node, update nav history and nav tool
+ * 
+ * @param {cytoscape object} cy the cytoscape object
+ * @param {string} id id for the node whose source node to be set
+ * @param {string[]} labelsToBeRemoved labels of removed nodes, used to remove labels in childrenTable
+ * @returns 
+ */
+function setSourceAsCurrentNode(cy, id, labelsToBeRemoved) {
     var node = cy.$("#"+id);
     cy.nodes().forEach(function( ele ){
         if(ele.json().data.class === 'concept') {
@@ -43,13 +74,26 @@ function setSourceAsCurrentNode(cy, id) {
         }
     });
     const sourceID = node.json().data.sourceID;
-    cy.nodes(`[id = "${sourceID}"]`).style({
-        "background-color": 'red'
-    });
-    currentNode = cy.$("#"+sourceID);
-    updateNav(cy, "");
+    if(sourceID !== undefined) {
+        cy.nodes(`[id = "${sourceID}"]`).style({
+            "background-color": 'red'
+        });
+        currentNode = cy.$("#"+sourceID);
+        updateNav(cy, "", labelsToBeRemoved);
+    }
 }
 
+/**
+ * 
+ * set the source node as current node but node update nav
+ * this is called as initialization set
+ * 1. restore color for every node 
+ * 2. update its color be red 
+ * 3. update global variable currentNode
+ * 
+ * @param {cytoscape object} cy the cytoscape object
+ * @param {string} id id for the node to be set
+ */
 function setAsCurrentNodeWithoutUpdateNav(cy, id) {
     cy.nodes().forEach(function( ele ){
         if(ele.json().data.class === 'concept') {
@@ -70,6 +114,14 @@ function setAsCurrentNodeWithoutUpdateNav(cy, id) {
     currentNode = cy.$("#"+id);
 }
 
+/**
+ * 
+ * expand the node by adding property nodes using nodeData
+ * 
+ * @param {cytoscape object} cy the cytoscape object
+ * @param {string} id id for the node to which properties be added
+ * @param {JSON} nodeData 
+ */
 function addConceptNode(cy, id, nodeData) {
     // const nodeData = getDataJSON(data);
     conceptExpansionDataCache[id] = nodeData;
@@ -130,18 +182,26 @@ function addConceptNode(cy, id, nodeData) {
     setAsCurrentNode(cy, id);
 }
 
+/**
+ * 
+ * close the node by removing property nodes who has zero outgoer
+ * 
+ * @param {cytoscape object} cy the cytoscape object
+ * @param {string} id id for the node to which properties be removed
+ */
 function removeConceptNode(cy, id) {
     var currNode = cy.$("#"+id);
     //outgoers include both edges and nodes
     var currIsDelelted = false;
     var outgoers = currNode.outgoers();
+    var labelsToBeRemoved = [];
     for(let i = 0; i < outgoers.length; i++) {
         var outgoer = outgoers[i];
         if(outgoer.json().group === "edges" && outgoer.target().outgoers().length == 0) {
         if(outgoer.target().id() === currentNode.id()) {
             currIsDelelted = true;
         }
-        deleteFromChildrenTable(outgoer.target().json().data.label);
+        labelsToBeRemoved.push(outgoer.target().json().data.label)
         cy.remove(outgoer);
         cy.remove(outgoer.target())
         
@@ -152,13 +212,20 @@ function removeConceptNode(cy, id) {
         }
     } 
     reSetType(cy, id);
-    var node = cy.$("#"+id);
     var style = cy.$('#'+id).style();
     if (style['background-color'] === "rgb(255,0,0)" || currIsDelelted) {
-        setSourceAsCurrentNode(cy, id);
+        setSourceAsCurrentNode(cy, id, labelsToBeRemoved);
     }
 }
 
+/**
+ * 
+ * expand the bnode by adding property nodes using bnodeData
+ * 
+ * @param {cytoscape object} cy the cytoscape object
+ * @param {string} id id for the bnode to which properties be added
+ * @param {JSON} bnodeData 
+ */
 function addbNode(cy, id, bnodeData) {
     bnodeExpansionDataCache[id] = bnodeData;
     if(cy.$('#' + id).json().data.label == 'b0') {
@@ -201,6 +268,13 @@ function addbNode(cy, id, bnodeData) {
     reLayoutCola(cy);
 }
 
+/**
+ * 
+ * close the bnode by removing property nodes
+ * 
+ * @param {cytoscape object} cy the cytoscape object
+ * @param {string} id id for the bnode to which properties be removed
+ */
 function removebNode(cy, id) {
     var bnodeData = bnodeExpansionDataCache[id];
     if(cy.$('#' + id).json().data.label == 'b0') {
@@ -217,17 +291,39 @@ function removebNode(cy, id) {
     })
 }
 
-// note: the case for hasCounty edge is special: the label is hasCounty but the id is hasCounty + county name
-// e.g. hasCountyAllegheny, because otherwise every edge has id 'hasCounty', which leads to duplicates
-// also, id cannot have special characters
+/**
+ * 
+ * get the id for edge. NOTE: id cannot contain special characters
+ * 
+ * @param {string} id id for the source node
+ * @param {string} key
+ * @param {string} value 
+ * @returns id for the edge
+ */
 function convertToEdgeID(id, key, value) {
-    return (id + "_" + key).replace(/[^\w]/g,"_");
+    return (id + "_" + value).replace(/[^\w]/g,"_");
 }
 
+/**
+ * 
+ * get the id for edge. NOTE: id cannot contain special characters
+ * 
+ * @param {string} id id for the source node
+ * @param {string} key
+ * @param {string} value 
+ * @returns id for the node
+ */
 function convertToNodeID(id, key, value) {
     return (id + "_rel_" + value).replace(/[^\w]/g,"_");
 }
 
+/**
+ * 
+ * reset the type to be the same as type of source node if the source node id is defined
+ * 
+ * @param {cytoscape object} cy the cytoscape object
+ * @param {string} id id for the node to be reseted type
+ */
 function reSetType(cy, id) {
     const idForSourceNode = cy.$("#"+id).json().data.sourceID;
     if(idForSourceNode !== undefined) {
@@ -235,6 +331,14 @@ function reSetType(cy, id) {
     }
 }
 
+/**
+ * 
+ * classify a node and get its class name
+ * 
+ * @param {string} key 
+ * @param {string} value 
+ * @returns class name
+ */
 function classifyclass(key, value) {
     if(key === "image") {
         return "image";
