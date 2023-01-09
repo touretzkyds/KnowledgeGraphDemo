@@ -8,20 +8,7 @@
     border-style: solid;
 }
 
-
-.title {
-    text-align: center;
-}
-
-#entryName {
-    background-color: white;
-    color: black;
-    margin-top: 20px;
-    margin-bottom: 20px;
-    margin-right: 5px; 
-    height: 20px;
-    width: 150px;
-}
+/*nav history buttons on top-left*/
 
 .nav-history-button{
     font-size: 14px;
@@ -57,46 +44,7 @@
     border: 0px;
 }
 
-
-.show-nav-button{
-    font-size:15px; 
-    color:rgb(0, 170, 255);
-    border-width:0px;
-    border-color: rgb(173, 216, 230);
-    border-radius: 50px;
-    font-weight: 600;
-    width: 140px;
-    height: 40px;
-    text-align: center;
-    margin: 2px;
-}
-
-.show-nav-button:hover{
-    font-size:15px; 
-    background-color: rgb(212, 241, 244);
-    color:rgb(0, 170, 255);
-    border-width:1px; 
-    border-color: rgb(173, 216, 230);
-    border-radius: 50px;
-    font-weight: 600;
-    width: 140px;
-    height: 40px;
-    text-align: center;
-    margin: 2px;
-}
-
-.show-nav-button.selected{
-    font-size: 15px; 
-    background-color: #f08080;
-    color:#fff3f4; 
-    border-width:0px; 
-    border-radius: 50px;
-    font-weight: 600;
-    width:140px;
-    height: 40px;
-    text-align: center;
-    margin: 2px;
-}
+/*nav tool buttons on top-right*/
 
 #nav-up,
 #nav-down,

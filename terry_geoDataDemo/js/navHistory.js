@@ -1,4 +1,3 @@
-var unsortedNavSet = new Set();
 var navList = [];
 var labelToDivVal = {};
 var navButtons = [];
@@ -70,6 +69,7 @@ function navigateTo(cy, name) {
 
 function navigateThrough(cy, name) {
     var currNode = searchConceptByLabel(cy, navList[0]);
+    console.log(navList[0]);
     // follow the link "locatedInAdministrativeRegion" to the last node
     while(true) {
         //outgoers include both edges and nodes
@@ -145,34 +145,27 @@ function setNavHistory(cy) {
   });
     var reversedNavList = navList.slice().reverse();
     var n = reversedNavList.length;
-    var navUp = reversedNavList[n - 2];
-    var navMid = reversedNavList[n - 1];
-    var navUpHTML = "<span>" + navUp.split("\nboltz:")[0] + "<span><br><span>▲</span>";
-    $("#nav-up").attr("value", navUp);
-    $("#nav-up").append(navUpHTML);
-    $("#nav-up").addClass("clickable");
-    $("#nav-mid").attr("value", navMid);
-    $("#nav-mid").text(navMid.split("\nboltz")[0]);
-    
+    if(n > 1) {
+      var navUp = reversedNavList[n - 2];
+      var navUpHTML = "<span>" + navUp.split("\nboltz:")[0] + "<span><br><span>▲</span>";
+      $("#nav-up").attr("value", navUp);
+      $("#nav-up").append(navUpHTML);
+      if(n > 0) {
+        var navMid = reversedNavList[n - 1];
+        $("#nav-up").addClass("clickable");
+        $("#nav-mid").attr("value", navMid);
+        $("#nav-mid").text(navMid.split("\nboltz")[0]);
+      }
+    }
  }
 
  // start from the first place, get the navigation list
  function setRankedNavList(data, value) {
     var binding = data.results.bindings;
     if(binding.length === 0) {
-        navList = [value];
+        navList = [];
         return;
     }
-    unsortedNavSet.clear();
-    unsortedNavSet.add(value);
-    for(let i = 0; i < binding.length; i++) {
-      var curr = binding[i];
-      unsortedNavSet.add(curr.yLabel.value);
-    }
-    binding = binding.filter(function(ele){
-      var curr = ele.xLabel.value;
-      return unsortedNavSet.has(curr);
-    });
     // construct mapping from name to Qnumber
     var nameToQnumber = {};
     for(let i = 0; i < binding.length; i++) {
@@ -222,40 +215,37 @@ function setNavHistory(cy) {
 
   // get the url to navigation list query
   function navListQuery(value, perform_query) {
-    const prevquery = document.getElementById("sparql");
-    prevquery.innerHTML = 
-     `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-      PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
-      PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
-      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-      PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
-      PREFIX qudt:  <http://qudt.org/schema/qudt/>
-      PREFIX unit:  <http://qudt.org/vocab/unit/> 
-      PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
-      PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
-      PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
-      PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
-      PREFIX la: <https://linked.art/ns/terms/>
-      PREFIX un: <http://www.w3.org/2007/ont/unit#> 
-      PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
-      SELECT ?x ?y ?xLabel ?yLabel
-      WHERE {
-        BIND ( '${value}'@en AS ?prefLabel).
-        ?Q skos:prefLabel ?prefLabel .
-        ?Q kgo:locatedInAdministrativeRegion+ ?y.
-        ?x kgo:locatedInAdministrativeRegion ?y.
-        ?x rdfs:label|skos:prefLabel ?xLabel.
-        ?y rdfs:label|skos:prefLabel ?yLabel.
-      }`; 
+      const query = 
+      `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+        PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+        PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
+        PREFIX qudt:  <http://qudt.org/schema/qudt/>
+        PREFIX unit:  <http://qudt.org/vocab/unit/> 
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> 
+        PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> 
+        PREFIX qu: <http://purl.oclc.org/NET/ssnx/qu/qu#> 
+        PREFIX qud: <http://qudt.org/1.1/schema/qudt#> 
+        PREFIX la: <https://linked.art/ns/terms/>
+        PREFIX un: <http://www.w3.org/2007/ont/unit#> 
+        PREFIX uni: <http://purl.org/weso/uni/uni.html#> 
+        SELECT ?x ?y ?xLabel ?yLabel
+        WHERE {
+          BIND ( '${value}'@en AS ?prefLabel).
+          ?Q skos:prefLabel ?prefLabel .
+          ?Q kgo:locatedInAdministrativeRegion* ?x.
+          ?x kgo:locatedInAdministrativeRegion ?y.
+          ?x rdfs:label|skos:prefLabel ?xLabel.
+          ?y rdfs:label|skos:prefLabel ?yLabel.
+        }`; 
 
       
       if (perform_query) {
-      const endpoint = d3.select("#endpoint").property("value")
-      const sparql = d3.select("#sparql").property("value")
-      const url = endpoint + "?query=" + encodeURIComponent(sparql)
-      return url
+        const url = endpoint + "?query=" + encodeURIComponent(query);
+        return url;
       } else {
-      return false
+        return false;
       }
   }
 
@@ -386,6 +376,9 @@ function setNavHistory(cy) {
   }
 
   function deleteFromChildrenTable(p) {
+    if(navList.includes(p)) {
+      return;
+    }
     if(childrenTable.hasOwnProperty(p)) {
       delete childrenTable[p];
     }
