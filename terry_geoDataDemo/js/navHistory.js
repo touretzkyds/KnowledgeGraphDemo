@@ -1,6 +1,4 @@
 var navList = [];
-var labelToDivVal = {};
-var navButtons = [];
 var childrenTable = {};
 
 // expand the node and set it to be current node
@@ -59,8 +57,10 @@ function addNodeHelper(cy, label, prevNode) {
 }
 
 function navigateTo(cy, name) {
+  console.log("name", name);
     var node = searchConceptByLabel(cy, name);
     if(node !== undefined) {
+      console.log("not undefined");
         expandHelper(cy, node);
         return;
     }
@@ -69,7 +69,6 @@ function navigateTo(cy, name) {
 
 function navigateThrough(cy, name) {
     var currNode = searchConceptByLabel(cy, navList[0]);
-    console.log(navList[0]);
     // follow the link "locatedInAdministrativeRegion" to the last node
     while(true) {
         //outgoers include both edges and nodes
@@ -130,8 +129,8 @@ function setNavHistory(cy) {
     }
  }
 
- function setNavButtons(cy) {
-  resetNavButtons();
+ function setNavTools(cy) {
+  resetNavTools();
   $(".nav-button").on('click', function(e){
     //navigate nodes
     var name = $(this).attr("value");
@@ -247,7 +246,7 @@ function setNavHistory(cy) {
   // set nav history and nav tools buttons, value is the start city
   function setNav(cy, value) {
     const navListPairsUrl = navListQuery(value, true);
-    d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); updateChildrenTable(); setNavHistory(cy); setNavButtons(cy);});
+    d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); updateChildrenTable(); setNavHistory(cy); setNavTools(cy);});
   }
 
   // update the nav history buttons and nav tools
@@ -264,23 +263,25 @@ function setNavHistory(cy) {
           // if the name for them changed, here should be changed
           return  currText === currRegion || currText === (currRegion + " ◀");
       }).addClass("selected");
-      updateNavButtons(parentLabel);
+      updateNavTools(parentLabel);
     } else {
-      console.log(labelsToBeRemoved);
       const navListPairsUrl = navListQuery(currRegion, true);
-      d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, currRegion); updateChildrenTable(); setNavHistory(cy); updateNavButtons(parentLabel, labelsToBeRemoved)});
+      d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, currRegion); updateChildrenTable(); setNavHistory(cy); updateNavTools(parentLabel, labelsToBeRemoved)});
     }
   }
 
-  function updateNavButtons(parentLabel, labelsToBeRemoved=[]) {
+  function updateNavTools(parentLabel, labelsToBeRemoved=[]) {
     // when close nodes, remove nodes in children table
     for(let i = 0; i < labelsToBeRemoved.length; i++) {
       deleteFromChildrenTable(labelsToBeRemoved[i]);
     }
+
+    var prevLabel = $("#nav-mid").attr("value");
+    var prevRegion = $("#nav-mid").text();
     
     currLabel = currentNode.json().data.label;
     var currRegion = currLabel.split("\nboltz:")[0];
-    resetNavButtons();
+    resetNavTools();
     
     if(parentLabel === undefined || parentLabel === "") {
       parentLabel = getParent(currLabel);
@@ -318,20 +319,57 @@ function setNavHistory(cy) {
     $("#nav-mid").text(currRegion);
     
     var children = getChildren(currLabel);
-    if(children.length > 0) {
-      var navDownHTML = "<span>▼</span><br><span>" + children[0].split("\nboltz:")[0] + "<span>";
-      $("#nav-down").attr("value", children[0]);
+    console.log("currLabel", currLabel);
+    console.log("prevLabel", prevLabel);
+    console.log("children", children);
+    var index = -1;
+    if(children.includes(prevLabel)) {
+      index = children.indexOf(prevLabel);
+    }
+    var index = -1;
+    if(children.includes(prevLabel)) {
+      index = children.indexOf(prevLabel);
+    }
+    // if we are going from a child to parent
+    if(index !== -1) {
+      var navDownHTML = "<span>▼</span><br><span>" + prevRegion + "<span>";
+      $("#nav-down").attr("value", prevLabel);
       $("#nav-down").append(navDownHTML);
       $("#nav-down").addClass("clickable");
-    }
-    if(children.length > 1) {
-      var navDownRightHTML = "<span>◢</span><br>" + children[1].split("\nboltz:")[0] + "<span>";
-      $("#nav-down-right").attr("value", children[1]);
-      $("#nav-down-right").append(navDownRightHTML);
-      $("#nav-down-right").addClass("clickable");
-    }
-    if(children.length > 2) {
-      $("#down-right-ellipsis").addClass("visible");
+      if(index - 1 >= 0) {
+        var navDownLeftHTML = "<span>◣</span><br>" + children[index-1].split("\nboltz:")[0] + "<span>";
+        $("#nav-down-left").attr("value", children[index-1]);
+        $("#nav-down-left").append(navDownLeftHTML);
+        $("#nav-down-left").addClass("clickable");
+      }
+      if(index - 1 >= 1) {
+        $("#down-left-ellipsis").addClass("visible");
+      }
+      if(index + 1 < children.length) {
+        var navDownRightHTML = "<span>◢</span><br>" + children[index+1].split("\nboltz:")[0] + "<span>";
+        $("#nav-down-right").attr("value", children[index+1]);
+        $("#nav-down-right").append(navDownRightHTML);
+        $("#nav-down-right").addClass("clickable");
+      }
+      if(index + 1 < children.length - 1) {
+        $("#down-right-ellipsis").addClass("visible");
+      }
+    } else {
+      if(children.length > 0) {
+        var navDownHTML = "<span>▼</span><br><span>" + children[0].split("\nboltz:")[0] + "<span>";
+        $("#nav-down").attr("value", children[0]);
+        $("#nav-down").append(navDownHTML);
+        $("#nav-down").addClass("clickable");
+      }
+      if(children.length > 1) {
+        var navDownRightHTML = "<span>◢</span><br>" + children[1].split("\nboltz:")[0] + "<span>";
+        $("#nav-down-right").attr("value", children[1]);
+        $("#nav-down-right").append(navDownRightHTML);
+        $("#nav-down-right").addClass("clickable");
+      }
+      if(children.length > 2) {
+        $("#down-right-ellipsis").addClass("visible");
+      }
     }
   }
 
@@ -392,7 +430,7 @@ function setNavHistory(cy) {
     };
   }
 
-  function resetNavButtons() {
+  function resetNavTools() {
     $(".nav-button").attr("value", "");
     $(".nav-button").text("");
     $(".clickable").removeClass("clickable");

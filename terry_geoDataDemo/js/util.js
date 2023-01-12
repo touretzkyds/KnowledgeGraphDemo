@@ -198,17 +198,17 @@ function removeConceptNode(cy, id) {
     for(let i = 0; i < outgoers.length; i++) {
         var outgoer = outgoers[i];
         if(outgoer.json().group === "edges" && outgoer.target().outgoers().length == 0) {
-        if(outgoer.target().id() === currentNode.id()) {
-            currIsDelelted = true;
-        }
-        labelsToBeRemoved.push(outgoer.target().json().data.label)
-        cy.remove(outgoer);
-        cy.remove(outgoer.target())
-        
-        const label = outgoer.target().json().data.label;
-        if(conceptNodeLabelToID[label] == outgoer.target().id()) {
-            delete conceptNodeLabelToID[label];
-        }
+            if(outgoer.target().id() === currentNode.id()) {
+                currIsDelelted = true;
+            }
+            labelsToBeRemoved.push(outgoer.target().json().data.label)
+            cy.remove(outgoer);
+            cy.remove(outgoer.target())
+            
+            const label = outgoer.target().json().data.label;
+            if(conceptNodeLabelToID[label] == outgoer.target().id()) {
+                delete conceptNodeLabelToID[label];
+            }
         }
     } 
     reSetType(cy, id);
