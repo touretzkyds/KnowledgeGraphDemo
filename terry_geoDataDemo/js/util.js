@@ -139,7 +139,7 @@ function addConceptNode(cy, id, nodeData) {
     Object.keys(nodeData).forEach(function(key) {
         if(key != "prefLabel") {
         var value = nodeData[key];
-
+        // node info
         var tempNode = {"data":{}}
         tempNode.data.type = nodeData.type;
         tempNode.group = "nodes";
@@ -154,16 +154,12 @@ function addConceptNode(cy, id, nodeData) {
             tempNode.data.class = "dummyConcept";
             }
         }
-        
         const radian = (Math.PI * 2 / numOfKeys) * count;  
         const x = sourceX + radius * Math.sin(radian);
         const y = sourceY - radius * Math.cos(radian);
         tempNode.position = {x:x, y:y};
-
         addedData.push(tempNode);
-        
-        
-
+        // edge info
         var tempEdge = {"data":{}}
         tempEdge.group = "edges";
         tempEdge.data.id = convertToEdgeID(id, key, value)
@@ -244,10 +240,9 @@ function addbNode(cy, id, bnodeData) {
     var count = 1;
     Object.keys(bnodeData).forEach(function(key) {
         const value = bnodeData[key];
-        
+        // node info
         var tempNode = {}
         tempNode.group = "nodes";
-        
         const dataID = convertToNodeID(id, key, value);
         tempNode.data = {id: dataID, label: value, class: 'bnode', type: cy.$("#"+id).json().data.type};
         tempNode.data.sourceID = id;
@@ -255,7 +250,7 @@ function addbNode(cy, id, bnodeData) {
         const x = sourceX + radius * Math.sin(radian);
         const y = sourceY - radius * Math.cos(radian);
         tempNode.position = {x:x, y:y};
-
+        // edge info
         var tempEdge = {}
         tempEdge.group = "edges";
         tempEdge.data = {id: convertToEdgeID(id, key, value), label: key, source: id, target: dataID};

@@ -99,11 +99,11 @@ function addCounty(evt, cy) {
 
     var countyName = getNearestCounty(stateName, normalizedX, normalizedY);
     
-    //add new county node
+    //add new county node and edge
     var addedData = [];
-    
     var key = "hasCounty";
     var value = countyName;
+    // node info
     var tempNode = {"data":{}};
     tempNode.data.type = "County";
     tempNode.group = "nodes";
@@ -123,6 +123,7 @@ function addCounty(evt, cy) {
     const sourceY = cy.$("#" + id).position('y');
     tempNode.position = {x:sourceX + radius, y:sourceY - radius};
     addedData.push(tempNode);
+    // edge info
     var tempEdge = {"data":{}}
     tempEdge.group = "edges";
     tempEdge.data.id = convertToEdgeID(id, key, value)
@@ -130,7 +131,6 @@ function addCounty(evt, cy) {
     tempEdge.data.source = id;
     tempEdge.data.target = tempNode.data.id;
     addedData.push(tempEdge);
-
     cy.add(addedData);
     reLayoutCola(cy);
     setAsCurrentNode(cy, tempNode.data.id, parentLabel);

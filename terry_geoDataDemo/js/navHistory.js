@@ -43,8 +43,9 @@ function addNodeHelper(cy, label, prevNode, link) {
     var addedData = [];
     var key = link;
     var value = label;
+    // node info
     var tempNode = {"data":{}};
-    // tempNode.data.type = "County"; ? 
+    // tempNode.data.type = "County"; ?  cannot determine type
     tempNode.group = "nodes";
     tempNode.data.label = value;
     tempNode.data.class = classifyclass(key, value);
@@ -62,6 +63,7 @@ function addNodeHelper(cy, label, prevNode, link) {
     const sourceY = cy.$("#" + prevNode.id()).position('y');
     tempNode.position = {x:sourceX + radius, y:sourceY - radius};
     addedData.push(tempNode);
+    // edge info
     var tempEdge = {"data":{}}
     tempEdge.group = "edges";
     tempEdge.data.id = convertToEdgeID(prevNode.id(), key, value)
@@ -363,7 +365,6 @@ function initNavHistory(cy) {
     for(let i = 0; i < labelsToBeRemoved.length; i++) {
       deleteFromChildrenTable(labelsToBeRemoved[i]);
     }
-
     // label is the one with Q number while region is the region name
     // e.g. label = Pittsburgh\nboltz:Q1342, region = Pittsburgh
     var prevLabel = $("#nav-mid").attr("value");
