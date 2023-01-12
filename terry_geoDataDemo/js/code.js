@@ -259,7 +259,7 @@ function visualizeData(data, value) {
     });
 
     mycy = cy;
-    setNav(cy, value);
+    initNav(cy, value);
     setAsCurrentNodeWithoutUpdateNav(cy, source);
     reLayoutCola(cy);
     adjustImageSize(cy);

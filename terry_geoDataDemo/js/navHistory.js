@@ -1,8 +1,18 @@
-var navList = [];
+// the path from searched node label to the root following path kgo:locatedInAdministrativeRegion Note: the label string contains Q value: e.g. Pittsburgh\nboltz:Q1342
+// this reflects parent children relations e.g. Pittsburgh -> Allegheny -> Pennsylvania -> Northeastern Region -> USA -> North America
+// Note again strings in navHistoryList are labels containing Q numbers e.g. Pittsburgh\nboltz:Q1342, not Pittsburgh
+var navHistoryList = [];
+// parent children pairs where parent is  label string and children is list of label string. e.g. {"'Pennsylvania\nboltz:Q1400': ['Allegheny\boltz:Q156291']"} Note: the label string contains Q value: e.g. Pittsburgh\nboltz:Q1342
 var childrenTable = {};
 
-// expand the node and set it to be current node
-// or just set it to be current if it's already expanded
+/**
+ * 
+ * if the current node is not ready to collapse, expand the node and set it to be current node, which is done within function addConceptNode
+ * otherwise just set it to be current if it's already expanded
+ * 
+ * @param {cytoscape object} cy     the cytoscape object
+ * @param {node} node current node
+ */
 function expandHelper(cy, node) {
     const cityName = node.json().data.label.split("\nboltz")[0];
     if(!node.hasClass('readyToCollapse')) {
@@ -18,11 +28,20 @@ function expandHelper(cy, node) {
     }
 }
 
-// add a link "locatedInAdministrativeRegion" and target node with label = label
-// connecting to prevNode
-function addNodeHelper(cy, label, prevNode) {
+/**
+ * 
+ * add a link with label = link coming out from prevNoode links
+ * to target node with label = label 
+ * 
+ * @param {cytoscape object} cy     the cytoscape object
+ * @param {string} label the label of newly added node
+ * @param {node} prevNode the node to which the new edge and node will be added
+ * * @param {string} link the label of edge to be added
+ * @returns 
+ */
+function addNodeHelper(cy, label, prevNode, link) {
     var addedData = [];
-    var key = "locatedInAdministrativeRegion";
+    var key = link;
     var value = label;
     var tempNode = {"data":{}};
     // tempNode.data.type = "County"; ? 
@@ -56,26 +75,43 @@ function addNodeHelper(cy, label, prevNode) {
     return cy.$("#"+tempNode.data.id)
 }
 
-function navigateTo(cy, name) {
-  console.log("name", name);
-    var node = searchConceptByLabel(cy, name);
+/**
+ * 
+ * navigate the node with label=label
+ * if the node is already in graph, expand it, update it to be current node, and update nav his & hav tool
+ * otherwise navigate it through a link to the root. the default is "locatedInAdministrativeRegion"
+ * 
+ * @param {cytoscape object} cy     the cytoscape object
+ * @param {string} label the label of the node to be navigated to 
+ * @returns 
+ */
+function navigateTo(cy, label) {
+    var node = searchConceptByLabel(cy, label);
     if(node !== undefined) {
       console.log("not undefined");
         expandHelper(cy, node);
         return;
     }
-    navigateThrough(cy, name);
+    navigateThrough(cy, label);
 }
 
-function navigateThrough(cy, name) {
-    var currNode = searchConceptByLabel(cy, navList[0]);
+/**
+ * 
+ * navigate through link and add link as edges and target nodes, default link is "locatedInAdministrativeRegion"
+ * 
+ * @param {cytoscape object} cy     the cytoscape object
+ * @param {string} label the label of the start node in the navigation
+ * @param {string} link the link to be navigated through
+ */
+function navigateThrough(cy, label, link="locatedInAdministrativeRegion") {
+    var currNode = searchConceptByLabel(cy, navHistoryList[0]);
     // follow the link "locatedInAdministrativeRegion" to the last node
     while(true) {
         //outgoers include both edges and nodes
         var outgoers = currNode.outgoers();
         for(let i = 0; i < outgoers.length; i++) {
             var outgoer = outgoers[i];
-            if(outgoer.json().group === "edges" && outgoer.json().data.label === "locatedInAdministrativeRegion") {
+            if(outgoer.json().group === "edges" && outgoer.json().data.label === link) {
                 currNode = outgoer.target();
                 continue;
             }
@@ -84,12 +120,12 @@ function navigateThrough(cy, name) {
     }
     var start = 0;
     var end = 0;
-    for(let i = 0; i < navList.length; i++) {
-        if(navList[i] === currNode.json().data.label) {
+    for(let i = 0; i < navHistoryList.length; i++) {
+        if(navHistoryList[i] === currNode.json().data.label) {
             start = i + 1;
             continue;
         } 
-        if(navList[i] === name) {
+        if(navHistoryList[i] === label) {
             end = i + 1;
             break;
         }
@@ -98,71 +134,92 @@ function navigateThrough(cy, name) {
     // follow thel link "locatedInAdministrativeRegion" from the curr node 
     // add new link and nodes until the node with label = name is added
     for(let i = start; i < end; i++) {
-        var label = navList[i];
-        currNode = addNodeHelper(cy, label, currNode);
+        var label = navHistoryList[i];
+        currNode = addNodeHelper(cy, label, currNode, link);
     }
     expandHelper(cy, currNode);
 }
 
 // append nav history buttons in div whose id = nav-history
 // according to the navList
-function setNavHistory(cy) {
+/**
+ * 
+ * first clear existing nav history buttons
+ * then initialize the navHistory buttons according to navHistoryList and make the leaf selected e.g. Pittsburgh be selected
+ * 
+ * @param {cytoscape object} cy     the cytoscape object
+ */
+function initNavHistory(cy) {
     $('.nav-history-button').remove();
-    var reversedNavList = navList.slice().reverse();
+    var reversedNavList = navHistoryList.slice().reverse();
     for(let i = 0; i < reversedNavList.length; i++) {
-      var name = reversedNavList[i];
-      var btn1 = $(`<button class="nav-history-button" value = "${i}">${name.split("\nboltz")[0]} ◀</button>`);
+      var label = reversedNavList[i];
+      var btn1 = $(`<button class="nav-history-button" value = "${i}">${label.split("\nboltz")[0]} ◀</button>`);
       if(i === reversedNavList.length - 1) {
-        btn1 = $(`<button class="nav-history-button selected" value = "${i}">${name.split("\nboltz")[0]}</button>`);
+        btn1 = $(`<button class="nav-history-button selected" value = "${i}">${label.split("\nboltz")[0]}</button>`);
       }
       $("#nav-history").append(btn1);
-      (function(btn1, name) {
+      (function(btn1, label) {
         btn1.on('click', function(e) {
           //navigate nodes
           try { 
-            navigateTo(cy, name);
+            navigateTo(cy, label);
           } catch (e) {
             console.error(e);
           }
         });
-      })(btn1, name);
+      })(btn1, label);
     }
  }
 
- function setNavTools(cy) {
+ /**
+  * 
+  * first reset nav tool buttons to be empty
+  * then initialize nav tools according to navHistoryList 
+  * 
+  * @param {cytoscape object} cy     the cytoscape object
+  */
+ function initNavTools(cy) {
   resetNavTools();
   $(".nav-button").on('click', function(e){
     //navigate nodes
-    var name = $(this).attr("value");
-    if(name !== undefined && name !== "") {
+    var label = $(this).attr("value");
+    if(label !== undefined && label !== "") {
       try { 
-        navigateTo(cy, name);
+        navigateTo(cy, label);
       } catch (e) {
         console.error(e);
       }
     }
   });
-    var reversedNavList = navList.slice().reverse();
+    var reversedNavList = navHistoryList.slice().reverse();
     var n = reversedNavList.length;
-    if(n > 1) {
-      var navUp = reversedNavList[n - 2];
-      var navUpHTML = "<span>" + navUp.split("\nboltz:")[0] + "<span><br><span>▲</span>";
-      $("#nav-up").attr("value", navUp);
-      $("#nav-up").append(navUpHTML);
-      if(n > 0) {
-        var navMid = reversedNavList[n - 1];
-        $("#nav-up").addClass("clickable");
-        $("#nav-mid").attr("value", navMid);
-        $("#nav-mid").text(navMid.split("\nboltz")[0]);
+    if(n > 0) {
+      var navMid = reversedNavList[n - 1];
+      $("#nav-up").addClass("clickable");
+      $("#nav-mid").attr("value", navMid);
+      $("#nav-mid").text(navMid.split("\nboltz")[0]);
+      if(n > 1) {
+        var navUp = reversedNavList[n - 2];
+        var navUpHTML = "<span>" + navUp.split("\nboltz:")[0] + "<span><br><span>▲</span>";
+        $("#nav-up").attr("value", navUp);
+        $("#nav-up").append(navUpHTML);
       }
     }
  }
 
  // start from the first place, get the navigation list
- function setRankedNavList(data, value) {
+ /**
+  * 
+  * using data queried from server to generate nav history list
+  * 
+  * @param {JSON} data data fetched from server
+  * @returns 
+  */
+ function setRankedNavHistoryList(data) {
     var binding = data.results.bindings;
     if(binding.length === 0) {
-        navList = [];
+        navHistoryList = ["North America\nboltz:Q49"];
         return;
     }
     // construct mapping from name to Qnumber
@@ -172,6 +229,7 @@ function setNavHistory(cy) {
         nameToQnumber[curr.xLabel.value] = curr.x.value.split("/data/")[1];
         nameToQnumber[curr.yLabel.value] = curr.y.value.split("/data/")[1];
     }
+    // algorithm to sort those pairs
     var nodes = {};
     var done = false;
     while(!done) {
@@ -193,27 +251,34 @@ function setNavHistory(cy) {
       }
     }
     
-    navList = [];
+    navHistoryList = [];
     
     Object.keys(nodes).forEach(function(key) {
       var value = nodes[key];
       var temp = {};
       temp.order = value;
       temp.name = key;
-      navList.push(temp);
+      navHistoryList.push(temp);
     })
-    navList = navList.sort((a, b) => {
+    navHistoryList = navHistoryList.sort((a, b) => {
       if (a.order < b.order) {
         return -1;
       }
     });
-    for(let i = 0; i < navList.length; i++) {
-      navList[i] = navList[i].name + "\nboltz:" + nameToQnumber[navList[i].name];
+    for(let i = 0; i < navHistoryList.length; i++) {
+      navHistoryList[i] = navHistoryList[i].name + "\nboltz:" + nameToQnumber[navHistoryList[i].name];
     }
   }
 
   // get the url to navigation list query
-  function navListQuery(value) {
+  /**
+   * 
+   * get the url for generating nav history list pairs
+   * 
+   * @param {string} value the name for region to be queries. e.g. Pittsburgh
+   * @returns the url for query
+   */
+  function navHistoryListQuery(value) {
       const query = 
       `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
         PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
@@ -243,39 +308,65 @@ function setNavHistory(cy) {
       return url;
   }
 
-  // set nav history and nav tools buttons, value is the start city
-  function setNav(cy, value) {
-    const navListPairsUrl = navListQuery(value, true);
-    d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, value); updateChildrenTable(); setNavHistory(cy); setNavTools(cy);});
+  /**
+   * 
+   * initialize the nav history and nav tools buttons with starting value
+   * 
+   * @param {cytoscape object} cy     the cytoscape object
+   * @param {string} value the starting region e.g. Pittsburgh
+   */
+  function initNav(cy, value) {
+    const navListPairsUrl = navHistoryListQuery(value, true);
+    d3.json(navListPairsUrl).then(function(data) {childrenTable = {}; setRankedNavHistoryList(data); updateChildrenTable(); initNavHistory(cy); initNavTools(cy);});
   }
 
-  // update the nav history buttons and nav tools
+  /**
+   * 
+   * update both nav history and nav tools buttons
+   * 
+   * @param {cytoscape object} cy     the cytoscape object
+   * @param {*} parentLabel 
+   * @param {*} labelsToBeRemoved list of labels removed in cytoscape graph, need to be removed in childrenTable as well. Empty as default
+   */
   function updateNav(cy, parentLabel, labelsToBeRemoved=[]) {
     currLabel = currentNode.json().data.label;
     var currRegion = currLabel.split("\nboltz:")[0];
-    if(navList.includes(currLabel)) {
+    if(navHistoryList.includes(currLabel)) {
       // update nav history
       $('.nav-history-button.selected').removeClass('selected');
       $('.nav-history-button').filter(function() {
           var currText = $(this).text();
-          // important: the name check for nav history and 
-          // nav tools are hard coded here
+          // important: the name check for nav history are hard coded here
           // if the name for them changed, here should be changed
           return  currText === currRegion || currText === (currRegion + " ◀");
       }).addClass("selected");
+      // update nav tool
       updateNavTools(parentLabel);
     } else {
-      const navListPairsUrl = navListQuery(currRegion, true);
-      d3.json(navListPairsUrl).then(function(data) {setRankedNavList(data, currRegion); updateChildrenTable(); setNavHistory(cy); updateNavTools(parentLabel, labelsToBeRemoved)});
+      const navListPairsUrl = navHistoryListQuery(currRegion, true);
+      d3.json(navListPairsUrl).then(function(data) {setRankedNavHistoryList(data); updateChildrenTable(); initNavHistory(cy); updateNavTools(parentLabel, labelsToBeRemoved)});
     }
   }
 
+  /**
+   * 
+   * update the nav tools buttons
+   * 1. delete those labels appeared in labelsToBeRemoved in childrenTable
+   * 2. reset nav tools to be empty
+   * 3. find text (name such as Pittsburgh) and value (label such as Pittsburgh\nboltz:Q1342, used for searching in graph) and set
+   * to the right buttons (see the buttons template in terryDemoCola.html with id=nav-tool)
+   * 
+   * @param {string} parentLabel label for the parent node of the newly selected node
+   * @param {*} labelsToBeRemoved list of labels removed in cytoscape graph, need to be removed in childrenTable as well. Empty as default
+   */
   function updateNavTools(parentLabel, labelsToBeRemoved=[]) {
     // when close nodes, remove nodes in children table
     for(let i = 0; i < labelsToBeRemoved.length; i++) {
       deleteFromChildrenTable(labelsToBeRemoved[i]);
     }
 
+    // label is the one with Q number while region is the region name
+    // e.g. label = Pittsburgh\nboltz:Q1342, region = Pittsburgh
     var prevLabel = $("#nav-mid").attr("value");
     var prevRegion = $("#nav-mid").text();
     
@@ -284,7 +375,7 @@ function setNavHistory(cy) {
     resetNavTools();
     
     if(parentLabel === undefined || parentLabel === "") {
-      parentLabel = getParent(currLabel);
+      parentLabel = getParentLabel(currLabel);
     }
     if(parentLabel !== undefined && parentLabel !== "") {
       var siblings = childrenTable[parentLabel];
@@ -292,11 +383,14 @@ function setNavHistory(cy) {
         siblings.push(currLabel);
         siblings.sort();
       }
+      // set parent to nav-up btn
       var navUpHTML = "<span>" + parentLabel.split("\nboltz:")[0] + "<span><br><span>▲</span>";
       $("#nav-up").attr("value", parentLabel);
       $("#nav-up").append(navUpHTML);
       $("#nav-up").addClass("clickable");
       var index = siblings.indexOf(currLabel);
+      // set siblings to nav-left & nav-right btns if there's any
+      // also show ellipsis if there are more than one left or right siblings 
       if(index > 0) {
         $("#nav-left").attr("value", siblings[index - 1]);
         $("#nav-left").text(siblings[index - 1].split("\nboltz:")[0] + " ◀");
@@ -315,13 +409,11 @@ function setNavHistory(cy) {
       }
     }
     
+    // set nav-mid to be the current region
     $("#nav-mid").attr("value", currLabel);
     $("#nav-mid").text(currRegion);
     
-    var children = getChildren(currLabel);
-    console.log("currLabel", currLabel);
-    console.log("prevLabel", prevLabel);
-    console.log("children", children);
+    var children = getChildrenLabel(currLabel);
     var index = -1;
     if(children.includes(prevLabel)) {
       index = children.indexOf(prevLabel);
@@ -330,8 +422,12 @@ function setNavHistory(cy) {
     if(children.includes(prevLabel)) {
       index = children.indexOf(prevLabel);
     }
-    // if we are going from a child to parent
+
     if(index !== -1) {
+      // if we are navigating from a child to parent
+      // make the child be in nav-down btn and fill nav-down-left
+      // and nav-down-right be its siblings
+      // also show ellipsis if there are more than one left or right siblings 
       var navDownHTML = "<span>▼</span><br><span>" + prevRegion + "<span>";
       $("#nav-down").attr("value", prevLabel);
       $("#nav-down").append(navDownHTML);
@@ -355,6 +451,9 @@ function setNavHistory(cy) {
         $("#down-right-ellipsis").addClass("visible");
       }
     } else {
+      // otherwise, set the first child (if any) in nav-down btn and second
+      // child (if any) in nav-down-right btn
+      // also show ellipsis if there are more than one left or right siblings 
       if(children.length > 0) {
         var navDownHTML = "<span>▼</span><br><span>" + children[0].split("\nboltz:")[0] + "<span>";
         $("#nav-down").attr("value", children[0]);
@@ -373,16 +472,21 @@ function setNavHistory(cy) {
     }
   }
 
+  /**
+   * 
+   * updateChildrenTable according to new navHistoryList
+   * 
+   */
   function updateChildrenTable() {
-    for(let i = 0; i < navList.length; i++) {
-      var curr = navList[i];
+    for(let i = 0; i < navHistoryList.length; i++) {
+      var curr = navHistoryList[i];
       if(i === 0) {
         if(childrenTable.hasOwnProperty(curr)) {
           continue;
         }
         childrenTable[curr] = [];
       } else {
-        var child = navList[i - 1];
+        var child = navHistoryList[i - 1];
         if(childrenTable.hasOwnProperty(curr)) {
           var siblings = childrenTable[curr];
           if(!siblings.includes(child)) {
@@ -396,40 +500,65 @@ function setNavHistory(cy) {
     }
   }
 
-  function getParent(p) {
+  /**
+   * 
+   * get the label of parent node of the node whose label=label
+   * 
+   * @param {string} label label for the node whose parent to be get
+   * @returns label of parent node
+   */
+  function getParentLabel(label) {
     var parent = undefined;
     for(var key in childrenTable){
       var siblings = childrenTable[key];
-      if(siblings.includes(p)) {
+      if(siblings.includes(label)) {
         parent = key;
       }
     };
     return parent;
   }
 
-  function getChildren(p) {
-    if(childrenTable.hasOwnProperty(p)) {
-      return childrenTable[p];
+  /**
+   * 
+   * get the list of label of chilren node of the node whose label=label
+   * 
+   * @param {string} label label for the node whose parent to be get
+   * @returns list of labels of children nodes
+   */
+  function getChildrenLabel(label) {
+    if(childrenTable.hasOwnProperty(label)) {
+      return childrenTable[label];
     }
     return [];
   }
 
-  function deleteFromChildrenTable(p) {
-    if(navList.includes(p)) {
+
+  /**
+   * 
+   * delete any occurance of label=label in childrenTable if its not in the updated navHistoryList
+   * 
+   * @param {string} label label for the node to be deleted in childrenTable
+   * @returns 
+   */
+  function deleteFromChildrenTable(label) {
+    if(navHistoryList.includes(label)) {
       return;
     }
-    if(childrenTable.hasOwnProperty(p)) {
-      delete childrenTable[p];
+    if(childrenTable.hasOwnProperty(label)) {
+      delete childrenTable[label];
     }
     for(var key in childrenTable){
       var siblings = childrenTable[key];
-      if(siblings.includes(p)) {
-        var id = siblings.indexOf(p);
+      if(siblings.includes(label)) {
+        var id = siblings.indexOf(label);
         siblings.splice(id, 1);
       }
     };
   }
 
+  /**
+   * reset the nav tools buttons to be empty
+   */
   function resetNavTools() {
     $(".nav-button").attr("value", "");
     $(".nav-button").text("");
