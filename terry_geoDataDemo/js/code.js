@@ -17,6 +17,20 @@ const endpoint = "https://solid.boltz.cs.cmu.edu:3031/Devel/sparql";
 
 /**
  * 
+ * starting function that performs the query from propertyQuery
+ * calls visualizeData to initialize graph, nav history, and nav tool
+ * 
+ * @param {string} value the name for region to be queries. e.g. Pittsburgh
+ */
+function getDataResponse(value) {
+    const url = propertyQuery(value, true);
+    conceptNodeLabelToID = {};
+    d3.json(url).then(function(data) {visualizeData(data, value);});
+    
+}
+
+/**
+ * 
  * get the url for querying data the region
  * 
  * @param {string} value the name for region to be queries. e.g. Pittsburgh
@@ -49,20 +63,6 @@ function propertyQuery(value) {
     
     const url = endpoint + "?query=" + encodeURIComponent(query);
     return url;
-}
-
-/**
- * 
- * starting function that performs the query from propertyQuery
- * calls visualizeData to initialize graph, nav history, and nav tool
- * 
- * @param {string} value the name for region to be queries. e.g. Pittsburgh
- */
-function getDataResponse(value) {
-    const url = propertyQuery(value, true);
-    conceptNodeLabelToID = {};
-    d3.json(url).then(function(data) {visualizeData(data, value);});
-    
 }
 
 /**
@@ -200,23 +200,21 @@ function visualizeData(data, value) {
         }
     },
     {
-        selector: 'node[class = "dummy"]',
+        selector: 'node[class = "image"]',
         style: {
-            'shape': 'ellipse',
-            'border-style': 'solid',
-            'width':100,
-            'height':100,
-            "background-color": 'red',
-            'text-max-width': 80,
-            'label': 'data(label)',
-            'font-size': 30,
-            'font-family': 'Garamond',
-            'line-height': 1.15,
-            'text-valign': 'center',
+            'shape': 'rectangle',
+            'background-image': function(node) {
+            return 'url(' + node.data('label') + ')';
+            },
+            'background-fit': 'cover',
+            'background-color': 'white',
+            "border-color": 'black',
+            "border-width": 1,
+            'z-index': '10',
         }
     },
     {
-        selector: 'node[class = "image"]',
+        selector: 'node[class = "flagImage"]',
         style: {
             'shape': 'rectangle',
             'background-image': function(node) {
@@ -258,12 +256,6 @@ function visualizeData(data, value) {
     ]
     });
 
-    mycy = cy;
-    initNav(cy, value);
-    setAsCurrentNodeWithoutUpdateNav(cy, source);
-    reLayoutCola(cy);
-    adjustImageSize(cy);
-
     cy.on('tap', function(evt) {
         tap(evt, cy);
     });
@@ -282,6 +274,12 @@ function visualizeData(data, value) {
     cy.on('drag', function(evt){
         drag(evt);
     });
+
+    initNav(cy, value);
+    setAsCurrentNodeWithoutUpdateNav(cy, source);
+    reLayoutCola(cy);
+    adjustImageSize(cy);
+
 }
 
 /**
@@ -354,7 +352,7 @@ function getDataJSON(data) {
 
     
     resultData["prefLabel"] = prefLabelValue;
-    return [resultData, bnodeData];
+    return [resultData,  bnodeData];
 }
 
 

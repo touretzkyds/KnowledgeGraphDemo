@@ -13,9 +13,9 @@
     <script src="../external/cytoscape-cola/cytoscape-cola.js"></script>
     <script src="js/countyData.js"></script>
     <script src="js/event.js"></script>
-    <script src="js/navHistory.js"></script>
+    <script src="js/nav.js"></script>
     <script src="js/util.js"></script>
-    <script src="js/styleCyto.js"></script>
+    <script src="js/style.js"></script>
     <script src="js/code.js"></script>
   </head>
 
@@ -91,7 +91,6 @@
 
     <!--starting script-->
     <script>
-      // state flag
       const defaultCityName = 'Pittsburgh';
       getDataResponse(defaultCityName);
       $("#queryName").on('keypress',function(e) {

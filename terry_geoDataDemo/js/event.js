@@ -26,14 +26,14 @@ function tap(evt, cy) {
         if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
             const sourceCityName = cy.$('#' + node.json().data.sourceID).json().data.label.split("\nboltz:")[0];
             if(bnodeExpansionDataCache.hasOwnProperty(node.id())) {
-                addbNode(cy, node.id(), bnodeExpansionDataCache[node.id()]);
+                expandbNode(cy, node.id(), bnodeExpansionDataCache[node.id()]);
             } else {
                 const url = propertyQuery(sourceCityName, true);
-                d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; addbNode(cy, node.id(), jsonData[1]);});
+                d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; expandbNode(cy, node.id(), jsonData[1]);});
             }
             cy.$("#" + node.id()).addClass('readyToCollapse');
         } else {
-            removebNode(cy, node.id());
+            closebNode(cy, node.id());
             cy.$("#" + node.id()).removeClass('readyToCollapse');
         }
     } else if(node.json().data.class === 'dummyConcept') {
@@ -45,17 +45,17 @@ function tap(evt, cy) {
         const cityName = node.json().data.label.split("\nboltz")[0];
         if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
             if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
-                addConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()]);
+                expandConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()]);
             } else {
                 const url = propertyQuery(cityName, true);
-                d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; addConceptNode(cy, node.id(), jsonData[0]);});
+                d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; expandConceptNode(cy, node.id(), jsonData[0]);});
             }
             cy.$("#" + node.id()).addClass('readyToCollapse');
         } else {
             cy.$("#" + node.id()).removeClass('readyToCollapse');
-            removeConceptNode(cy, node.id());
+            closeConceptNode(cy, node.id());
         }
-    } else if(node.json().data.class === 'image' || node.json().data.class === 'countyImage') {
+    } else if(node.json().data.class === 'image' || node.json().data.class === 'flagImage' || node.json().data.class === 'countyImage') {
         if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
             prevImagePositions.x = node.position('x');
             prevImagePositions.y = node.position('y');
@@ -117,7 +117,7 @@ function cxttap(evt, cy) {
 
         if(id !== undefined) {
             if(cy.$("#" + id).hasClass('readyToCollapse')) {
-                removeConceptNode(cy, id);
+                closeConceptNode(cy, id);
                 cy.$("#" + id).removeClass('readyToCollapse');
             }
         }
@@ -193,7 +193,7 @@ function mouseout(evt, cy) {
         }
     }
     } 
-    else if(node.json().data.class === 'image' || node.json().data.class === 'countyImage') {
+    else if(node.json().data.class === 'image' || node.json().data.class === 'flagImage' || node.json().data.class === 'countyImage') {
     if(cy.$("#" + node.id()).hasClass('readyToCollapse')) {
         cy.nodes(`[id = "${node.id()}"]`).style({
             'width': node.width() * 0.1,

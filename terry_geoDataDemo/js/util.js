@@ -122,7 +122,7 @@ function setAsCurrentNodeWithoutUpdateNav(cy, id) {
  * @param {string} id id for the node to which properties be added
  * @param {JSON} nodeData 
  */
-function addConceptNode(cy, id, nodeData) {
+function expandConceptNode(cy, id, nodeData) {
     // const nodeData = getDataJSON(data);
     conceptExpansionDataCache[id] = nodeData;
     var addedData = [];
@@ -185,7 +185,7 @@ function addConceptNode(cy, id, nodeData) {
  * @param {cytoscape object} cy the cytoscape object
  * @param {string} id id for the node to which properties be removed
  */
-function removeConceptNode(cy, id) {
+function closeConceptNode(cy, id) {
     var currNode = cy.$("#"+id);
     //outgoers include both edges and nodes
     var currIsDelelted = false;
@@ -222,7 +222,7 @@ function removeConceptNode(cy, id) {
  * @param {string} id id for the bnode to which properties be added
  * @param {JSON} bnodeData 
  */
-function addbNode(cy, id, bnodeData) {
+function expandbNode(cy, id, bnodeData) {
     bnodeExpansionDataCache[id] = bnodeData;
     if(cy.$('#' + id).json().data.label == 'b0') {
         bnodeData = bnodeData.b0;
@@ -270,7 +270,7 @@ function addbNode(cy, id, bnodeData) {
  * @param {cytoscape object} cy the cytoscape object
  * @param {string} id id for the bnode to which properties be removed
  */
-function removebNode(cy, id) {
+function closebNode(cy, id) {
     var bnodeData = bnodeExpansionDataCache[id];
     if(cy.$('#' + id).json().data.label == 'b0') {
         bnodeData = bnodeData.b0;
@@ -337,6 +337,9 @@ function reSetType(cy, id) {
 function classifyclass(key, value) {
     if(key === "image") {
         return "image";
+    }
+    if(key === "flagImage") {
+        return "flagImage";
     }
     if(key === "hasCounties") {
         return "countyImage";

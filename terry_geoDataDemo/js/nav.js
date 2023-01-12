@@ -17,10 +17,10 @@ function expandHelper(cy, node) {
     const cityName = node.json().data.label.split("\nboltz")[0];
     if(!node.hasClass('readyToCollapse')) {
         if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
-            addConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()]);
+            expandConceptNode(cy, node.id(), conceptExpansionDataCache[node.id()]);
         } else {
             const url = propertyQuery(cityName, true);
-            d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; addConceptNode(cy, node.id(), jsonData[0]);});
+            d3.json(url).then(function(data) {var jsonData = getDataJSON(data); if(jsonData == undefined) return; expandConceptNode(cy, node.id(), jsonData[0]);});
         }
         cy.$("#" + node.id()).addClass('readyToCollapse');
     } else {
@@ -220,7 +220,8 @@ function initNavHistory(cy) {
  function setRankedNavHistoryList(data) {
     var binding = data.results.bindings;
     if(binding.length === 0) {
-        navHistoryList = ["North America\nboltz:Q49"];
+      console.log(11);
+        navHistoryList = [];
         return;
     }
     // construct mapping from name to Qnumber
