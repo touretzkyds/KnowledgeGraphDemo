@@ -88,7 +88,6 @@ function addNodeHelper(cy, label, prevNode, link) {
 function navigateTo(cy, label) {
     var node = searchConceptByLabel(cy, label);
     if(node !== undefined) {
-      console.log("not undefined");
         expandHelper(cy, node);
         return;
     }
