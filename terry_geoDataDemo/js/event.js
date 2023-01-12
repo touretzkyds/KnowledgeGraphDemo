@@ -121,6 +121,10 @@ function cxttap(evt, cy) {
                 cy.$("#" + id).removeClass('readyToCollapse');
             }
         }
+    } else if(node.json().data.class === "countyImage") {
+        // use this to see the normalized position
+        var p = getNormalizedPositions(evt);
+        console.log("x", p.x, "y", p.y);
     }
 }
 
