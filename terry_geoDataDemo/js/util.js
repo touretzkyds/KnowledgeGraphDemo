@@ -342,7 +342,7 @@ function classifyclass(key, value) {
         return "flagImage";
     }
     if(key === "hasCounties") {
-        return "countyImage";
+        return "imageMap";
     }
     if(value.startsWith('b')) {
         return "qudt";

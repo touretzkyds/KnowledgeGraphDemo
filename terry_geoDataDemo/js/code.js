@@ -228,7 +228,7 @@ function visualizeData(data, value) {
         }
     },
     {
-        selector: 'node[class = "countyImage"]',
+        selector: 'node[class = "imageMap"]',
         style: {
             'shape': 'rectangle',
             'background-image': function(node) {

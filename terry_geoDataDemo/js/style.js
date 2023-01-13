@@ -55,7 +55,7 @@ function styleImageSize(imgCache, ele, cy) {
  */
 function adjustImageSize(cy) {
     cy.nodes().forEach(function(ele){
-        if(ele.json().data.class === 'image' || ele.json().data.class === 'flagImage' || ele.json().data.class === 'countyImage') {
+        if(ele.json().data.class === 'image' || ele.json().data.class === 'flagImage' || ele.json().data.class === 'imageMap') {
         const url = ele.json().data.label;
         var imgCache = cy._private.renderer.imageCache;
         if(imgCache === undefined || imgCache[url] === undefined) {

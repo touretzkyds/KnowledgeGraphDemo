@@ -15,7 +15,7 @@ var prevImagePositions = {};
  * 2. if it's dummyConcept, recenter to the corresponding real node
  * 3. if it's concept, if it's not ready to collapse, exnpande it; otherwise close it. In either case toggle the class 'readyToCollapse'
  * 4. if it's image, and it does not have class 'readyToCollapse', store previous position, enlarge it by factor 10 and add class 'readyToCollapse',
- * this class will be removed when mouseout. If the image is countyImage, add the clicked county
+ * this class will be removed when mouseout. If the image is imageMap, add the clicked county
  * 
  * @param {event} evt the left click event
  * @param {cytoscape object} cy the cytoscape object
@@ -55,7 +55,7 @@ function tap(evt, cy) {
             cy.$("#" + node.id()).removeClass('readyToCollapse');
             closeConceptNode(cy, node.id());
         }
-    } else if(node.json().data.class === 'image' || node.json().data.class === 'flagImage' || node.json().data.class === 'countyImage') {
+    } else if(node.json().data.class === 'image' || node.json().data.class === 'flagImage' || node.json().data.class === 'imageMap') {
         if(!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
             prevImagePositions.x = node.position('x');
             prevImagePositions.y = node.position('y');
@@ -65,7 +65,7 @@ function tap(evt, cy) {
                 'z-index': '20',
             });
             cy.$("#" + node.id()).addClass('readyToCollapse');
-        } else if(node.json().data.class === 'countyImage') {
+        } else if(node.json().data.class === 'imageMap') {
             addCounty(evt, cy);
         }
     }
@@ -121,7 +121,7 @@ function cxttap(evt, cy) {
                 cy.$("#" + id).removeClass('readyToCollapse');
             }
         }
-    } else if(node.json().data.class === "countyImage") {
+    } else if(node.json().data.class === "imageMap") {
         // use this to see the normalized position
         var p = getNormalizedPositions(evt);
         console.log("x", p.x, "y", p.y);
@@ -197,7 +197,7 @@ function mouseout(evt, cy) {
         }
     }
     } 
-    else if(node.json().data.class === 'image' || node.json().data.class === 'flagImage' || node.json().data.class === 'countyImage') {
+    else if(node.json().data.class === 'image' || node.json().data.class === 'flagImage' || node.json().data.class === 'imageMap') {
     if(cy.$("#" + node.id()).hasClass('readyToCollapse')) {
         cy.nodes(`[id = "${node.id()}"]`).style({
             'width': node.width() * 0.1,
@@ -209,7 +209,7 @@ function mouseout(evt, cy) {
             y: prevImagePositions.y
         });
         cy.$("#" + node.id()).removeClass('readyToCollapse');
-        if(node.json().data.class === 'countyImage') {
+        if(node.json().data.class === 'imageMap') {
             reLayoutCola(cy);
         }
     }
