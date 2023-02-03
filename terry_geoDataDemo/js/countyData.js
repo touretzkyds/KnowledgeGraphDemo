@@ -114,10 +114,8 @@ function getNormalizedPositions(evt) {
  */
 function getNearestCounty(stateName, normalizedX, normalizedY) {
     var data = countyData[stateName];
-    console.log("counties index:", stateName);
     var shortestDistance = Number.MAX_SAFE_INTEGER;
     var nearestCounty = "";
-    console.log("counties length:", data.length);
     for(let i = 0; i < data.length; i++) {
         var currCounty = data[i];
         var currDistance = distanceBetween(normalizedX, normalizedY, currCounty.x, currCounty.y);
@@ -131,10 +129,8 @@ function getNearestCounty(stateName, normalizedX, normalizedY) {
 
 function getNearestState(countryName, normalizedX, normalizedY) {
   var data = stateData[countryName];
-  console.log("states index:", countryName);
   var shortestDistance = Number.MAX_SAFE_INTEGER;
   var nearestState = "";
-  console.log("states length:", data.length);
   for(let i = 0; i < data.length; i++) {
       var currState = data[i];
       var currDistance = distanceBetween(normalizedX, normalizedY, currState.x, currState.y);
