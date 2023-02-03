@@ -65,9 +65,9 @@ function tap(evt, cy) {
                 'z-index': '20',
             });
             cy.$("#" + node.id()).addClass('readyToCollapse');
-        } else if(node.json().data.class === 'imageMap' && node.json().data.type === 'County') {
-            addCounty(evt, cy);
         } else if(node.json().data.class === 'imageMap' && node.json().data.type === 'State') {
+            addCounty(evt, cy);
+        } else if(node.json().data.class === 'imageMap' &&  node.json().data.type === 'Region') {
             addState(evt, cy);
         }
     }
