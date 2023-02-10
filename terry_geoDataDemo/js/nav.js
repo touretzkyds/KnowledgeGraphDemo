@@ -380,6 +380,7 @@ function initNavHistory(cy) {
     }
     if(parentLabel !== undefined && parentLabel !== "") {
       var siblings = childrenTable[parentLabel];
+      console.log("siblings: ", siblings);
       if(!siblings.includes(currLabel)) {
         siblings.push(currLabel);
         siblings.sort();

@@ -63,6 +63,36 @@ const stateData = {
                      {"x":0.3394, "y":0.86441, "stateName":"Hawaii\nboltz:Q782"}
                     ]
 }
+
+const northeast = new Set(["Connecticut\nboltz:Q779", "Maine\nboltz:Q724", 
+                          "Massachusetts\nboltz:Q771", "New Hampshire\nboltz:Q759",
+                          "Rhode Island\nboltz:Q1387", "Vermont\nboltz:Q16551",
+                          "New Jersey\nboltz:Q1408", "New York\nboltz:Q1384",
+                          "Pennsylvania\nboltz:Q1400"]);
+                  
+const midwest = new Set(["Illinois\nboltz:Q1204", "Indiana\nboltz:Q1415",
+                        "Michigan\nboltz:Q1166", "Ohio\nboltz:Q1397",
+                        "Wisconsin\nboltz:Q1537", "Iowa\nboltz:Q1546",
+                        "Kansas\nboltz:Q1558", "Minnesota\nboltz:Q1527",
+                        "Missouri\nboltz:Q1581", "Nebraska\nboltz:Q1553",
+                        "North Dakota\nboltz:Q1207", "South Dakota\nboltz:Q1211"]);
+
+const southern = new Set(["Delaware\nboltz:Q1393", "Florida\nboltz:Q812",
+                          "Georgia\nboltz:Q1428", "Maryland\nboltz:Q1391",
+                          "North Carolina\nboltz:Q1454", "South Carolina\nboltz:Q1456",
+                          "Virginia\nboltz:Q1370", "West Virginia\nboltz:Q1371",
+                          "Alabama\nboltz:Q173", "Kentucky\nboltz:Q1603",
+                          "Mississippi\nboltz:Q1494", "Tennessee\nboltz:Q1509",
+                          "Arkansas\nboltz:Q1612", "Louisiana\nboltz:Q1588",
+                          "Oklahoma\nboltz:Q1649", "Texas\nboltz:Q1439"]);
+                          
+const western = new Set(["Arizona\nboltz:Q816", "Colorado\nboltz:Q1261",
+                        "Idaho\nboltz:Q1221", "Montana\nboltz:Q1212",
+                        "Nevada\nboltz:Q1227", "New Mexico\nboltz:Q1522",
+                        "Utah\nboltz:Q829", "Wyoming\nboltz:Q1214",
+                        "Alaska\nboltz:Q797", "California\nboltz:Q99",
+                        "Hawaii\nboltz:Q782", "Oregon\nboltz:Q824",
+                        "Washington\nboltz:Q1223"]);                          
 /**
  * 
  * calculate the distance between (x1, y1), (x2, y2)
@@ -198,6 +228,7 @@ function addCounty(evt, cy) {
     addedData.push(tempEdge);
     cy.add(addedData);
     reLayoutCola(cy);
+    console.log("parentLabelCounty: ", parentLabel);
     setAsCurrentNode(cy, tempNode.data.id, parentLabel);
   }
 
@@ -214,7 +245,7 @@ function addState(evt, cy) {
     var countryName = cy.$("#"+id).json().data.label.split("\nboltz:")[0];
 
     var stateName = getNearestState(countryName, normalizedX, normalizedY);
-
+  
     //add new state node and edge
     var addedData = [];
     var key = "hasState";
@@ -249,5 +280,20 @@ function addState(evt, cy) {
     addedData.push(tempEdge);
     cy.add(addedData);
     reLayoutCola(cy);
+    
+    // check northeast
+    if (northeast.has(stateName)) {
+      parentLabel = "Northeastern United States\nboltz:Q24460";
+    }
+    if (midwest.has(stateName)) {
+      parentLabel = "Midwestern United States\nboltz:Q186545";
+    }
+    if (southern.has(stateName)) {
+      parentLabel = "Southern United States\nboltz:Q49042";
+    }
+    if (western.has(stateName)) {
+      parentLabel = "Western United States\nboltz:Q12612";
+    }
+    
     setAsCurrentNode(cy, tempNode.data.id, parentLabel);
 }
