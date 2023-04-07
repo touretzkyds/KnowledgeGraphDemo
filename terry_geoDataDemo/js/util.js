@@ -123,7 +123,18 @@ function setAsCurrentNodeWithoutUpdateNav(cy, id) {
  * @param {JSON} nodeData 
  */
 function expandConceptNode(cy, id, nodeData) {
-    // const nodeData = getDataJSON(data);
+    var up = false;
+    console.log("type", nodeData.type);
+    //double loop to see if we expand up or down, first looping over expanded nodes
+    Object.values(conceptExpansionDataCache).forEach(function(node) {
+        // looping over the its characteristics
+        Object.keys(node).forEach(function(trait) {
+            // if we are the parent of any currently expanded node
+            if (trait == "locatedInAdministrativeRegion" && node[trait] == nodeData["prefLabel"]) {
+                up = true;
+            }
+        })
+    }) 
     conceptExpansionDataCache[id] = nodeData;
     var addedData = [];
     const sourceX = cy.$("#" + id).position('x');
@@ -136,43 +147,149 @@ function expandConceptNode(cy, id, nodeData) {
     }) 
     var count = 1;
     cy.$("#"+id).data("type", nodeData.type);
+
+    var leftNode = null;
+    var rightNode = null;
+    cy.nodes().forEach(function( ele ){
+        if (ele.json().data.id === id) {
+            // console.log(ele.json().data.sourceID);
+            console.log("found destination node");
+            var sourceID = ele.json().data.sourceID;
+            rightNode = ele;
+            cy.nodes().forEach(function( innerEle ){
+                if (innerEle.json().data.id === sourceID) {
+                    console.log("found source node");
+                    leftNode = innerEle;
+                }
+            });
+        }
+    });
+
     Object.keys(nodeData).forEach(function(key) {
         if(key != "prefLabel") {
-        var value = nodeData[key];
-        // node info
-        var tempNode = {"data":{}}
-        tempNode.data.type = nodeData.type;
-        tempNode.group = "nodes";
-        tempNode.data.label = value;
-        tempNode.data.class = classifyclass(key, value);
-        tempNode.data.id = convertToNodeID(id, key, value);
-        tempNode.data.sourceID = id;
-        if(tempNode.data.class == "concept") {
-            if(!conceptNodeLabelToID.hasOwnProperty(value)) {
-            conceptNodeLabelToID[value] = tempNode.data.id;
-            } else {
-            tempNode.data.class = "dummyConcept";
+            var value = nodeData[key];
+            // node info
+            var tempNode = {"data":{}}
+            tempNode.data.type = nodeData.type;
+            tempNode.group = "nodes";
+            tempNode.data.label = value;
+            tempNode.data.class = classifyclass(key, value);
+            tempNode.data.id = convertToNodeID(id, key, value);
+            tempNode.data.sourceID = id;
+            if(tempNode.data.class == "concept") {
+                // concept doesn't have a full form
+                if(!conceptNodeLabelToID.hasOwnProperty(value)) {
+                    conceptNodeLabelToID[value] = tempNode.data.id;
+                } else {
+                    if(key != "locatedInAdministrativeRegion" && value == nodeData["locatedInAdministrativeRegion"]) {
+                        tempNode.data.class = "concept";
+                        // conceptNodeLabelToID[tempNode.data.label] = tempNode.data.id;
+                        // convert the prev node to dummyConcept
+                        cy.nodes().forEach(function( ele ){
+                            //console.log("json label", ele.json().data.label, "mine", value, "id", id);
+                            if(ele.json().data.label === value && (ele.json().data.class === 'concept')) {
+                                ele.json({data:{class:'dummyConcept'}});
+                                cy.nodes(`[id = "${ele.id()}"]`).style({
+                                    "background-color": '#FFFFFF',
+                                    "border-color": '#ADD8E6',
+                                });
+                            }
+                        });
+                        cy.nodes(`[id = "${tempNode.id}"]`).style({
+                            "background-color": '#ADD8E6',
+                            "border-color": '#00008B',
+                        });
+                        conceptNodeLabelToID[tempNode.data.label] = tempNode.id;
+                        if(tempNode.id !== undefined) {
+                            if(cy.$("#" + tempNode.id).hasClass('readyToCollapse')) {
+                                closeConceptNode(cy, tempNode.id);
+                                cy.$("#" + tempNode.id).removeClass('readyToCollapse');
+                            }
+                        }
+                    } else {
+                    tempNode.data.class = "dummyConcept";
+                }
             }
-        }
-        const radian = (Math.PI * 2 / numOfKeys) * count;  
-        const x = sourceX + radius * Math.sin(radian);
-        const y = sourceY - radius * Math.cos(radian);
-        tempNode.position = {x:x, y:y};
-        addedData.push(tempNode);
-        // edge info
-        var tempEdge = {"data":{}}
-        tempEdge.group = "edges";
-        tempEdge.data.id = convertToEdgeID(id, key, value)
-        tempEdge.data.label = key;
-        tempEdge.data.source = id;
-        tempEdge.data.target = tempNode.data.id;
-        addedData.push(tempEdge);
-
-        cy.add(addedData);
-        addedData = [];
-        count++;
+            }
+            const radian = (Math.PI * 2 / numOfKeys) * count;  
+            var x = sourceX + radius * Math.sin(radian);
+            var y = sourceY - radius * Math.cos(radian);
+            console.log(tempNode.data.label, x, y);
+            if (up) {
+                y = y - 1000;
+            } else {
+                y = y + 1000;
+            }
+            if (rightNode.json().data.type === "County") {
+                var index = countyLevel.indexOf(rightNode);
+                x = (1500 * index) + x;
+            }
+            tempNode.position = {x:x, y:y};
+            
+            addedData.push(tempNode);
+            // edge info
+            var tempEdge = {"data":{}};
+            tempEdge.group = "edges";
+            tempEdge.data.id = convertToEdgeID(id, key, value);
+            tempEdge.data.label = key;
+            tempEdge.data.source = id;
+            tempEdge.data.target = tempNode.data.id;
+            if (tempEdge.data.label == "locatedInAdministrativeRegion" || (tempEdge.data.label != "locatedInAdministrativeRegion" && value != nodeData["locatedInAdministrativeRegion"])) {
+                addedData.push(tempEdge);
+            }
+            cy.add(addedData);
+            addedData = [];
+            count++;
         }
     })
+
+    // once we expand, we add to the gap list with the source and target
+    var relation = {
+        axis:"y",
+        left: leftNode,
+        right: rightNode,
+        gap:up ? -1500 : 1500,
+        equality:true
+    };
+    nodeRelationships.push(relation);
+
+    const alignmentY = [
+        {
+            node: leftNode,
+            offset: 0,
+        },
+        {
+            node: rightNode,
+            offset: 0,
+        }
+    ];
+    
+    vertAlignments.push(alignmentY);
+
+    if (rightNode.json().data.type === "County") {
+        horizAlignments = [];
+        const alignmentX = 
+            {
+                node: rightNode,
+                offset: 0,
+            };
+        countyLevel.push(alignmentX);
+        horizAlignments.push(countyLevel);
+
+        for (let i = 0; i < countyLevel.length-1; i++) {
+            var county1 = countyLevel[i];
+            var county2 = countyLevel[i+1];
+            var relationH = {
+                axis:"x",
+                left: county1.node,
+                right: county2.node,
+                gap: 1500,
+                equality:true
+            };
+            nodeRelationships.push(relationH);
+        }
+    }
+
     reLayoutCola(cy);
     adjustImageSize(cy);
     setAsCurrentNode(cy, id);

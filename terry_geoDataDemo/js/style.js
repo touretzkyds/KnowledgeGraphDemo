@@ -14,6 +14,10 @@ function reLayoutCola(cy) {
         nodeDimensionsIncludeLabels: true,
         centerGraph:true,
         numIter: 100000,
+        alignment: {vertical: vertAlignments, horizontal: horizAlignments},
+        gapInequalities: nodeRelationships,
+        handleDisconnected: true,
+        animate: false,
     });
     
     layout.start();

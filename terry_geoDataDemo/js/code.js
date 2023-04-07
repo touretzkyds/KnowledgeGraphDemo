@@ -12,6 +12,18 @@ var conceptNodeLabelToID = {};
 // current node in the graph, which is red in graph and reflected on nav history and nav tool
 var currentNode = undefined;
 
+// array to hold all the different nodes and relationships for use with cola
+var nodeRelationships = []
+
+// array to hold the vertical alignments
+var vertAlignments = []
+
+// array to hold the horizontal alignments
+var horizAlignments = []
+
+// array to represent the current county
+var countyLevel = []
+
 // endpoint of boltz server to be queried
 const endpoint = "https://solid.boltz.cs.cmu.edu:3031/Devel/sparql";
 

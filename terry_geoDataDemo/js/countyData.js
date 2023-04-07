@@ -172,7 +172,6 @@ function getNearestState(countryName, normalizedX, normalizedY) {
   return nearestState;
 }
 
-
 /**
  * 
  * add the clicked county node to the graph
@@ -227,6 +226,7 @@ function addCounty(evt, cy) {
     tempEdge.data.target = tempNode.data.id;
     addedData.push(tempEdge);
     cy.add(addedData);
+
     reLayoutCola(cy);
     console.log("parentLabelCounty: ", parentLabel);
     setAsCurrentNode(cy, tempNode.data.id, parentLabel);
