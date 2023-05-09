@@ -14,6 +14,8 @@ var currentNode = undefined;
 
 // array to hold all the different nodes and relationships for use with cola
 var nodeRelationships = []
+var horizRelationships = []
+var vertRelationships = []
 
 // array to hold the vertical alignments
 var vertAlignments = []
@@ -21,8 +23,31 @@ var vertAlignments = []
 // array to hold the horizontal alignments
 var horizAlignments = []
 
-// array to represent the current county
+// arrays to represent the current level in the hierarchy that are opened
+var cityLevel = []
 var countyLevel = []
+var stateLevel = []
+var regionLevel = []
+var countryLevel = []
+var continentLevel = []
+
+// flag to ensure we add once
+var addedCity = false;
+var addedCounty = false;
+var addedState = false;
+var addedRegion = false;
+var addedCountry = false;
+var addedContinent = false;
+
+// mapping between administrative area type and priority
+var adminAreaPriority = {
+    "City": 1,
+    "County": 2,
+    "State": 3,
+    "Region": 4,
+    "Country": 5,
+    "Continent": 6
+};
 
 // endpoint of boltz server to be queried
 const endpoint = "https://solid.boltz.cs.cmu.edu:3031/Devel/sparql";

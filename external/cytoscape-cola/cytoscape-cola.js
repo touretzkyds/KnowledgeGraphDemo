@@ -391,7 +391,6 @@ ColaLayout.prototype.run = function () {
 
   if (options.alignment) {
     // then set alignment constraints
-
     if (options.alignment.vertical) {
       var verticalAlignments = options.alignment.vertical;
       verticalAlignments.forEach(function (alignment) {
@@ -438,7 +437,7 @@ ColaLayout.prototype.run = function () {
   // if gapInequalities variable is set add each inequality constraint to list of constraints
   if (options.gapInequalities) {
     options.gapInequalities.forEach(function (inequality) {
-
+      
       // for the constraints to be passed to cola layout adaptor use indices of nodes,
       // not the nodes themselves
       var leftIndex = inequality.left.scratch().cola.index;

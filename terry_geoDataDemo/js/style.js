@@ -8,15 +8,15 @@
 function reLayoutCola(cy) {
     var layout = cy.layout({
         name: 'cola',
-        avoidOverlap: true,
+        avoidOverlap: false,
         edgeLength: 500,
         nodeSpacing: 100,
         nodeDimensionsIncludeLabels: true,
         centerGraph:true,
         numIter: 100000,
-        alignment: {vertical: vertAlignments, horizontal: horizAlignments},
-        gapInequalities: nodeRelationships,
-        handleDisconnected: true,
+        alignment: {vertical: vertAlignments, horizontal: horizAlignments}, // used to determine explicitly if nodes are related vertically/horizontally
+        gapInequalities: nodeRelationships, // used to relatively establish the particular relationship between two nodes
+        handleDisconnected: false,
         animate: false,
     });
     

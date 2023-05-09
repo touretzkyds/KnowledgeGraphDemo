@@ -123,18 +123,23 @@ function setAsCurrentNodeWithoutUpdateNav(cy, id) {
  * @param {JSON} nodeData 
  */
 function expandConceptNode(cy, id, nodeData) {
-    var up = false;
-    console.log("type", nodeData.type);
-    //double loop to see if we expand up or down, first looping over expanded nodes
-    Object.values(conceptExpansionDataCache).forEach(function(node) {
-        // looping over the its characteristics
-        Object.keys(node).forEach(function(trait) {
-            // if we are the parent of any currently expanded node
-            if (trait == "locatedInAdministrativeRegion" && node[trait] == nodeData["prefLabel"]) {
-                up = true;
+    // check to see if we are on startup with just the Pittsburgh node open, push that into the list of open city nodes
+    if (Object.keys(conceptExpansionDataCache).length == 1 && horizAlignments.length == 0) {
+        var pghID = (Object.keys(conceptExpansionDataCache))[0];
+        cy.nodes().forEach(function ( ele ) {
+            if (ele.json().data.id === pghID) {
+                alignmentX = 
+                    {
+                        node: ele,
+                        offset: 0,
+                    };
+                cityLevel.push(alignmentX);
+                horizAlignments.push(cityLevel);
             }
-        })
-    }) 
+        });
+    }
+
+    
     conceptExpansionDataCache[id] = nodeData;
     var addedData = [];
     const sourceX = cy.$("#" + id).position('x');
@@ -150,20 +155,138 @@ function expandConceptNode(cy, id, nodeData) {
 
     var leftNode = null;
     var rightNode = null;
+    // looping over all the nodes to find the source and currently expanding node
     cy.nodes().forEach(function( ele ){
         if (ele.json().data.id === id) {
-            // console.log(ele.json().data.sourceID);
-            console.log("found destination node");
             var sourceID = ele.json().data.sourceID;
             rightNode = ele;
+            
             cy.nodes().forEach(function( innerEle ){
                 if (innerEle.json().data.id === sourceID) {
-                    console.log("found source node");
                     leftNode = innerEle;
                 }
             });
         }
     });
+    console.log("already in graph?", checkExistence(id))
+    if (!checkExistence(id)) {
+        // get the difference in priority between the destination (current) and source node
+        var priorityCurr = adminAreaPriority[rightNode.json().data.type];
+        var prioritySource = adminAreaPriority[leftNode.json().data.type];
+        var priority = prioritySource - priorityCurr;
+
+        // once we expand, we add the source/dest pairing as a vertical relationship
+        var relation = {
+            axis:"y",
+            left: leftNode,
+            right: rightNode,
+            gap: (priority*1500),
+            equality:true
+        };
+        vertRelationships.push(relation);
+
+        var offset_amt = 0;
+
+        var alignmentX;
+
+        // casing on the type of our currently expanding node, placing it in the correct horizontal alignment level
+        if (rightNode.json().data.type === "City") {
+            alignmentX = 
+                {
+                    node: rightNode,
+                    offset: 0,
+                };
+            cityLevel.push(alignmentX);
+            offset_amt = cityLevel.length - 1;
+            if (!addedCity) {
+                horizAlignments.push(cityLevel);
+                addedCity = true;
+            }
+        }
+
+        else if (rightNode.json().data.type === "County") {
+            alignmentX = 
+                {
+                    node: rightNode,
+                    offset: 0,
+                };
+            countyLevel.push(alignmentX);
+            offset_amt = countyLevel.length - 1;
+            if (!addedCounty) {
+                horizAlignments.push(countyLevel);
+                addedCounty = true;
+            }
+        } 
+        else if (rightNode.json().data.type === "State") {
+            alignmentX = 
+                {
+                    node: rightNode,
+                    offset: 0,
+                };
+            stateLevel.push(alignmentX);
+            offset_amt = stateLevel.length - 1;
+            if (!addedState) {
+                horizAlignments.push(stateLevel);
+                addedState = true;
+            }
+        } 
+        else if (rightNode.json().data.type === "Region") {
+            alignmentX = 
+                {
+                    node: rightNode,
+                    offset: 0,
+                };
+            regionLevel.push(alignmentX);
+            offset_amt = regionLevel.length - 1;
+            if (!addedRegion) {
+                horizAlignments.push(regionLevel);
+                addedRegion = true;
+            }
+        } 
+        else if (rightNode.json().data.type === "Country") {
+            alignmentX = 
+                {
+                    node: rightNode,
+                    offset: 0,
+                };
+            countryLevel.push(alignmentX);
+            offset_amt = countryLevel.length - 1;
+            if (!addedCountry) {
+                horizAlignments.push(countryLevel);
+                addedCountry = true;
+            }
+        } 
+        else if (rightNode.json().data.type === "Continent") {
+            alignmentX = 
+                {
+                    node: rightNode,
+                    offset: 0,
+                };
+            continentLevel.push(alignmentX);
+            offset_amt = continentLevel.length - 1;
+            if (!addedContinent) {
+                horizAlignments.push(continentLevel);
+                addedContinent = true;
+            }
+        }
+        
+        // adds the relative relationship - with the quantified gap between them - to our vertical alignments
+        const alignmentY = [
+            {
+                node: leftNode,
+                offset: 0,
+            },
+            {
+                node: rightNode,
+                offset: offset_amt * 1500,
+            }
+        ];
+        vertAlignments.push(alignmentY);
+
+        // set our horizontal relationships based on each level
+    }
+    setHorizRelations();
+
 
     Object.keys(nodeData).forEach(function(key) {
         if(key != "prefLabel") {
@@ -179,22 +302,30 @@ function expandConceptNode(cy, id, nodeData) {
             if(tempNode.data.class == "concept") {
                 // concept doesn't have a full form
                 if(!conceptNodeLabelToID.hasOwnProperty(value)) {
-                    conceptNodeLabelToID[value] = tempNode.data.id;
+                    conceptNodeLabelToID[value] = tempNode.id;
                 } else {
+                    // if one of the branches of our current node has the value of a direct parent
                     if(key != "locatedInAdministrativeRegion" && value == nodeData["locatedInAdministrativeRegion"]) {
                         tempNode.data.class = "concept";
                         // conceptNodeLabelToID[tempNode.data.label] = tempNode.data.id;
-                        // convert the prev node to dummyConcept
+                        // convert the prev node to dummyConcept, find any existing concept node
+                        // and turns it into a dummyConcept
                         cy.nodes().forEach(function( ele ){
-                            //console.log("json label", ele.json().data.label, "mine", value, "id", id);
                             if(ele.json().data.label === value && (ele.json().data.class === 'concept')) {
                                 ele.json({data:{class:'dummyConcept'}});
                                 cy.nodes(`[id = "${ele.id()}"]`).style({
                                     "background-color": '#FFFFFF',
                                     "border-color": '#ADD8E6',
                                 });
+                                //also we must collapse it
+                                // if(cy.$("#" + ele.id()).hasClass('readyToCollapse')) {
+                                //     closeConceptNode(cy, ele.id());
+                                //     cy.$("#" + ele.id()).removeClass('readyToCollapse');
+                                // }
                             }
                         });
+                        // follows similar logic to right clicking our newly expanded node
+                        //console.log("in our expand function ", tempNode.data.id);
                         cy.nodes(`[id = "${tempNode.id}"]`).style({
                             "background-color": '#ADD8E6',
                             "border-color": '#00008B',
@@ -211,18 +342,18 @@ function expandConceptNode(cy, id, nodeData) {
                 }
             }
             }
+            // sourceX and sourceY is based on x,y when you click on it, it adjusts with the gap
             const radian = (Math.PI * 2 / numOfKeys) * count;  
             var x = sourceX + radius * Math.sin(radian);
             var y = sourceY - radius * Math.cos(radian);
-            console.log(tempNode.data.label, x, y);
-            if (up) {
-                y = y - 1000;
-            } else {
-                y = y + 1000;
-            }
-            if (rightNode.json().data.type === "County") {
-                var index = countyLevel.indexOf(rightNode);
-                x = (1500 * index) + x;
+            y = y + (priority * 1500);
+
+            // for these branches of this node, want the offset to be multiple of expanded node's index
+            for (let j = 0; j < horizAlignments.length; j++) {
+                if (horizAlignments[j].indexOf(rightNode) != -1) {
+                    var index = horizAlignments[j].indexOf(rightNode);
+                    x = (1500*index) + x;
+                }
             }
             tempNode.position = {x:x, y:y};
             
@@ -233,7 +364,9 @@ function expandConceptNode(cy, id, nodeData) {
             tempEdge.data.id = convertToEdgeID(id, key, value);
             tempEdge.data.label = key;
             tempEdge.data.source = id;
+            //console.log("source edge id/opened node", tempEdge.data.source)
             tempEdge.data.target = tempNode.data.id;
+            //console.log("target edge id", tempEdge.data.target)
             if (tempEdge.data.label == "locatedInAdministrativeRegion" || (tempEdge.data.label != "locatedInAdministrativeRegion" && value != nodeData["locatedInAdministrativeRegion"])) {
                 addedData.push(tempEdge);
             }
@@ -243,56 +376,49 @@ function expandConceptNode(cy, id, nodeData) {
         }
     })
 
-    // once we expand, we add to the gap list with the source and target
-    var relation = {
-        axis:"y",
-        left: leftNode,
-        right: rightNode,
-        gap:up ? -1500 : 1500,
-        equality:true
-    };
-    nodeRelationships.push(relation);
-
-    const alignmentY = [
-        {
-            node: leftNode,
-            offset: 0,
-        },
-        {
-            node: rightNode,
-            offset: 0,
-        }
-    ];
-    
-    vertAlignments.push(alignmentY);
-
-    if (rightNode.json().data.type === "County") {
-        horizAlignments = [];
-        const alignmentX = 
-            {
-                node: rightNode,
-                offset: 0,
-            };
-        countyLevel.push(alignmentX);
-        horizAlignments.push(countyLevel);
-
-        for (let i = 0; i < countyLevel.length-1; i++) {
-            var county1 = countyLevel[i];
-            var county2 = countyLevel[i+1];
-            var relationH = {
-                axis:"x",
-                left: county1.node,
-                right: county2.node,
-                gap: 1500,
-                equality:true
-            };
-            nodeRelationships.push(relationH);
-        }
-    }
-
     reLayoutCola(cy);
+    horizRelationships = [];
     adjustImageSize(cy);
     setAsCurrentNode(cy, id);
+}
+
+/**
+ * 
+ * creates and delineates horizontal relationships between the nodes on the different levels of our hierarchy
+ * 
+ * @param {string} type 
+ */
+function setHorizRelations(type) {
+    // loop over the entire map of levels and the nodes within each level, continuing to pair elements up 
+    // and establish a relationship between them
+    for (let j = 0; j < horizAlignments.length; j++) {
+        if (horizAlignments[j].length > 1) {
+            for (let i = 0; i < horizAlignments[j].length - 1; i++) {
+                var entity1 = horizAlignments[j][i];
+                var entity2 = horizAlignments[j][i+1];
+                var relationH = {
+                    axis:"x",
+                    left:entity1.node,
+                    right: entity2.node,
+                    gap: 1500,
+                    equality:true
+                };
+                horizRelationships.push(relationH);
+            }
+        }
+    }
+    nodeRelationships = [].concat(vertRelationships, horizRelationships);
+}
+
+function checkExistence(id) {
+    for (let i = 0; i < horizAlignments.length; i++) {
+        for (let j = 0; j < horizAlignments[i].length; j++) {
+            if (id === horizAlignments[i][j].node.json().data.id) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 /**

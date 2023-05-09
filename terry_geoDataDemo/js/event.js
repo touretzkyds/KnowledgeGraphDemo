@@ -110,6 +110,7 @@ function cxttap(evt, cy) {
                 });
             }
         });
+        console.log("in event.js ", node.id());
         node.json({data:{class:'concept'}});
         cy.nodes(`[id = "${node.id()}"]`).style({
             "background-color": '#ADD8E6',
