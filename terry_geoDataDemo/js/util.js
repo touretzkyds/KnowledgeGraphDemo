@@ -171,6 +171,8 @@ function expandConceptNode(cy, id, nodeData) {
     console.log("already in graph?", checkExistence(id))
     if (!checkExistence(id)) {
         // get the difference in priority between the destination (current) and source node
+        console.log("right node data:", rightNode.json().data);
+        console.log("left node data:", leftNode.json().data);
         var priorityCurr = adminAreaPriority[rightNode.json().data.type];
         var prioritySource = adminAreaPriority[leftNode.json().data.type];
         var priority = prioritySource - priorityCurr;
@@ -364,12 +366,13 @@ function expandConceptNode(cy, id, nodeData) {
             tempEdge.data.id = convertToEdgeID(id, key, value);
             tempEdge.data.label = key;
             tempEdge.data.source = id;
-            //console.log("source edge id/opened node", tempEdge.data.source)
+            //console.log("source edge id/opened node:", tempEdge.data.source)
             tempEdge.data.target = tempNode.data.id;
-            //console.log("target edge id", tempEdge.data.target)
+            //console.log("target edge id:", tempEdge.data.target)
             if (tempEdge.data.label == "locatedInAdministrativeRegion" || (tempEdge.data.label != "locatedInAdministrativeRegion" && value != nodeData["locatedInAdministrativeRegion"])) {
                 addedData.push(tempEdge);
             }
+            console.log('addedData:', addedData);
             cy.add(addedData);
             addedData = [];
             count++;
@@ -578,19 +581,19 @@ function reSetType(cy, id) {
  * @returns class name
  */
 function classifyclass(key, value) {
-    if(key === "image") {
+    if (key === "image") {
         return "image";
     }
-    if(key === "flagImage") {
+    if (key === "flagImage") {
         return "flagImage";
     }
-    if(key === "hasCounties") {
+    if (key.endsWith('ImageMap')) { // should be if it ends with image map
         return "imageMap";
     }
-    if(value.startsWith('b')) {
+    if (value.startsWith('b')) {
         return "qudt";
     }
-    if(value.includes('boltz:Q')) {
+    if (value.includes('boltz:Q')) {
         return "concept";
     }
     return "literal";

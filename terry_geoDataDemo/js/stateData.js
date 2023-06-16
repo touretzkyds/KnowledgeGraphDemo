@@ -162,6 +162,7 @@ function getNearestState(countryName, normalizedX, normalizedY) {
  * @param {cytoscape object} cy the cytoscape object
  */
 function addState(evt, cy) {
+  console.log("Called addState");
   var node = evt.target;
   var sourceCountryNode = cy.$("#"+node.json().data.sourceID);
   var parentLabel = sourceCountryNode.json().data.label;

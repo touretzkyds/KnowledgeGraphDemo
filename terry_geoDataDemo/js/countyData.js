@@ -88,7 +88,6 @@ const countyData = {
  * @returns 
  */
 function distanceBetween(x1, y1, x2, y2) {
-  console.log(Math.sqrt(Math.pow((x2-x1), 2)+Math.pow((y2-y1),2)));
   return Math.sqrt(Math.pow((x2-x1), 2)+Math.pow((y2-y1),2));
 }
 
@@ -136,8 +135,8 @@ function getNearestCounty(stateName, normalizedX, normalizedY) {
       var currCounty = data[i];
       var currDistance = distanceBetween(normalizedX, normalizedY, currCounty.x, currCounty.y);
       if(currDistance < shortestDistance) {
-      shortestDistance = currDistance;
-      nearestCounty = currCounty.countyName;
+        shortestDistance = currDistance;
+        nearestCounty = currCounty.countyName;
       }
   }
   console.log(nearestCounty);
@@ -153,7 +152,6 @@ function getNearestCounty(stateName, normalizedX, normalizedY) {
  * @param {cytoscape object} cy the cytoscape object
  */
 function addCounty(evt, cy) {
-  console.log("Called addCounty");
   var node = evt.target;
   var sourceStateNode = cy.$("#"+node.json().data.sourceID);
   var parentLabel = sourceStateNode.json().data.label;
@@ -190,6 +188,7 @@ function addCounty(evt, cy) {
   const sourceX = cy.$("#" + id).position('x');
   const sourceY = cy.$("#" + id).position('y');
   tempNode.position = {x:sourceX + radius, y:sourceY - radius};
+  console.log(tempNode);
   addedData.push(tempNode);
   // edge info
   var tempEdge = {"data":{}}
@@ -199,10 +198,9 @@ function addCounty(evt, cy) {
   tempEdge.data.source = id;
   tempEdge.data.target = tempNode.data.id;
   addedData.push(tempEdge);
+  console.log(tempEdge);
   cy.add(addedData);
 
   reLayoutCola(cy);
-  console.log("parentLabelCounty: ", parentLabel);
-  console.log("countyName: ", countyName);
   setAsCurrentNode(cy, tempNode.data.id, parentLabel);
 }

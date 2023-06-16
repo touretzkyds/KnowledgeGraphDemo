@@ -66,9 +66,14 @@ function tap(evt, cy) {
             });
             cy.$("#" + node.id()).addClass('readyToCollapse');
         } else if(node.json().data.class === 'imageMap' && node.json().data.type === 'State') {
-            addCounty(evt, cy);
-        } else if(node.json().data.class === 'imageMap' &&  node.json().data.type === 'Region') {
-            addState(evt, cy);
+            addCountyFromState(evt, cy);
+        } else if(node.json().data.class === 'imageMap' && node.json().data.type === 'Region') {
+            addStateFromRegion(evt, cy);
+        } else if(node.json().data.class === 'imageMap' && node.json().data.type === 'Country') {
+            console.log(cy.$("#"+node.id()).json().data);
+            addStateFromCountry(evt, cy);
+        } else if(node.json().data.class === 'imageMap') {
+            console.log("imageMap of type", node.json().data.type);
         }
     }
 }

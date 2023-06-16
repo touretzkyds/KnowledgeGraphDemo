@@ -14,6 +14,7 @@ var childrenTable = {};
  * @param {node} node current node
  */
 function expandHelper(cy, node) {
+  console.log("IN FUNCTION expandHelper");
     const cityName = node.json().data.label.split("\nboltz")[0];
     if(!node.hasClass('readyToCollapse')) {
         if(conceptExpansionDataCache.hasOwnProperty(node.id())) {
@@ -40,12 +41,37 @@ function expandHelper(cy, node) {
  * @returns 
  */
 function addNodeHelper(cy, label, prevNode, link) {
+  console.log("IN FUNCTION addNodeHelper with parameters:");
+  console.log("label:", label, "link:", link, "previous node:");
+  console.log(prevNode.json().data);
+
     var addedData = [];
     var key = link;
     var value = label;
     // node info
     var tempNode = {"data":{}};
     // tempNode.data.type = "County"; ?  cannot determine type
+    if (link === "locatedInAdministrativeRegion") {
+      switch(prevNode.json().data.type) {
+        case "City":
+          tempNode.data.type = "County";
+          break;
+        case "County":
+          tempNode.data.type = "State";
+          break;
+        case "State":
+          tempNode.data.type = "Region";
+          break;
+        case "Region":
+          tempNode.data.type = "Country";
+          break;
+        case "Country":
+          tempNode.data.type = "Continent";
+          break;
+        default:
+          tempNode.data.type = "SHOULD NOT REACH THIS";
+      }
+    }
     tempNode.group = "nodes";
     tempNode.data.label = value;
     tempNode.data.class = classifyclass(key, value);
@@ -88,6 +114,7 @@ function addNodeHelper(cy, label, prevNode, link) {
  * @returns 
  */
 function navigateTo(cy, label) {
+  console.log("IN FUNCTION navigateTo");
     var node = searchConceptByLabel(cy, label);
     if(node !== undefined) {
         expandHelper(cy, node);
@@ -105,6 +132,7 @@ function navigateTo(cy, label) {
  * @param {string} link the link to be navigated through
  */
 function navigateThrough(cy, label, link="locatedInAdministrativeRegion") {
+  console.log("IN FUNCTION navigateThrough");
     var currNode = searchConceptByLabel(cy, navHistoryList[0]);
     // follow the link "locatedInAdministrativeRegion" to the last node
     while(true) {

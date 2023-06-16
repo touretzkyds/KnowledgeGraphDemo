@@ -6,7 +6,7 @@
  * @param {cytoscape object} cy the cytoscape object
  */
 function reLayoutCola(cy) {
-    var layout = cy.layout({
+    var options = {
         name: 'cola',
         avoidOverlap: false,
         edgeLength: 500,
@@ -18,8 +18,9 @@ function reLayoutCola(cy) {
         gapInequalities: nodeRelationships, // used to relatively establish the particular relationship between two nodes
         handleDisconnected: false,
         animate: false,
-    });
-    
+    }
+    var layout = cy.layout(options);
+    console.log(options);
     layout.start();
 }
 
