@@ -116,7 +116,7 @@ function addNodeHelper(cy, label, prevNode, link) {
 function navigateTo(cy, label) {
   console.log("IN FUNCTION navigateTo");
     var node = searchConceptByLabel(cy, label);
-    if(node !== undefined) {
+    if (node !== undefined) {
         expandHelper(cy, node);
         return;
     }
@@ -135,7 +135,7 @@ function navigateThrough(cy, label, link="locatedInAdministrativeRegion") {
   console.log("IN FUNCTION navigateThrough");
     var currNode = searchConceptByLabel(cy, navHistoryList[0]);
     // follow the link "locatedInAdministrativeRegion" to the last node
-    while(true) {
+    while (true) {
         //outgoers include both edges and nodes
         var outgoers = currNode.outgoers();
         for(let i = 0; i < outgoers.length; i++) {
@@ -149,12 +149,12 @@ function navigateThrough(cy, label, link="locatedInAdministrativeRegion") {
     }
     var start = 0;
     var end = 0;
-    for(let i = 0; i < navHistoryList.length; i++) {
-        if(navHistoryList[i] === currNode.json().data.label) {
+    for (let i = 0; i < navHistoryList.length; i++) {
+        if (navHistoryList[i] === currNode.json().data.label) {
             start = i + 1;
             continue;
         } 
-        if(navHistoryList[i] === label) {
+        if (navHistoryList[i] === label) {
             end = i + 1;
             break;
         }
@@ -182,7 +182,7 @@ function initNavHistory(cy) {
     $('.nav-history-button').remove();
     var reversedNavList = navHistoryList.slice().reverse();
     for(let i = 0; i < reversedNavList.length; i++) {
-      var label = reversedNavList[i];
+	var label = reversedNavList[i];
       var btn1 = $(`<button class="nav-history-button" value = "${i}">${label.split("\nboltz")[0]} ◀</button>`);
       if(i === reversedNavList.length - 1) {
         btn1 = $(`<button class="nav-history-button selected" value = "${i}">${label.split("\nboltz")[0]}</button>`);
@@ -237,7 +237,7 @@ function initNavHistory(cy) {
     }
  }
 
- // start from the first place, get the navigation list
+
  /**
   * 
   * using data queried from server to generate nav history list
@@ -245,7 +245,7 @@ function initNavHistory(cy) {
   * @param {JSON} data data fetched from server
   * @returns 
   */
- function setRankedNavHistoryList(data) {
+function setRankedNavHistoryList(data) {
     var binding = data.results.bindings;
     if(binding.length === 0) {
       console.log(11);
@@ -259,6 +259,7 @@ function initNavHistory(cy) {
         nameToQnumber[curr.xLabel.value] = curr.x.value.split("/data/")[1];
         nameToQnumber[curr.yLabel.value] = curr.y.value.split("/data/")[1];
     }
+    
     // algorithm to sort those pairs
     var nodes = {};
     var done = false;
@@ -280,6 +281,7 @@ function initNavHistory(cy) {
         }
       }
     }
+
     
     navHistoryList = [];
     
@@ -298,9 +300,12 @@ function initNavHistory(cy) {
     for(let i = 0; i < navHistoryList.length; i++) {
       navHistoryList[i] = navHistoryList[i].name + "\nboltz:" + nameToQnumber[navHistoryList[i].name];
     }
-  }
+}
 
-  // get the url to navigation list query
+
+
+
+
   /**
    * 
    * get the url for generating nav history list pairs
@@ -308,7 +313,7 @@ function initNavHistory(cy) {
    * @param {string} value the name for region to be queries. e.g. Pittsburgh
    * @returns the url for query
    */
-  function navHistoryListQuery(value) {
+function navHistoryListQuery(value) {
       const query = 
       `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
         PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
@@ -360,12 +365,19 @@ function initNavHistory(cy) {
    */
   function updateNav(cy, parentLabel, labelsToBeRemoved=[]) {
     currLabel = currentNode.json().data.label;
-    var currRegion = currLabel.split("\nboltz:")[0];
+      var currRegion = currLabel.split("\nboltz:")[0];
+
+      // console.log('currRegion: "', currRegion, '"');
+      
     if(navHistoryList.includes(currLabel)) {
       // update nav history
       $('.nav-history-button.selected').removeClass('selected');
       $('.nav-history-button').filter(function() {
           var currText = $(this).text();
+
+	  console.log('this: ', this, ', $(this): ', $(this),
+		      'currText: "', currText, '"');
+	  
           // important: the name check for nav history are hard coded here
           // if the name for them changed, here should be changed
           return  currText === currRegion || currText === (currRegion + " ◀");

@@ -11,7 +11,7 @@ var prevImagePositions = {};
 /**
  * 
  * when left clicking on a node
- * 1. if it's qudt, if it's not ready to collapse, exnpande it; otherwise close it. In either case toggle the class 'readyToCollapse'
+ * 1. if it's qudt, if it's not ready to collapse, expand it; otherwise close it. In either case toggle the class 'readyToCollapse'
  * 2. if it's dummyConcept, recenter to the corresponding real node
  * 3. if it's concept, if it's not ready to collapse, exnpande it; otherwise close it. In either case toggle the class 'readyToCollapse'
  * 4. if it's image, and it does not have class 'readyToCollapse', store previous position, enlarge it by factor 10 and add class 'readyToCollapse',

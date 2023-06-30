@@ -21,6 +21,7 @@ function reLayoutCola(cy) {
     }
     var layout = cy.layout(options);
     console.log(options);
+
     layout.start();
 }
 

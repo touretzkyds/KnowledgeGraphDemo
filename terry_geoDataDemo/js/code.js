@@ -49,8 +49,10 @@ var adminAreaPriority = {
     "Continent": 6
 };
 
+
 // endpoint of boltz server to be queried
-const endpoint = "https://solid.boltz.cs.cmu.edu:3031/Devel/sparql";
+// const endpoint = "https://solid.boltz.cs.cmu.edu:3031/Devel/sparql";
+const endpoint = "http://solid.boltz.cs.cmu.edu:3030/Devel/sparql";
 
 /**
  * 
@@ -62,8 +64,7 @@ const endpoint = "https://solid.boltz.cs.cmu.edu:3031/Devel/sparql";
 function getDataResponse(value) {
     const url = propertyQuery(value, true);
     conceptNodeLabelToID = {};
-    d3.json(url).then(function(data) {visualizeData(data, value);});
-    
+    d3.json(url).then(function(data) {visualizeData(data, value);});    
 }
 
 /**

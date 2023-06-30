@@ -119,13 +119,18 @@ function setAsCurrentNodeWithoutUpdateNav(cy, id) {
  * expand the node by adding property nodes using nodeData
  * 
  * @param {cytoscape object} cy the cytoscape object
- * @param {string} id id for the node to which properties be added
+ * @param {string} id for the node to which properties be added
  * @param {JSON} nodeData 
  */
 function expandConceptNode(cy, id, nodeData) {
+
     // check to see if we are on startup with just the Pittsburgh node open, push that into the list of open city nodes
     if (Object.keys(conceptExpansionDataCache).length == 1 && horizAlignments.length == 0) {
-        var pghID = (Object.keys(conceptExpansionDataCache))[0];
+	let pghID = (Object.keys(conceptExpansionDataCache))[0];
+
+
+	// ele.json().data syntax refers to a node
+	// loops through all nodes until finds Pittsburgh's node
         cy.nodes().forEach(function ( ele ) {
             if (ele.json().data.id === pghID) {
                 alignmentX = 
@@ -139,50 +144,66 @@ function expandConceptNode(cy, id, nodeData) {
         });
     }
 
-    
+    // add node we want to expand (id) to the dataCache
     conceptExpansionDataCache[id] = nodeData;
-    var addedData = [];
+    let addedData = [];
+    // y position of node we want to expand
     const sourceX = cy.$("#" + id).position('x');
+    // y position of node we want to expand
     const sourceY = cy.$("#" + id).position('y');
     const radius = 400;
-    var numOfKeys = 0;
+    let numOfKeys = 0;
 
+    // looping through each key in nodeData and counting them, to know how many things are going to pop out of node when we expand it
     Object.keys(nodeData).forEach(function(key) {
         numOfKeys++;
-    }) 
-    var count = 1;
+    })
+
+    
+    let count = 1;
+    //We update the type field of node we want to expand to be nodeData.type
     cy.$("#"+id).data("type", nodeData.type);
 
-    var leftNode = null;
-    var rightNode = null;
+
+    /* Here we set leftNode = node in cy object that is the source of the one we want to expand
+       and  we set rightNode = node in cy object that we want to expand  */
+    let leftNode = null;
+    let rightNode = null;
     // looping over all the nodes to find the source and currently expanding node
     cy.nodes().forEach(function( ele ){
-        if (ele.json().data.id === id) {
+        if (ele.json().data.id === id) { //here we stop at node we are currently expanding
             var sourceID = ele.json().data.sourceID;
             rightNode = ele;
-            
+
+	    //once we find current node, we look for source node
             cy.nodes().forEach(function( innerEle ){
-                if (innerEle.json().data.id === sourceID) {
+                if (innerEle.json().data.id === sourceID) {//here we stop if we find source node
                     leftNode = innerEle;
                 }
             });
         }
     });
-    console.log("already in graph?", checkExistence(id))
+
+    
+    console.log("already in graph?", checkExistence(id));
+
+    /* If node NOT in graph, we have to take this step */
     if (!checkExistence(id)) {
         // get the difference in priority between the destination (current) and source node
         console.log("right node data:", rightNode.json().data);
         console.log("left node data:", leftNode.json().data);
+	//rightNode.json().data.type is 'City', 'State', etc
         var priorityCurr = adminAreaPriority[rightNode.json().data.type];
         var prioritySource = adminAreaPriority[leftNode.json().data.type];
         var priority = prioritySource - priorityCurr;
+	// Note, above, priority must be 'var', used later
 
         // once we expand, we add the source/dest pairing as a vertical relationship
-        var relation = {
+        let relation = { // this encodes the "edge" connecting both nodes
             axis:"y",
             left: leftNode,
             right: rightNode,
-            gap: (priority*1500),
+            gap: (priority * 1000),
             equality:true
         };
         vertRelationships.push(relation);
@@ -206,6 +227,7 @@ function expandConceptNode(cy, id, nodeData) {
             }
         }
 
+	// Hard coded, only works on 6 levels, has to be changed to be generalizable, work on 'n' levels
         else if (rightNode.json().data.type === "County") {
             alignmentX = 
                 {
@@ -280,18 +302,21 @@ function expandConceptNode(cy, id, nodeData) {
             },
             {
                 node: rightNode,
-                offset: offset_amt * 1500,
+                offset: offset_amt * 1000,
             }
         ];
         vertAlignments.push(alignmentY);
 
         // set our horizontal relationships based on each level
     }
+
+
+    /* Whether the node is or isn't in graph, we have to take following steps */
+    
     setHorizRelations();
-
-
+    
     Object.keys(nodeData).forEach(function(key) {
-        if(key != "prefLabel") {
+        if (key != "prefLabel") {
             var value = nodeData[key];
             // node info
             var tempNode = {"data":{}}
@@ -391,7 +416,7 @@ function expandConceptNode(cy, id, nodeData) {
  * 
  * @param {string} type 
  */
-function setHorizRelations(type) {
+function setHorizRelations() {
     // loop over the entire map of levels and the nodes within each level, continuing to pair elements up 
     // and establish a relationship between them
     for (let j = 0; j < horizAlignments.length; j++) {
