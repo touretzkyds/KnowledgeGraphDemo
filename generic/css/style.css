@@ -1,0 +1,108 @@
+.body{
+    margin: 0;
+}
+
+#cy {
+    height: 59vh;
+    width: 100%;
+    border-style: solid;
+}
+
+/*nav history buttons on top-left*/
+
+.nav-history-button{
+    font-size: 14px;
+    font-family: Arial;
+    background-color: white;
+    font-weight: 550;
+    color: rgb(3, 169, 244);
+    border-radius: 50px;
+    border: 0px;
+}
+
+.nav-history-button:hover{
+    background-color: white;
+    font-weight: 700;
+    color: rgb(3, 1, 140);
+    border-radius: 50px;
+    border: 0px;
+}
+
+.nav-history-button.selected{
+    background-color: white;
+    font-weight: 550;
+    color: rgb(255, 105, 180);
+    border-radius: 50px;
+    border: 0px;
+}
+
+.nav-history-button.selected:hover{
+    background-color: white;
+    font-weight: 700;
+    color: rgb(170, 51, 106);
+    border-radius: 50px;
+    border: 0px;
+}
+
+/*nav tool buttons on top-right*/
+
+#nav-up,
+#nav-down,
+#nav-left,
+#nav-right,
+#nav-down-left,
+#nav-down-right,
+#nav-top-left,
+#nav-top-right {
+    border: none;
+    background-color: white;
+    font-weight: 600;
+    width: 140px;
+    height: 60px;
+    text-align: center;
+    margin: 2px;
+    font-size: 12px;
+    color: rgb(0, 170, 255);
+}
+
+#nav-up.clickable:hover,
+#nav-down.clickable:hover,
+#nav-left.clickable:hover,
+#nav-right.clickable:hover,
+#nav-down-left.clickable:hover,
+#nav-down-right.clickable:hover {
+    border-radius: 50px;
+    border-width:1px; 
+    border-color: rgb(173, 216, 230);
+    background-color: rgb(212, 241, 244);
+    font-weight: 600;
+    width: 140px;
+    height: 60px;
+    text-align: center;
+    margin: 2px;
+    font-size: 12px;
+    color: rgb(0, 170, 255);
+}
+
+#nav-mid {
+    border-radius: 50px;
+    background-color: #f08080;
+    border: 0px;
+    font-weight: 600;
+    width: 140px;
+    height: 60px;
+    text-align: center;
+    margin: 2px;
+    font-size: 12px;
+    color: #fff3f4;
+}
+
+.ellipsis {
+    font-size: 6px;
+    color: white;
+}
+
+.ellipsis.visible {
+    font-size: 6px;
+    color: rgb(0, 170, 255);
+}
