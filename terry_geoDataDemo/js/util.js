@@ -587,7 +587,7 @@ function classifyclass(key, value) {
     if (key === "flagImage") {
         return "flagImage";
     }
-    if (key.endsWith('ImageMap')) { // should be if it ends with image map
+    if (key.endsWith('ImageMap')) { 
         return "imageMap";
     }
     if (value.startsWith('b')) {

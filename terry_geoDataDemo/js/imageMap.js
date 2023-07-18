@@ -3,7 +3,7 @@ const countryToRegionImageMaps = {
     { "x": 0.8364634015613773, "y": 0.3108128572018856, "prefLabel": "Northeastern United States", "concept": "boltz:Q24460" },
     { "x": 0.536691171440346, "y": 0.3757588858924756, "prefLabel": "Midwestern United States", "concept": "boltz:Q186545" },
     { "x": 0.6269840118382469, "y": 0.7762593961511136, "prefLabel": "Southern United States", "concept": "boltz:Q49042" },
-    { "x": 0.2874829319421391, "y": 0.44070491458306554, "prefLabel": "Western United States", "concept": "Q12612" }
+    { "x": 0.2874829319421391, "y": 0.44070491458306554, "prefLabel": "Western United States", "concept": "boltz:Q12612" }
   ]
 }
 
@@ -313,17 +313,35 @@ function addSubRegion(evt, regionType, maps, cy) {
     }
   }
   setAsCurrentNode(cy, tempNode.data.id, parentLabel);
+
+  console.log('sub region name:', subRegionName);
+  console.log('id:', tempNode.data.id);
+
+  expandSubRegion(cy, subRegionName, tempNode.data.id);
 }
 
-function addCountyFromState(evt, cy) {
-  addSubRegion(evt, "State", stateImageMaps, cy);
+function expandSubRegion(cy, name, id) {
+  console.log('im expandng now');
+  if (!cy.$("#" + id).hasClass('readyToCollapse')) {
+    if (conceptExpansionDataCache.hasOwnProperty(id)) {
+      expandConceptNode(cy, id, conceptExpansionDataCache[id]);
+    } else {
+      const url = propertyQuery(name, true);
+      d3.json(url).then(function (data) { var jsonData = getDataJSON(data); if (jsonData == undefined) return; expandConceptNode(cy, id, jsonData[0]); });
+    }
+    cy.$("#" + id).addClass('readyToCollapse');
+  }
 }
-function addStateFromRegion(evt, cy) {
-  addSubRegion(evt, "Region", regionImageMaps, cy);
+
+function addRegionFromCountry(evt, cy) {
+  addSubRegion(evt, "Country", countryToRegionImageMaps, cy);
 }
 function addStateFromCountry(evt, cy) {
   addSubRegion(evt, "Country", countryImageMaps, cy);
 }
-function addRegionFromCountry(evt, cy) {
-  addSubRegion(evt, "Country", countryToRegionImageMaps, cy);
+function addStateFromRegion(evt, cy) {
+  addSubRegion(evt, "Region", regionImageMaps, cy);
+}
+function addCountyFromState(evt, cy) {
+  addSubRegion(evt, "State", stateImageMaps, cy);
 }

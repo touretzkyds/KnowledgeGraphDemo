@@ -360,7 +360,7 @@
             ?rank rdfs:label "${rank_name}"@en .
             ?rank rdfs:label ?rLabel .
             ?rank kgo:nextLowerRank [ rdfs:label ?nextLower] . 
-            ?rank kgo:nextHigherRank [rdfs:label ?nextHigher ].
+            ?rank kgo:nextHigherRank [ rdfs:label ?nextHigher ].
               
           }
         ORDER BY ?yLabel`;
@@ -373,7 +373,7 @@
     }
 
     // Obtain all ranks in the system, to be displayed in a new window
-    function all_ranks_query(){
+/*      function all_ranks_query(){
       const prevquery = document.getElementById("sparql5");
       prevquery.innerHTML = 
         `PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
@@ -387,6 +387,34 @@
                   skos:definition ?definition .
             OPTIONAL{?rank kgo:nextHigherRank ?nextHigher}.
             OPTIONAL{?rank kgo:nextLowerRank ?nextLower}.
+          } `;
+
+      const endpoint = d3.select("#endpoint5").property("value");
+      const sparql = d3.select("#sparql5").property("value");
+      const url = endpoint + "?query=" + encodeURIComponent(sparql);
+      return url;
+    } */
+
+    function all_ranks_query(rank_name){
+      const prevquery = document.getElementById("sparql5");
+      prevquery.innerHTML = 
+        `PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+          PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
+
+          SELECT ?rank ?rankLabel ?definition ?nextHigher ?nextLower WHERE {
+            ?currRank rdfs:label "${rank_name}"@en .
+            ?rank kgo:instanceOf boltz:Q427626 ;
+                  rdfs:label ?rankLabel ;
+                  (kgo:nextHigherRank|kgo:nextLowerRank)? ?currRank ;
+                  skos:definition ?definition .
+            OPTIONAL{
+              ?rank kgo:nextHigherRank ?nextHigher .
+            }
+            OPTIONAL{
+              ?rank kgo:nextLowerRank ?nextLower .
+            }
           } `;
 
       const endpoint = d3.select("#endpoint5").property("value");
@@ -2574,6 +2602,7 @@
     }
 
     function get_node_properties(event, node_parent, expandable) {
+      console.log('in get_node_properties');
       // cy.$id(node_parent).style('font-size', 45);
       let evtTarget = event.target;
       let node_id = evtTarget.data('id');
@@ -2796,11 +2825,14 @@
 
 
     function display_ranks(id, rank, position) {
-      let url = all_ranks_query();
+      console.log(rank);
+      // let url = all_ranks_query();
       var taxonomic_rank_nodes = [];
       var taxonomic_rank_edges = [];
 
       var rank_name = rank.replace('prop ', '')
+      let url = all_ranks_query(rank_name);
+      console.log(url);
       // Goal is to create the nodes out of this json_result
       d3.json(url).then(function(json_result) {
         var data = json_result.results.bindings;
@@ -2842,9 +2874,16 @@
           let rank_index = nodes[rank_key]
           ordered_rank_hierarchy[rank_index] = rank_key
         }
+        var local_rank_hierary = JSON.parse(JSON.stringify(ordered_rank_hierarchy));
+        if (local_rank_hierary.length > 3) {
+          local_rank_hierary.shift(); // mutates original array, should change
+        }
+        console.log('local rank hierarchy', local_rank_hierary);
         // Goal: automate this process, for all nodes, call a query that returns all of its properties. You make the node with the properties expandable. 
-        for (rank_qval of ordered_rank_hierarchy) {
+        for (rank_qval of local_rank_hierary) {
           var rank_object = ranks_to_object[rank_qval];
+          console.log('ranks to object', ranks_to_object);
+          console.log('rank object', rank_object);
 
           var name = rank_object['rankLabel']['value'];
           qvals_to_names[rank_qval] = name;
@@ -2868,11 +2907,13 @@
             };
           cy.add(node_obj);
           taxonomic_rank_nodes.push({node: cy.$id(rank_qval), offset: 0});
-
+          console.log('rank qval is', rank_qval);
+          console.log('includes rank qval?', local_rank_hierary.includes(rank_qval));
           // Connecting edge for all concepts
           if ('nextHigher' in rank_object){
             var nextHigher_qval = rank_object.nextHigher.value.toString().replace('http://solid.boltz.cs.cmu.edu:3030/data/', '');
-            connecting_edge = {
+            if (local_rank_hierary.includes(rank_qval) && local_rank_hierary.includes(nextHigher_qval)) {
+              connecting_edge = {
               group: 'edges',
               data:
                 {id: `${rank_qval} to ${nextHigher_qval}`, 
@@ -2881,22 +2922,25 @@
                 type: 'hierarchy: up',
                 label: '',
                 },
+              }
+              taxonomic_rank_edges.push(connecting_edge);
             }
-            taxonomic_rank_edges.push(connecting_edge);
           }
           if ('nextLower' in rank_object){
             var nextLower_qval = rank_object.nextLower.value.toString().replace('http://solid.boltz.cs.cmu.edu:3030/data/', '');
-            connecting_edge = {
-              group: 'edges',
-              data:
-                {id: `${rank_qval} to ${nextLower_qval}`, 
-                source: rank_qval, 
-                target: nextLower_qval,
-                type: 'hierarchy: down',
-                label: '',
-                },
+            if (local_rank_hierary.includes(rank_qval) && local_rank_hierary.includes(nextLower_qval)) {
+              connecting_edge = {
+                group: 'edges',
+                data:
+                  {id: `${rank_qval} to ${nextLower_qval}`, 
+                  source: rank_qval, 
+                  target: nextLower_qval,
+                  type: 'hierarchy: down',
+                  label: '',
+                  },
+              }
+              taxonomic_rank_edges.push(connecting_edge)
             }
-            taxonomic_rank_edges.push(connecting_edge)
           }
         }
         // Manipulations to graph
@@ -3530,6 +3574,7 @@
             } else {
               //OTHERWISE WE CLICKED A NODE
                 if (data.type == "taxon") {
+                  console.log('case: node clicked');
                   let name = data.name;
                   if (!(all_ranks.includes(name))) {
                       cy.nodes(`node[id = "${data.id}"]`).style({
@@ -3552,8 +3597,10 @@
                 }
               }
                 else if (data.clickable == "true") {
+                  console.log('case: data clickable');
                   // If we click on a node that is a display property (one of the nodes part of a ranked subgraph hierarchy), we must make sure that the existing properties and edges are removed.
                   if (data.type == "display") {
+                    console.log('case: node is display property');
                     cy.remove(`[class = "property"]`);
                     cy.remove(`[class = "property-edge"]`);
                   }
@@ -3562,7 +3609,9 @@
                   // Expandable: false => just a normal get properties, with no nesting created
                   let isExpandable;
                   let edge = cy.edges(`[target = "${id}"]`);
+                  console.log(edge.json().data);
                   let source = edge.sources();
+                  console.log(source.json().data);
 
                   if (source.length == 1) {
                     isExpandable = "true";
@@ -3937,7 +3986,7 @@
     <div id="query" style="margin: 10px">
       <h1 class="title">Knowledge Graph Query and Display</h1>
         <div class="input-append">
-          <input id="endpoint" class="span5" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
+          <input id="endpoint" class="span5" value="http://solid.boltz.cs.cmu.edu:3030/Devel/sparql" type="text" style="display:none;">
           <div id="show-nav-buttons">
           </div>
           
@@ -3959,19 +4008,19 @@
         </div> 
       <textarea id="sparql" class="spans9" style="display:none;"></textarea>
 
-      <input id="endpoint2" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
+      <input id="endpoint2" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/Devel/sparql" type="text" style="display:none;">
       <textarea id="sparql2" class="spans10" style="display:none;"></textarea>
 
-      <input id="endpoint3" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
+      <input id="endpoint3" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/Devel/sparql" type="text" style="display:none;">
       <textarea id="sparql3" class="spans10" style="display:none;"></textarea>
 
-      <input id="endpoint4" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
+      <input id="endpoint4" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/Devel/sparql" type="text" style="display:none;">
       <textarea id="sparql4" class="spans10" style="display:none;"></textarea>
 
-      <input id="endpoint5" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
+      <input id="endpoint5" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/Devel/sparql" type="text" style="display:none;">
       <textarea id="sparql5" class="spans10" style="display:none;"></textarea>
 
-      <input id="endpoint6" class="span6" value="https://solid.boltz.cs.cmu.edu:3031/Devel/sparql" type="text" style="display:none;">
+      <input id="endpoint6" class="span6" value="http://solid.boltz.cs.cmu.edu:3030/Devel/sparql" type="text" style="display:none;">
       <textarea id="sparql6" class="spans10" style="display:none;"></textarea>
 
       

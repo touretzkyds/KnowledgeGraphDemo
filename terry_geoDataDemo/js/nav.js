@@ -41,8 +41,8 @@ function expandHelper(cy, node) {
  * @returns 
  */
 function addNodeHelper(cy, label, prevNode, link) {
-  console.log("IN FUNCTION addNodeHelper with parameters:");
-  console.log("label:", label, "link:", link, "previous node:");
+  // console.log("IN FUNCTION addNodeHelper with parameters:");
+  // console.log("label:", label, "link:", link, "previous node:");
   console.log(prevNode.json().data);
 
     var addedData = [];

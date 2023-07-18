@@ -20,7 +20,7 @@ function reLayoutCola(cy) {
         animate: false,
     }
     var layout = cy.layout(options);
-    console.log(options);
+    // console.log(options);
     layout.start();
 }
 

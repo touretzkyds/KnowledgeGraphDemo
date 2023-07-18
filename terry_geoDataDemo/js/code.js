@@ -50,7 +50,7 @@ var adminAreaPriority = {
 };
 
 // endpoint of boltz server to be queried
-const endpoint = "https://solid.boltz.cs.cmu.edu:3031/Devel/sparql";
+const endpoint = "http://solid.boltz.cs.cmu.edu:3030/Devel/sparql";
 
 /**
  * 
