@@ -112,21 +112,21 @@ function distanceBetween(x1, y1, x2, y2) {
  * @returns 
  */
 function getNormalizedPositions(evt) {
-  var node = evt.target;
-  var renderedBoundingBox = node.renderedBoundingBox();
-  var renderedPosition = evt.renderedPosition;
-  var x1 = renderedBoundingBox.x1;
-  var x2 = renderedBoundingBox.x2;
-  var y1 = renderedBoundingBox.y1;
-  var y2 = renderedBoundingBox.y2;
-  var x = renderedPosition.x;
-  var y = renderedPosition.y;
+  let node = evt.target;
+  let renderedBoundingBox = node.renderedBoundingBox();
+  let renderedPosition = evt.renderedPosition;
+  let x1 = renderedBoundingBox.x1;
+  let x2 = renderedBoundingBox.x2;
+  let y1 = renderedBoundingBox.y1;
+  let y2 = renderedBoundingBox.y2;
+  let x = renderedPosition.x;
+  let y = renderedPosition.y;
 
-  var relativeX = x - x1; 
-  var relativeY = y - y1;
+  let relativeX = x - x1; 
+  let relativeY = y - y1;
 
-  var normalizedX = relativeX / (x2 - x1);
-  var normalizedY = relativeY / (y2 - y1);
+  let normalizedX = relativeX / (x2 - x1);
+  let normalizedY = relativeY / (y2 - y1);
   return {'x': normalizedX, 'y': normalizedY};
 }
 
@@ -140,13 +140,13 @@ function getNormalizedPositions(evt) {
  * @returns nearestState name as a string
  */
 function getNearestState(countryName, normalizedX, normalizedY) {
-  var data = stateData[countryName];
-  var shortestDistance = Number.MAX_SAFE_INTEGER;
-  var nearestState = "";
-  for(let i = 0; i < data.length; i++) {
-      var currState = data[i];
-      var currDistance = distanceBetween(normalizedX, normalizedY, currState.x, currState.y);
-      if(currDistance < shortestDistance) {
+  let data = stateData[countryName];
+  let shortestDistance = Number.MAX_SAFE_INTEGER;
+  let nearestState = "";
+  for (let i = 0; i < data.length; i++) {
+      let currState = data[i];
+      let currDistance = distanceBetween(normalizedX, normalizedY, currState.x, currState.y);
+      if (currDistance < shortestDistance) {
         shortestDistance = currDistance;
         nearestState = currState.stateName;
       }
@@ -159,71 +159,79 @@ function getNearestState(countryName, normalizedX, normalizedY) {
  * add the clicked state node to the graph
  * 
  * @param {event} evt the clicking event
- * @param {cytoscape object} cy the cytoscape object
+ * @param {dictionary} toolKit: our dictionary with all our graph tools
  */
-function addState(evt, cy) {
-  console.log("Called addState");
-  var node = evt.target;
-  var sourceCountryNode = cy.$("#"+node.json().data.sourceID);
-  var parentLabel = sourceCountryNode.json().data.label;
+function addState(evt, toolKit) {
+    // Tool aliases
+    displayResources = toolKit['displayResources'];
+    hierarchyPathTool = toolKit['hierachyPathTool'];
+    subGraphNavigatorTool = toolKit['subGraphNavigatorTool'];    
+    graphVipsualizerTool = toolKit['graphVisualizerTool'];
 
-  var normalizedX = getNormalizedPositions(evt).x;
-  var normalizedY = getNormalizedPositions(evt).y;
-
-  var id = node.json().data.sourceID;
-
-  var countryName = cy.$("#"+id).json().data.label.split("\nboltz:")[0];
-
-  var stateName = getNearestState(countryName, normalizedX, normalizedY);
-
-  //add new state node and edge
-  var addedData = [];
-  var key = "hasState";
-  var value = stateName;
-  //node info
-  var tempNode = {"data":{}};
-  tempNode.data.type = "State";
-  tempNode.group = "nodes";
-  tempNode.data.label = value;
-  tempNode.data.class = classifyclass(key, value);
-  tempNode.data.id = convertToNodeID(id, key, value);
-  tempNode.data.sourceID = id;
-  if (tempNode.data.class == "concept") {
-    if(!conceptNodeLabelToID.hasOwnProperty(value)) {
-      conceptNodeLabelToID[value] = tempNode.data.id;
-    } else {
-      tempNode.data.class = "dummyConcept";
+    // Function body
+    console.log("Called addState");
+    let node = evt.target;
+    let sourceCountryNode = displayResources.cy.$("#"+node.json().data.sourceID);
+    let parentLabel = sourceCountryNode.json().data.label;
+    
+    let normalizedX = getNormalizedPositions(evt).x;
+    let normalizedY = getNormalizedPositions(evt).y;
+    
+    let id = node.json().data.sourceID;
+    
+    let countryName = displayResources.cy.$("#"+id).json().data.label.split("\nboltz:")[0];
+    
+    let stateName = getNearestState(countryName, normalizedX, normalizedY);
+    
+    //add new state node and edge
+    let addedData = [];
+    let key = "hasState";
+    let value = stateName;
+    //node info
+    let tempNode = {"data":{}};
+    tempNode.data.type = "State";
+    tempNode.group = "nodes";
+    tempNode.data.label = value;
+    tempNode.data.class = classifyclass(key, value);
+    tempNode.data.id = convertToNodeID(id, key, value);
+    tempNode.data.sourceID = id;
+    if (tempNode.data.class == "concept") {
+	if (!displayResources.conceptNodeLabelToID.hasOwnProperty(value)) {
+	    displayResources.conceptNodeLabelToID[value] = tempNode.data.id;
+	} else {
+	    tempNode.data.class = "dummyConcept";
+	}
     }
-  }
-  const radius = 400;
-  const sourceX = cy.$("#" + id).position('x');
-  const sourceY = cy.$("#" + id).position('y');
-  tempNode.position = {x:sourceX + radius, y:sourceY - radius};
-  addedData.push(tempNode);
-  // edge info
-  var tempEdge = {"data":{}}
-  tempEdge.group = "edges";
-  tempEdge.data.id = convertToEdgeID(id, key, value)
-  tempEdge.data.label = "hasState";
-  tempEdge.data.source = id;
-  tempEdge.data.target = tempNode.data.id;
-  addedData.push(tempEdge);
-  cy.add(addedData);
-  reLayoutCola(cy);
-  
-  // to maintain our hierarchy 
-  if (northeast.has(stateName)) {
-    parentLabel = "Northeastern United States\nboltz:Q24460";
-  }
-  if (midwest.has(stateName)) {
-    parentLabel = "Midwestern United States\nboltz:Q186545";
-  }
-  if (southern.has(stateName)) {
-    parentLabel = "Southern United States\nboltz:Q49042";
-  }
-  if (western.has(stateName)) {
-    parentLabel = "Western United States\nboltz:Q12612";
-  }
-  
-  setAsCurrentNode(cy, tempNode.data.id, parentLabel);
+    const radius = 400;
+    const sourceX = displayResources.cy.$("#" + id).position('x');
+    const sourceY = displayResources.cy.$("#" + id).position('y');
+    tempNode.position = {x:sourceX + radius, y:sourceY - radius};
+    addedData.push(tempNode);
+    // edge info
+    let tempEdge = {"data":{}}
+    tempEdge.group = "edges";
+    tempEdge.data.id = convertToEdgeID(id, key, value)
+    tempEdge.data.label = "hasState";
+    tempEdge.data.source = id;
+    tempEdge.data.target = tempNode.data.id;
+    addedData.push(tempEdge);
+    displayResources.cy.add(addedData);
+    graphVisualizerTool.reLayoutCola(toolKit);
+    
+    // to maintain our hierarchy 
+    if (northeast.has(stateName)) {
+	parentLabel = "Northeastern United States\nboltz:Q24460";
+    }
+    if (midwest.has(stateName)) {
+	parentLabel = "Midwestern United States\nboltz:Q186545";
+    }
+    if (southern.has(stateName)) {
+	parentLabel = "Southern United States\nboltz:Q49042";
+    }
+    if (western.has(stateName)) {
+	parentLabel = "Western United States\nboltz:Q12612";
+    }
+    
+    displayResources.setAsCurrentNode(tempNode.data.id, false,
+				      toolKit, parentLabel);
 }

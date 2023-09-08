@@ -1,6 +1,7 @@
 // endpoint of boltz server to be queried
 // const endpoint = "https://solid.boltz.cs.cmu.edu:3031/Devel/sparql";
 const endpoint = "http://solid.boltz.cs.cmu.edu:3030/Devel/sparql";
+// const endpoint = "http://solid.boltz.cs.cmu.edu:3030/dataset.html?tab=query&ds=/Devel";
 
 /**
  * Gets info on the current node that will be displayed if you
@@ -13,7 +14,7 @@ const endpoint = "http://solid.boltz.cs.cmu.edu:3030/Devel/sparql";
  **/
 function propertyQuery(value) {
     const query = 
-    `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+	  `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
         PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
         PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -42,18 +43,18 @@ function propertyQuery(value) {
 }
 
 
-  /**
-   * Purpose: get the url to navigation list query. The url
-   * generates the nav history list pairs
-   * 
-   * @param {string} value: the name for region to be queries. e.g. Pittsburgh
-   * @param {string} link: e.g. 'locatedInAdministrativeRegion'
-   * @returns the url for query
-   *
-   **/
+/**
+ * Purpose: get the url to navigation list query. The url
+ * generates the nav history list pairs
+ * 
+ * @param {string} value: the name for region to be queries. e.g. Pittsburgh
+ * @param {string} link: e.g. 'locatedInAdministrativeRegion'
+ * @returns the url for query
+ *
+ **/
 function navHistoryListQuery(value, link) {
-      const query = 
-      `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+    const query = 
+	  `PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
         PREFIX kgo: <http://solid.boltz.cs.cmu.edu:3030/ontology/>
         PREFIX boltz: <http://solid.boltz.cs.cmu.edu:3030/data/> 
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -77,6 +78,6 @@ function navHistoryListQuery(value, link) {
           ?y rdfs:label|skos:prefLabel ?yLabel.
         }`; 
 
-      const url = endpoint + "?query=" + encodeURIComponent(query);
-      return url;
-  }
+    const url = endpoint + "?query=" + encodeURIComponent(query);
+    return url;
+}

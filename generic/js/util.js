@@ -95,8 +95,7 @@ function convertToCytoscape(data, toolKit) {
     var edges = [];
     var source = data.prefLabel.split("boltz:")[1];
 
-    // conceptExpansionDataCache[source] = data;
-    displayResources.update('conceptExpansionDataCache', data, source);
+    displayResources.conceptExpansionDataCache[source] = data;
     
     Object.keys(data).forEach(function(key) {
         var value = data[key];
@@ -108,9 +107,8 @@ function convertToCytoscape(data, toolKit) {
 	    tempNode.classes = "readyToCollapse";
 	    tempNode.data.id = source;
 	    
-	    // conceptNodeLabelToID[value] = source;
-	    displayResources.update('conceptNodeLabelToID', source, value);
-
+	    displayResources.conceptNodeLabelToID[value] = source;
+	    
 	    nodes.push(tempNode);
 	    
         } else {
@@ -120,8 +118,7 @@ function convertToCytoscape(data, toolKit) {
 	    tempNode.class = "readyToCollapse";
 	    if (tempNode.data.class == "concept") {
 	if (!displayResources.conceptNodeLabelToID.hasOwnProperty(value)) {
-	    // conceptNodeLabelToID[value] = tempNode.data.id;
-	    displayResources.update('conceptNodeLabelToID', tempNode.data.id, value);
+	    displayResources.conceptNodeLabelToID[value] = tempNode.data.id;
 		}
 	    }
 	    
@@ -406,16 +403,16 @@ function getCytoscapeObjectAndSource(data, value, toolKit) {
 
 	// 3. adds event listeners
 	cy.on('tap', function(evt) {
-            tap (evt, cy, toolKit);
+            tap (evt, toolKit);
 	});
 	cy.on('cxttap', function(evt) {
-            cxttap (evt, cy, toolKit);
+            cxttap (evt, toolKit);
 	});
 	cy.on('mouseover', function(evt) {
-            mouseover (evt, cy, toolKit);
+            mouseover (evt, toolKit);
 	});
 	cy.on('mouseout', function(evt) {
-            mouseout (evt, cy, toolKit);
+            mouseout (evt, toolKit);
 	});
 	cy.on('grab', function(evt){
             grab (evt, toolKit);
@@ -441,7 +438,7 @@ function getCytoscapeObjectAndSource(data, value, toolKit) {
  * @returns the node with label = {name}; or undefined if not found
  *
  **/
-function searchConceptByLabel(cy, name) {
+function getCyNodeByLabel(cy, name) {
     var node = undefined;
     cy.nodes().forEach( function(ele) {
         if (ele.json().data.label === name
@@ -449,6 +446,9 @@ function searchConceptByLabel(cy, name) {
         node = ele;
         }
     });
+
+    if (node == undefined) console.log('THIS SHOULD NOT HAPPEN, NODE NOT FOUND');
+    
     return node;
 }
 
@@ -470,7 +470,7 @@ function getParentLabel(label, childrenTable) {
 	if (siblings.includes(label)) {
             parent = key;
 	}
-    };
+    };    
     return parent;
 }
 
@@ -501,4 +501,97 @@ function checkExistence(id, horizAlignments) {
         }
     }
     return false;
+}
+
+
+/**
+ * 
+ * reset the type to be the same as type of source node if the source node id is defined
+ * 
+ * @param {cytoscape object} cy the cytoscape object
+ * @param {string} id id for the node to be reseted type
+ *
+ **/
+function reSetType(cy, id) {
+    const idForSourceNode = cy.$("#"+id).json().data.sourceID;
+    if (idForSourceNode !== undefined) {
+        cy.$("#"+id).json({data:{type: cy.$("#"+idForSourceNode).json().data.type}});
+    }
+}
+
+
+/**
+ * 
+ * returns the json data of a given node
+ * 
+ * @param {string} nodeName: name of the node
+ *
+ **/
+
+function getNodeData(nodeName){
+    let url = propertyQuery(nodeName, true);
+    let nodeData = d3.json(url).then(function(data) {
+	let jsonData = getDataJSON(data);
+	if (jsonData == undefined) return;
+	return jsonData[0];        
+    });
+    return nodeData;
+}
+
+
+/**
+ * 
+ * gets the best possible relation available between
+ * two nodes. Prioritizes in the following order:
+ * 1. backBoneRelation
+ * 2. any other existing relation
+ * 3. inferredRelation
+ * 
+ * @param {object} sourceNodeData
+ * @param {string} targetNodeName
+ * @param {string} backBoneRelation
+ *
+ **/
+
+function getBestRelation(sourceNodeData, targetNodeName, backBoneRelation){
+    // Gathering possible links
+    let validLinks = [];
+    
+    Object.keys(sourceNodeData).forEach(function(key){
+	if (sourceNodeData[key].split("\n")[0] == targetNodeName){ //careful this might not work if there are trailing spaces!
+	    validLinks.push(key);
+	}
+    });
+    
+    // Choosing link that joins them
+    if (validLinks.includes(backBoneRelation)){
+	return backBoneRelation;
+    }
+    else if (validLinks.length > 0){
+	return validLinks[0];
+    }
+    else {
+	return 'inferredRelation';
+    }    
+}
+
+
+
+/**
+ * 
+ * returns the backBoneRelation a given node has
+ * 
+ * @param {object} node data
+ * @param {string list} backBoneRelations
+ *
+ **/
+
+function getBackBoneRelation(nodeData, backBoneRelations){
+    Object.keys(nodeData).forEach(function(key) {
+	console.log(key);
+	if (backBoneRelations.includes(key)) return key;
+    })
+    
+    console.log('SHOULD NOT GET HERE: no backBoneRelation found');
+    return '';
 }

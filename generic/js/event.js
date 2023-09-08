@@ -18,11 +18,10 @@
  * this class will be removed when mouseout. If the image is imageMap, add the clicked county
  * 
  * @param {event} evt: the left click event
- * @param {cytoscape object} cy: the cytoscape object
  * @param {dictionary} toolKit: our dictionary with all our graph tools
  *
  **/
-function tap(evt, cy, toolKit) {
+function tap(evt, toolKit) {
     // Tool aliases
     displayResources = toolKit['displayResources'];
     hierarchyPathTool = toolKit['hierachyPathTool'];
@@ -32,86 +31,94 @@ function tap(evt, cy, toolKit) {
     // Function body    
     let node = evt.target;
     if (node.json().data.class === 'qudt') {
-        if (!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
+	// add tap_on_qudt function
+        if (!displayResources.cy.$("#" + node.id()).hasClass('readyToCollapse')) {
 
 	    /* e.g. If you click on the qudt coming from the 'Pittsburgh' node,
 	    sourceNodeName = 'Pittsburgh'*/
-	    const sourceNodeName = cy.$('#' + node.json().data.sourceID).json().data.label.split("\nboltz:")[0];
+	    const sourceNodeName = displayResources.cy.$('#' + node.json().data.sourceID).json().data.label.split("\nboltz:")[0];
 	    if (displayResources.bnodeExpansionDataCache.hasOwnProperty(node.id())) {
-                expandbNode(cy,
+                graphVisualizerTool.expandbNode(
 			    node.id(),
 			    displayResources.bnodeExpansionDataCache[node.id()],
 			    toolKit);
             } else {
-                const url = propertyQuery(sourceNodeName, true);
+                const url = propertyQuery(sourceNodeName, true);		
                 d3.json(url).then(function(data) {
 		    var jsonData = getDataJSON(data);
 		    if (jsonData == undefined) return;
-		    expandbNode(cy,
+		    graphVisualizerTool.expandbNode(
 				node.id(),
 				jsonData[1],
 				toolKit);});
             }
-            cy.$("#" + node.id()).addClass('readyToCollapse');
+            displayResources.cy.$("#" + node.id()).addClass('readyToCollapse');
         } else {
-            closebNode(cy, node.id(), toolKit);
-            cy.$("#" + node.id()).removeClass('readyToCollapse');
+            graphVisualizerTool.closebNode(node.id(), toolKit);
+            displayResources.cy.$("#" + node.id()).removeClass('readyToCollapse');
         }
     } else if (node.json().data.class === 'dummyConcept') {
         const id = displayResources.conceptNodeLabelToID[node.json().data.label];
         if (id !== undefined) {
-            cy.center("#" + id);
+            displayResources.cy.center("#" + id);
         }
     } else if (node.json().data.class === 'concept') {
-
 	// e.g. nodeName = 'Pittsburgh'
         const nodeName = node.json().data.label.split("\nboltz")[0];
-        if (!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
+        if (!displayResources.cy.$("#" + node.id()).hasClass('readyToCollapse')) {
             if (displayResources.conceptExpansionDataCache.hasOwnProperty(node.id())) {
-		expandConceptNode(cy,
+		expandConceptNode(
 				  node.id(),
 				  displayResources.conceptExpansionDataCache[node.id()],
-				  toolKit
-				 );
+				  toolKit);
             } else {
                 const url = propertyQuery(nodeName, true);
                 d3.json(url).then(function(data) {
 		    var jsonData = getDataJSON(data);
 		    if (jsonData == undefined) return;
-		    expandConceptNode(cy, node.id(), jsonData[0],
+		    expandConceptNode(node.id(), jsonData[0],
 				      toolKit);
 		});
             }
-            cy.$("#" + node.id()).addClass('readyToCollapse');
+            displayResources.cy.$("#" + node.id()).addClass('readyToCollapse');
         } else {
-            cy.$("#" + node.id()).removeClass('readyToCollapse');
-            closeConceptNode(cy, node.id(), toolKit);
+            displayResources.cy.$("#" + node.id()).removeClass('readyToCollapse');
+            graphVisualizerTool.closeConceptNode(node.id(), toolKit);
         }
     } else if (node.json().data.class === 'image' ||
 	       node.json().data.class === 'flagImage' ||
 	       node.json().data.class === 'imageMap') {
 	
-        if (!cy.$("#" + node.id()).hasClass('readyToCollapse')) {
+        if (!displayResources.cy.$("#" + node.id()).hasClass('readyToCollapse')) {
             displayResources.prevImagePositions.x = node.position('x');
             displayResources.prevImagePositions.y = node.position('y');
-            cy.nodes(`[id = "${node.id()}"]`).style({
+            displayResources.cy.nodes(`[id = "${node.id()}"]`).style({
                 'width': node.width() * 10,
                 'height': node.height() * 10,
                 'z-index': '20',
             });
 	    
-	    cy.$("#" + node.id()).addClass('readyToCollapse');
-	    
-        } else if (node.json().data.class === 'imageMap' &&
-		   node.json().data.type === 'State') {
-            addCounty(evt, cy, toolKit);
-	    
-        } else if (node.json().data.class === 'imageMap' &&
-		   node.json().data.type === 'Region') {
-            addState(evt, cy);
-        }
+	    displayResources.cy.$("#" + node.id()).addClass('readyToCollapse');
+        } else if(node.json().data.class === 'imageMap' && node.json().data.type === 'State') {
+            addCountyFromState(evt, displayResources.cy);
+        } else if(node.json().data.class === 'imageMap' && node.json().data.type === 'Region') {
+            addStateFromRegion(evt, displayResources.cy);
+        } else if(node.json().data.class === 'imageMap' && node.json().data.type === 'Country') {
+            console.log(displayResources.cy.$("#"+node.id()).json().data);
+            addStateFromCountry(evt, displayResources.cy);
+        } else if(node.json().data.class === 'imageMap') {
+            console.log("imageMap of type", node.json().data.type);
+        }	    
+    }
+
+    else {
+	console.log("WARNING: I don't know how to handle taps for this node. Node: ", node);
+	
     }
 }
+
+
+
 
 /**
  * 
@@ -121,11 +128,10 @@ function tap(evt, cy, toolKit) {
  * and update displayResources variable conceptNodeLabelToID
  * 
  * @param {event} evt: the right click event
- * @param {cytoscape object} cy: the cytoscape object
  * @param {dictionary} toolKit: our dictionary with all our graph tools 
  *
  **/
-function cxttap(evt, cy, toolKit) {
+function cxttap(evt, toolKit) {
 
     // Tool aliases
     displayResources = toolKit['displayResources'];
@@ -136,7 +142,7 @@ function cxttap(evt, cy, toolKit) {
     // Function body        
     let node = evt.target;
     if (node.json().data.class === 'dummyConcept') {
-        cy.nodes(`[id = "${node.id()}"]`).style({
+        displayResources.cy.nodes(`[id = "${node.id()}"]`).style({
             'width': node.width() * 1.25,
             'height': node.height() * 1.25
         });
@@ -144,39 +150,39 @@ function cxttap(evt, cy, toolKit) {
 	      displayResources.conceptNodeLabelToID[node.json().data.label];
 
         if (id !== undefined) {
-            cy.nodes(`[id = "${id}"]`).style({
-                'width': cy.$('#'+id).width() * 0.8,
-                'height': cy.$('#'+id).height() * 0.8
+            displayResources.cy.nodes(`[id = "${id}"]`).style({
+                'width': displayResources.cy.$('#'+id).width() * 0.8,
+                'height': displayResources.cy.$('#'+id).height() * 0.8
             });
-            if (cy.$("#" + id).json().data.class === 'greenConcept') {
-                cy.$("#"+id).json({data:{class:'concept'}});
+            if (displayResources.cy.$("#" + id).json().data.class === 'greenConcept') {
+                displayResources.cy.$("#"+id).json({data:{class:'concept'}});
             }
         }
         const currentlabel = node.json().data.label;
-        cy.nodes().forEach(function( ele ){
+        displayResources.cy.nodes().forEach(function( ele ){
             if (ele.json().data.label === currentlabel &&
 		(ele.json().data.class === 'concept')) {
 		
                 ele.json({data:{class:'dummyConcept'}});
-                cy.nodes(`[id = "${ele.id()}"]`).style({
+                displayResources.cy.nodes(`[id = "${ele.id()}"]`).style({
                     "background-color": '#FFFFFF',
                     "border-color": '#ADD8E6',
                 });
             }
         });
         node.json({data:{class:'concept'}});
-        cy.nodes(`[id = "${node.id()}"]`).style({
+        displayResources.cy.nodes(`[id = "${node.id()}"]`).style({
             "background-color": '#ADD8E6',
             "border-color": '#00008B',
         });
         displayResources.conceptNodeLabelToID[node.json().data.label] = node.id();
 
         if (id !== undefined) {
-            if (cy.$("#" + id).hasClass('readyToCollapse')) {
+            if (displayResources.cy.$("#" + id).hasClass('readyToCollapse')) {
 
-		closeConceptNode(cy, id, toolKit);
+		graphVisualizerTool.closeConceptNode(id, toolKit);
 
-		cy.$("#" + id).removeClass('readyToCollapse');
+		displayResources.cy.$("#" + id).removeClass('readyToCollapse');
             }
         }
     } else if (node.json().data.class === "imageMap") {
@@ -194,11 +200,10 @@ function cxttap(evt, cy, toolKit) {
  * set its type to greenConcept, and set its color to green
  * 
  * @param {event} evt: the mouseover event
- * @param {cytoscape object} cy: the cytoscape object
  * @param {dictionary} toolKit: our dictionary with all our graph tools
  *
  */
-function mouseover(evt, cy, toolKit) {
+function mouseover(evt, toolKit) {
     // Tool aliases
     displayResources = toolKit['displayResources'];
 
@@ -207,23 +212,22 @@ function mouseover(evt, cy, toolKit) {
     
     if (node.json().data.class === 'qudt' ||
 	node.json().data.class === 'concept') {
-	
-    cy.nodes(`[id = "${node.id()}"]`).style({
-        'width': node.width() * 1.25,
-        'height': node.height() * 1.25
-    });
+	displayResources.cy.nodes(`[id = "${node.id()}"]`).style({
+            'width': node.width() * 1.25,
+            'height': node.height() * 1.25
+	});
     } else if (node.json().data.class === 'dummyConcept') {
         const id = displayResources.conceptNodeLabelToID[node.json().data.label];
 	
         if (id !== undefined) {
-            cy.nodes(`[id = "${displayResources.conceptNodeLabelToID[node.json().data.label]}"]`).style({
-                'width': cy.$('#'+id).width() * 1.25,
-                'height': cy.$('#'+id).height() * 1.25,
+            displayResources.cy.nodes(`[id = "${displayResources.conceptNodeLabelToID[node.json().data.label]}"]`).style({
+                'width': displayResources.cy.$('#'+id).width() * 1.25,
+                'height': displayResources.cy.$('#'+id).height() * 1.25,
             });
 	    
-            if (cy.$("#" + id).json().data.class === 'concept') {
-            cy.$("#"+id).json({data:{class:'greenConcept'}});
-            cy.nodes(`[id = "${id}"]`).style({
+            if (displayResources.cy.$("#" + id).json().data.class === 'concept') {
+            displayResources.cy.$("#"+id).json({data:{class:'greenConcept'}});
+            displayResources.cy.nodes(`[id = "${id}"]`).style({
                 "background-color": '#00FF00',
             });
             }
@@ -242,11 +246,10 @@ function mouseover(evt, cy, toolKit) {
  * displayResources variable prevImagePositions. Remove class 'readyToCollapse' and relayout
  * 
  * @param {event} evt the mouseout event
- * @param {cytoscape object} cy the cytoscape object
  * @param {dictionary} toolKit: our dictionary with all our graph tools 
  *
  **/
-function mouseout(evt, cy, toolKit) {
+function mouseout(evt, toolKit) {
     // Tool aliases
     displayResources = toolKit['displayResources'];
     graphVipsualizerTool = toolKit['graphVisualizerTool'];
@@ -256,7 +259,7 @@ function mouseout(evt, cy, toolKit) {
     if (node.json().data.class === 'qudt' ||
 	node.json().data.class === 'concept') {
 	
-    cy.nodes(`[id = "${node.id()}"]`).style({
+    displayResources.cy.nodes(`[id = "${node.id()}"]`).style({
         'width': node.width() * 0.8,
         'height': node.height() * 0.8
     });
@@ -265,14 +268,14 @@ function mouseout(evt, cy, toolKit) {
 	
 	if (id !== undefined) {
 	    
-        cy.nodes(`[id = "${id}"]`).style({
-        'width': cy.$('#'+id).width() * 0.8,
-        'height': cy.$('#'+id).height() * 0.8,
+        displayResources.cy.nodes(`[id = "${id}"]`).style({
+        'width': displayResources.cy.$('#'+id).width() * 0.8,
+        'height': displayResources.cy.$('#'+id).height() * 0.8,
         });
 	    
-            if (cy.$("#" + id).json().data.class === 'greenConcept') {
-		cy.$("#"+id).json({data:{class:'concept'}});
-		cy.nodes(`[id = "${id}"]`).style({
+            if (displayResources.cy.$("#" + id).json().data.class === 'greenConcept') {
+		displayResources.cy.$("#"+id).json({data:{class:'concept'}});
+		displayResources.cy.nodes(`[id = "${id}"]`).style({
                     "background-color": '#ADD8E6',
                     "border-color": '#00008B'
 		});
@@ -283,8 +286,8 @@ function mouseout(evt, cy, toolKit) {
 	     node.json().data.class === 'flagImage' ||
 	     node.json().data.class === 'imageMap') {
 	
-	if (cy.$("#" + node.id()).hasClass('readyToCollapse')) {
-            cy.nodes(`[id = "${node.id()}"]`).style({
+	if (displayResources.cy.$("#" + node.id()).hasClass('readyToCollapse')) {
+            displayResources.cy.nodes(`[id = "${node.id()}"]`).style({
 		'width': node.width() * 0.1,
 		'height': node.height() * 0.1,
 		'z-index': '10',
@@ -295,9 +298,9 @@ function mouseout(evt, cy, toolKit) {
             y: displayResources.prevImagePositions.y
         });
 	    
-        cy.$("#" + node.id()).removeClass('readyToCollapse');
+        displayResources.cy.$("#" + node.id()).removeClass('readyToCollapse');
         if (node.json().data.class === 'imageMap') {
-            graphVisualizerTool.reLayoutCola(cy, toolKit);
+            graphVisualizerTool.reLayoutCola(toolKit);
         }
     }
     }

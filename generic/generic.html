@@ -29,9 +29,11 @@
     <script src="js/event.js"></script>    
     <script src="js/querying_functions.js"></script>
     <script src="js/node_functions.js"></script>
+    <script src="js/tree_implementation.js"></script>
     <script src="js/countyData.js"></script>
     <script src="js/imageMap.js"></script>
-    <script src="js/stateData.js"></script>        
+    <script src="js/stateData.js"></script>
+
 
     
   </head>
@@ -110,7 +112,7 @@
     <script>
       
       const orderedKeys = ['City', 'County', 'State', 'Region', 'Country', 'Continent'];
-      const link = "locatedInAdministrativeRegion";
+      const backBoneRelations = ["locatedInAdministrativeRegion"];
       const defaultCityName = 'Pittsburgh';
       
       let hierarchyPathTool = new HierarchyPathTool();
@@ -119,13 +121,13 @@
 
 
       /* Two arguments user inputs:
-	 @param {string} link: the hierarchy relation.
-	 Example: 'subtaxonOf', 'locatedInAdministrativeRegion'
+	 @param {string list} backBoneRelations: list of the hierarchy
+	 relations. Example: 'subtaxonOf', 'locatedInAdministrativeRegion'
 
 	 @param {string[]} orderedKeys: ordered list of concepts that defines the levels of the hierarchy.
 	 Example: ['City', 'County', 'State', 'Region', ...]
       */
-      let displayResources = new DisplayResources(link, orderedKeys);
+      let displayResources = new DisplayResources(backBoneRelations, orderedKeys);
 
       var toolKit = {};
       toolKit['displayResources'] = displayResources;
@@ -142,7 +144,7 @@
           if (e.which == 13) {
               var cityName = $("#queryName").val()
 	      // restart all variables in displayResources
-	      displayResources.reset(link, orderedKeys);
+	      displayResources.reset(backBoneRelations, orderedKeys);
 	      // initialize graph
               initializeToConcept(cityName, toolKit);
           }

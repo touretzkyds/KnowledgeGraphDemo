@@ -15,54 +15,67 @@ function initializeToConcept(conceptName, toolKit) {
     subGraphNavigatorTool = toolKit['subGraphNavigatorTool'];    
     graphVipsualizerTool = toolKit['graphVisualizerTool'];
 
+    
     // Function body    
-
 
     // Initializing the graph
     const url = propertyQuery(conceptName, true);    
     d3.json(url).then(function(data) {
-	console.log('Bindings: ', data.results.bindings);
 	// Setting to true the existence of currentNode type in addedBoolListByPriority
 	let value = data.results.bindings[0]['nodeType']['value'];
 	let type = value.split('/ontology/')[1];
 	displayResources.addedBoolListByPriority[type] = true;
-	console.log(displayResources.addedBoolListByPriority);
-
-	
+	    
 	/** Check if data is undefined **/
 	const binding = data.results.bindings;
 	if (binding === undefined || binding.length === 0) {
             alert('Please enter valid name.');
             return undefined;
 	}
+
+	// Getting node data to store in our tree root
+	let jsonData = getDataJSON(data);
+	if (jsonData == undefined) return;
+	var nodeData = jsonData[0];
 	
 	/** Continue **/
 	[cy, source] = getCytoscapeObjectAndSource(data, conceptName, toolKit);
+	displayResources.cy = cy;
 	
 	// INITIALIZE navHistory and navTools (initNav)
-	const navListPairsUrl = navHistoryListQuery(conceptName, displayResources.link);
+	const navListPairsUrl = navHistoryListQuery(conceptName, displayResources.backBoneRelations[0]);
 	d3.json(navListPairsUrl).then(function(data) {
 	    // Give initial values to some essential main variables
-	    displayResources.update('childrenTable', {});
+	    displayResources.childrenTable = {};
 	    let path = hierarchyPathTool.getRankedNavHistoryList(data, toolKit);
 
 	    
-	    displayResources.update('navHistoryList', path);	    
+	    displayResources.navHistoryList = path;
 	    displayResources.updateChildrenTable();
 	    
 	    // Initialize the nav history
-	    hierarchyPathTool.initNavHistory(cy, toolKit);
+	    hierarchyPathTool.initNavHistory(toolKit);
 
 	    // Initialize the nav tools
-	    subGraphNavigatorTool.initNavTools(cy, toolKit);
+	    subGraphNavigatorTool.initNavTools(toolKit);
 	});
 
 	// Determining the current node
-	displayResources.setAsCurrentNode(cy, source, false,
+	displayResources.setAsCurrentNode(source, false,
 					  toolKit, parentLabel="");
 
+
+	// Adding first node of tree datastructure
+	displayResources.treeRoot = new GraphVizNode(nodeData,
+						     displayResources.hierarchyLevel[type],
+						     displayResources.cy.$("#"+source)[0],
+						     true,
+						     false);
+
+
+	
 	// Drawing the actual graph with cola
-	graphVisualizerTool.reLayoutCola(cy, toolKit);
+	graphVisualizerTool.reLayoutCola(toolKit);
 	graphVisualizerTool.adjustImageSize(cy);
     });
 }
@@ -79,12 +92,12 @@ function initializeToConcept(conceptName, toolKit) {
  * and SubGraphNavigatorTool
  *
  * Constructor arguments:
- * @param {string} link: e.g. 'locatedInAdministrativeRegion'
+ * @param {string} backBoneRelation: e.g. 'locatedInAdministrativeRegion'
  * @param {list} orderedKeys: e.g. ['City', 'Region', ...]
  */
 class DisplayResources {
     /* The arguments handed to the constructor will narrow down the genericity */
-    constructor(link, orderedKeys){
+    constructor(backBoneRelations, orderedKeys){	
 	this.navHistoryList = [];
 
 	this.bnodeExpansionDataCache = {};
@@ -112,7 +125,7 @@ class DisplayResources {
 	
 
 	/* New variables added for genericity */
-	this.link = link;
+	this.backBoneRelations = backBoneRelations;
 
 
 	/* levelListByPriority example:
@@ -121,11 +134,14 @@ class DisplayResources {
 	   'State': ['Pennsylvania', 'New Mexico'],
 	   ...
 	   }
-	*/
-	this.levelListByPriority = {};
+	*/	
+	this.levelListByPriority = {};	
+
+	// This loop populates both variables above:
 	for (let i = 0; i < orderedKeys.length; i++){
 	    this.levelListByPriority[ orderedKeys[i] ] = [];
-	}
+	}	
+	
 	/* This dictionary encapsulates generically the previous code:
 	this.cityLevel = [];
 	this.countyLevel = [];
@@ -158,25 +174,33 @@ class DisplayResources {
 	
 	// Converting orderedKeys list to dictionary to make access easy
 	this.orderedKeys = orderedKeys;
-	this.adminAreaPriority = {};
+	this.hierarchyLevel = {};
 	
 	for (let i = 0; i < orderedKeys.length; i++){
-	    this.adminAreaPriority[ orderedKeys[i] ] = i+1;
-	}	
+	    this.hierarchyLevel[ orderedKeys[i] ] = i+1;
+	}
+	
 	/* Transforms user input list (orderedKeys) into dictionary
 	Encapsulates generically:
-	this.adminAreaPriority = {
+	this.hierarchyLevel = {
 	    "City": 1,
 	    "County": 2,
 	    "State": 3,
 	    "Region": 4,
 	    "Country": 5,
 	    "Continent": 6
-	};*/
+	    };*/
+
+	// tree datastructure storage
+	this.treeRoot = null;
+	
+
+	// cy object
+	this.cy = undefined;
     }
 
 
-    reset(link, orderedKeys){
+    reset(backBoneRelations, orderedKeys){	
 	this.navHistoryList = [];
 
 	this.bnodeExpansionDataCache = {};
@@ -204,7 +228,7 @@ class DisplayResources {
 	
 
 	/* New variables added for genericity */
-	this.link = link;
+	this.backBoneRelations = backBoneRelations;
 
 	this.levelListByPriority = {};
 	for (let i = 0; i < orderedKeys.length; i++){
@@ -215,52 +239,24 @@ class DisplayResources {
 	for (let i = 0; i < orderedKeys.length; i++){
 	    this.addedBoolListByPriority [ orderedKeys[i] ] = false;
 	}
+
 	
 	// Converting orderedKeys list to dictionary to make access easy
 	this.orderedKeys = orderedKeys;
-	this.adminAreaPriority = {};
+	this.hierarchyLevel = {};
 	
 	for (let i = 0; i < orderedKeys.length; i++){
-	    this.adminAreaPriority[ orderedKeys[i] ] = i+1;
-	}		
+	    this.hierarchyLevel[ orderedKeys[i] ] = i+1;
+	}
+
+	this.treeRoot = null;
+	
     }
 
     /* ----------------------------------------------------------------- */
 
     /* This section handles variable-update requests from the tools
        (HierarchyPathTool, SubGraphNavigatorTool, GraphVisualizerTool) */
-    /**
-     * 
-     * Handles all variable update requests (which will be stored in
-     * the database displayResources)
-     * 
-     *
-     * @param {string} variable: indicates variable we want to edit in
-     *                           the 'database'
-     * @param {any type} value: the new value we want to give the
-     *                          variable
-     * @pararm {int} index: the index we want to edit in case of
-     *                      changing a list its default value is -1
-     **/
-    update(variable, value, index = -1){
-	if (variable === 'conceptExpansionDataCache'){
-	    this.conceptExpansionDataCache[index] = value;
-	}
-	else if (variable === 'conceptNodeLabelToID'){
-	    this.conceptNodeLabelToID[index] = value;
-	}
-	else if (variable === 'childrenTable'){
-	    this.childrenTable = value;
-	}
-	else if (variable === 'navHistoryList' && index === -1){
-	    this.navHistoryList = value;
-	}
-	else if (variable === 'horizAlignments' && index === 'push'){
-	    this.horizAlignments.push(value);
-	}
-	
-	
-    }
     
     /**
      * 
@@ -331,13 +327,12 @@ class DisplayResources {
      * Updates both the HierarchyPathTool buttons and the
      * SubGraphNavigatorTool buttons
      * 
-     * @param {cytoscape object} cy: the cytoscape object
      * @param {string} parentLabel: label of the current node's parent
      * @param {list} labelsToBeRemoved: list of labels removed in cytoscape
      *              graph, need to be removed in childrenTable as well. Empty as default
      **/
 
-    updateNav(cy, parentLabel,
+    updateNav(parentLabel,
 	      toolKit,
 	      labelsToBeRemoved = []) {	
 	// Tool aliases
@@ -348,7 +343,6 @@ class DisplayResources {
 
 	// Function body
 	// this.currentLabel = this.currentNode.json().data.label;
-	// this.update('currentLabel', this.currentNode.json().data.label);
 
 	// currentConceptName example: 'Pittsburgh'
 	let currentConceptName = this.currentLabel.split("\nboltz:")[0];
@@ -359,23 +353,21 @@ class DisplayResources {
 	    subGraphNavigatorTool.updateNavTools(parentLabel, toolKit, []);
 	}	
 	else {
-	    const navListPairsUrl = navHistoryListQuery(currentConceptName, true);
+	    // const navListPairsUrl = navHistoryListQuery(currentConceptName, true); // BUG FOUND
+	    const navListPairsUrl = navHistoryListQuery(currentConceptName, displayResources.backBoneRelations[0]);
 	    
-
 	    /* Here we have to capture our object 'this' in a constant,
 	       because the scope of 'this' won't work inside the
 	       function d3.json(...).then(function(...){ ... })*/
 	    let vizTool = this;
-	    
 	    d3.json(navListPairsUrl).then(function(data){
-
 		let path = hierarchyPathTool.getRankedNavHistoryList(data, toolKit);
-		vizTool.update('navHistoryList', path, -1);
+		vizTool.navHistoryList = path;		
 
 		vizTool.updateChildrenTable();
 		
 		
-		hierarchyPathTool.initNavHistory(cy, toolKit);
+		hierarchyPathTool.initNavHistory(toolKit);
 
 		subGraphNavigatorTool.updateNavTools(parentLabel,
 						     toolKit,
@@ -394,11 +386,10 @@ class DisplayResources {
      * 4. (OPTIONAL: depends on third parameter):
      *    update nav history and nav tool
      * 
-     * @param {cytoscape object} cy: the cytoscape object
      * @param {string} id: id of the node to be set as current
      * @param {string} parentLabel: label of parent of the node to be set
      **/
-    setAsCurrentNode(cy, id, navUpdateRequired,
+    setAsCurrentNode(id, navUpdateRequired,
 		     toolKit,
 		     parentLabel="") {
 
@@ -411,31 +402,31 @@ class DisplayResources {
 
 	
 	// Function body	
-	cy.nodes().forEach(function( ele ){
+	displayResources.cy.nodes().forEach(function( ele ){
             if (ele.json().data.class === 'concept') {
-		cy.nodes(`[id = "${ele.id()}"]`).style({
+		displayResources.cy.nodes(`[id = "${ele.id()}"]`).style({
 		    "background-color": '#ADD8E6',
 		    "border-color": '#00008B'
 		});
             } else if (ele.json().data.class === 'dummyConcept') {
-		cy.nodes(`[id = "${ele.id()}"]`).style({
+		displayResources.cy.nodes(`[id = "${ele.id()}"]`).style({
 		    "background-color": '#FFFFFF',
 		    "border-color": '#ADD8E6',
 		});
             }
 	});
-	cy.nodes(`[id = "${id}"]`).style({
+	displayResources.cy.nodes(`[id = "${id}"]`).style({
             "background-color": 'red'
 	});
 	// Update current node
-	this.currentNode = cy.$("#"+id);
+	this.currentNode = displayResources.cy.$("#"+id);
 
 	// Update current label
 	this.currentLabel = this.currentNode.json().data.label;
 
 	// Update nav if required
 	if ( navUpdateRequired ) {
-	    this.updateNav(cy, parentLabel,
+	    this.updateNav(parentLabel,
 			   toolKit,
 			   []);
 	}
@@ -450,13 +441,12 @@ class DisplayResources {
      * 3. if has source node, update displayResources variable currentNode
      * 4. if has source node, update nav history and nav tool
      * 
-     * @param {cytoscape object} cy the cytoscape object
      * @param {string} id: id for the node whose source node to be set
      * @param {string[]} labelsToBeRemoved: labels of removed nodes,
      *                   used to remove labels in childrenTable
      **/
     
-    setSourceAsCurrentNode(cy, id, labelsToBeRemoved,
+    setSourceAsCurrentNode(id, labelsToBeRemoved,
 			   toolKit) {
 	// Tool aliases
 	displayResources = toolKit['displayResources'];
@@ -464,10 +454,10 @@ class DisplayResources {
 	subGraphNavigatorTool = toolKit['subGraphNavigatorTool'];    
 
 	// Function body	
-	let node = cy.$("#"+id);
-	cy.nodes().forEach(function( ele ){
+	let node = displayResources.cy.$("#"+id);
+	displayResources.cy.nodes().forEach(function( ele ){
             if (ele.json().data.class === 'concept') {
-		cy.nodes(`[id = "${ele.id()}"]`).style({
+		displayResources.cy.nodes(`[id = "${ele.id()}"]`).style({
 		    "background-color": '#ADD8E6',
 		    "border-color": '#00008B'
 		});
@@ -475,17 +465,17 @@ class DisplayResources {
 	});
 	const sourceID = node.json().data.sourceID;
 	if (sourceID !== undefined) {
-            cy.nodes(`[id = "${sourceID}"]`).style({
+            displayResources.cy.nodes(`[id = "${sourceID}"]`).style({
 		"background-color": 'red'
             });
 	    // Update current node
-            this.currentNode = cy.$("#"+sourceID);
+            this.currentNode = displayResources.cy.$("#"+sourceID);
 
 	    // Update current label
 	    this.currentLabel = this.currentNode.json().data.label;
 	    
 	    // Update navigation system
-	    this.updateNav(cy, "",
+	    this.updateNav("",
 			   toolKit,
 			   labelsToBeRemoved);
 	}
@@ -522,7 +512,7 @@ class HierarchyPathTool {
 	const binding = data.results.bindings;
 	if (binding.length === 0) {
 	    // navHistoryList = [];
-	    displayResources.update('navHistoryList', [], -1);	    
+	    displayResources.navHistoryList = [];	    
             return [];
 	}
 	// construct mapping from name to Qnumber
@@ -585,12 +575,10 @@ class HierarchyPathTool {
      * 2. Initialize new nav history BUTTONS according to a new
      *    navHistoryList
      *
-     * @param {object} cy: cytoscape object
      * @param {dictionary} toolKit: our dictionary with all our graph tools
      **/
 
-    initNavHistory(cy, toolKit) {
-
+    initNavHistory(toolKit) {
 	// Tool aliases
 	displayResources = toolKit['displayResources'];
 	hierarchyPathTool = toolKit['hierachyPathTool'];
@@ -618,7 +606,7 @@ class HierarchyPathTool {
 
 	    btn1.on ('click', function(e) {
 		try {
-		    navigateTo(cy, label, toolKit);
+		    graphVisualizerTool.navigateTo(label, toolKit);
 		} catch (e) {
 		    console.error(e);
 		}
@@ -641,7 +629,6 @@ class HierarchyPathTool {
     updateNavHistory(toolKit) {
 	// Tool aliases
 	displayResources = toolKit['displayResources'];
-
 	// Function body
 	let currentConceptName = displayResources.currentLabel.split("\nboltz:")[0];
 	
@@ -665,11 +652,10 @@ class SubGraphNavigatorTool {
      * 1. Reset nav tool buttons to be empty
      * 2. Initialize nav tools according to navHistoryList
      * 
-     * @param {object} cy: cytoscape object
      * @param {dictionary} toolKit: our dictionary with all our graph tools
      **/
 
-    initNavTools(cy, toolKit) {
+    initNavTools(toolKit) {
 	
 	// Tool aliases
 	displayResources = toolKit['displayResources'];
@@ -688,7 +674,7 @@ class SubGraphNavigatorTool {
 	     let label = $(this).attr("value");
 	     if (label !== undefined && label !== "") {
 		 try {
-		     navigateTo(cy, label, toolKit);
+		     graphVisualizerTool.navigateTo(label, toolKit);
 		 } catch (e) {
 		     console.error(e);
 		 }
@@ -746,9 +732,10 @@ class SubGraphNavigatorTool {
 	// e.g. label = Pittsburgh\nboltz:Q1342, region = Pittsburgh
 	let prevLabel = $("#nav-mid").attr("value");
 	let prevRegion = $("#nav-mid").text();
-	
-	displayResources.update('currentLabel', displayResources.currentNode.json().data.label);
 
+	displayResources.currentLabel = displayResources.currentNode.json().data.label;
+
+	
 	let currentConceptName = displayResources.currentLabel.split("\nboltz:")[0];
 
 	/* _2_ */
@@ -873,13 +860,172 @@ class SubGraphNavigatorTool {
 }
 
 
+class GraphVisualizerTool {
+    
+    /**
+     * 
+     * navigate the node with label=label
+     * if the node is already in graph, expand it, update it to be current node, and update nav his & hav tool
+     * otherwise navigate it through a link to the root. the default is "locatedInAdministrativeRegion"
+     * 
+     * @param {string} label: the label of the node to be navigated to
+     * @param {dictionary} toolKit: our dictionary with all our graph tools
+     *
+     **/
+    
+    navigateTo(label, toolKit) {    	
+	// Function body    
+	var node = getCyNodeByLabel(label);
+	
+	if (node !== undefined) {	
+	    expandHelper(node, toolKit);
+            return;
+	}
+	
+	navigateThrough(label, toolKit);
+    }
+    
 
-/* This class will be defined depending on the type of graph (non-generic)*/
-class GraphVisualizerTool { /* calls expert, which could be animal or city*/
 
-    /* should include expansion of nodes: how you do that expansion is domain specific. When graph visualizer tool handles a mouse click, will have to call expert to do the layout of the expansion for it*/
+    
 
-    /*Add as methods node-dealing functions*/
+    /**
+     * 
+     * close the node by removing property nodes who has zero outgoer
+     * 
+     * @param {string} id: the id for the node to which properties be removed
+     * @param {dictionary} toolKit: our dictionary with all our graph tools
+     *
+     **/    
+    closeConceptNode(id, toolKit) {
+	// Tool aliases
+	displayResources = toolKit['displayResources'];
+	
+	// Function
+	let currentNode = displayResources.cy.$("#"+id);
+	//outgoers include both edges and nodes
+	let currentIsDeleted = false;
+	let outgoers = currentNode.outgoers();
+	let labelsToBeRemoved = [];
+	for (let i = 0; i < outgoers.length; i++) {
+            let outgoer = outgoers[i];
+            if (outgoer.json().group === "edges" &&
+		outgoer.target().outgoers().length == 0) {
+		if (outgoer.target().id() === displayResources.currentNode.id()) {
+                    currentIsDeleted = true;
+		}
+		labelsToBeRemoved.push(outgoer.target().json().data.label);
+		displayResources.cy.remove(outgoer);
+		displayResources.cy.remove(outgoer.target());
+		
+		const label = outgoer.target().json().data.label;
+		if (displayResources.conceptNodeLabelToID[label] == outgoer.target().id()) {
+                    delete displayResources.conceptNodeLabelToID[label];
+		}
+            }
+	} 
+	reSetType(displayResources.cy, id);
+	let style = displayResources.cy.$('#'+id).style();
+	if (style['background-color'] === "rgb(255,0,0)" || currentIsDeleted) {
+            displayResources.setSourceAsCurrentNode(
+		id,
+		labelsToBeRemoved,
+		toolKit);
+	}
+    }
+
+
+
+    /**
+     * 
+     * expand the bnode by adding property nodes using bnodeData
+     * 
+     * @param {string} id: the id for the bnode to which properties be added
+     * @param {JSON} bnodeData
+     * @param {dictionary} toolKit: our dictionary with all our graph tools 
+     *
+     **/
+
+    expandbNode(id, bnodeData,
+		toolKit) {
+	// Tool aliases
+	displayResources = toolKit['displayResources'];
+	
+	// Function body
+	displayResources.bnodeExpansionDataCache[id] = bnodeData;
+	
+	if (displayResources.cy.$('#' + id).json().data.label == 'b0') {
+            bnodeData = bnodeData.b0;
+	} else {
+            bnodeData = bnodeData.b1;
+	}
+	let addedData = [];
+	const sourceX = displayResources.cy.$("#" + id).position('x');
+	const sourceY = displayResources.cy.$("#" + id).position('y');
+	const radius = 300;
+	let numOfKeys = 1;
+	Object.keys(bnodeData).forEach(function(key) {
+            numOfKeys++;
+	}) 
+	let count = 1;
+	Object.keys(bnodeData).forEach(function(key) {
+            const value = bnodeData[key];
+            // node info
+            var tempNode = {}
+            tempNode.group = "nodes";
+            const dataID = convertToNodeID(id, key, value);
+            tempNode.data = {id: dataID, label: value, class: 'bnode', type: displayResources.cy.$("#"+id).json().data.type};
+            tempNode.data.sourceID = id;
+            const radian = (Math.PI * 2 / numOfKeys) * count;  
+            const x = sourceX + radius * Math.sin(radian);
+            const y = sourceY - radius * Math.cos(radian);
+            tempNode.position = {x:x, y:y};
+            // edge info
+            var tempEdge = {}
+            tempEdge.group = "edges";
+            tempEdge.data = {id: convertToEdgeID(id, key, value), label: key, source: id, target: dataID};
+            addedData.push(tempNode);
+            addedData.push(tempEdge);
+            displayResources.cy.add(addedData);
+            addedData = [];
+            count++;
+	})
+	this.reLayoutCola(toolKit);
+    }
+    
+    
+
+    /**
+     * 
+     * close the bnode by removing property nodes
+     * 
+     * @param {string} id: the id for the bnode to which properties be removed
+     * @param {dictionary} toolKit: our dictionary with all our graph tools
+     *
+     **/
+    
+    closebNode(id, toolKit) {
+	// Tool aliases
+	displayResources = toolKit['displayResources'];
+	
+	// Function    
+	let bnodeData = displayResources.bnodeExpansionDataCache[id];
+	if (displayResources.cy.$('#' + id).json().data.label == 'b0') {
+            bnodeData = bnodeData.b0;
+	} else {
+            bnodeData = bnodeData.b1;
+	}
+	Object.keys(bnodeData).forEach(function(key) {
+            const value = bnodeData[key];
+            const nodeID = convertToNodeID(id, key, value);
+            const edgeID = convertToEdgeID(id, key, value);
+            displayResources.cy.remove(displayResources.cy.$('#' + edgeID));
+            displayResources.cy.remove(displayResources.cy.$('#' + nodeID));
+	})
+    }
+    
+    
+    
 
     
     /* ---------------- GRAPH STYLING FUNCTIONS ---------------------*/
@@ -889,16 +1035,15 @@ class GraphVisualizerTool { /* calls expert, which could be animal or city*/
      * 
      * relayout the whole graph with cola
      * 
-     * @param {cytoscape object} cy: the cytoscape object
      * @param {dictionary} toolKit: our dictionary with all our graph tools
      **/
     
-    reLayoutCola(cy, toolKit) { /*this function belongs to city expert visualizer*/
+    reLayoutCola(toolKit) {
 	// Tool aliases
 	displayResources = toolKit['displayResources'];
-	
+
 	// Function body	
-	var layout = cy.layout({
+	var options = {
             name: 'cola',
             avoidOverlap: false,
             edgeLength: 500,
@@ -906,16 +1051,21 @@ class GraphVisualizerTool { /* calls expert, which could be animal or city*/
             nodeDimensionsIncludeLabels: true,
             centerGraph:true,
             numIter: 100000,
-            alignment: {vertical: []// displayResources.vertAlignments
-			, horizontal: []// displayResources.horizAlignments
-		       }, // used to determine explicitly if nodes are related vertically/horizontally
-            gapInequalities: []// displayResources.nodeRelationships
-	    , // used to relatively establish the particular relationship between two nodes
+            alignment: {vertical: displayResources.vertAlignments 
+			,
+			horizontal: []// displayResources.horizAlignments
+		       },
+            gapInequalities: displayResources.nodeRelationships,
             handleDisconnected: false,
             animate: false,
-	});
+	}
+	var layout = displayResources.cy.layout(options);
+
+	// console.log('displayResources.vertRelationships at relayoutcola', displayResources.vertRelationships);
+	// console.log('displayResources.nodeRelationships at relayoutcola', displayResources.nodeRelationships);
+	
 	layout.start();
-}
+    }
 
     
     /**

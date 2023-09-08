@@ -240,7 +240,7 @@ function getNearestSubRegion(maps, name, normalizedX, normalizedY) {
   return [nearestRegion, concept];
 }
 
-function addSubRegion(evt, regionType, maps, cy, toolKit) {
+function addSubRegion(evt, regionType, maps, toolKit) {
     // Tool aliases
     displayResources = toolKit['displayResources'];
     hierarchyPathTool = toolKit['hierachyPathTool'];
@@ -250,7 +250,7 @@ function addSubRegion(evt, regionType, maps, cy, toolKit) {
     // Function body        
     console.log("Adding subregion");
     let node = evt.target;
-    let sourceNode = cy.$("#" + node.json().data.sourceID);
+    let sourceNode = displayResources.cy.$("#" + node.json().data.sourceID);
     let parentLabel = sourceNode.json().data.label;
     
     let normalizedX = getNormalizedPositions(evt).x;
@@ -258,7 +258,7 @@ function addSubRegion(evt, regionType, maps, cy, toolKit) {
     
     let id = node.json().data.sourceID;
     
-    let adminRegionName = cy.$("#" + id).json().data.label.split("\nboltz:")[0];
+    let adminRegionName = displayResources.cy.$("#" + id).json().data.label.split("\nboltz:")[0];
     
     let [subRegionName, subRegionConcept] = getNearestSubRegion(maps, adminRegionName, normalizedX, normalizedY);
     
@@ -287,8 +287,8 @@ function addSubRegion(evt, regionType, maps, cy, toolKit) {
 	}
     }
     const radius = 400;
-    const sourceX = cy.$("#" + id).position('x');
-    const sourceY = cy.$("#" + id).position('y');
+    const sourceX = displayResources.cy.$("#" + id).position('x');
+    const sourceY = displayResources.cy.$("#" + id).position('y');
     tempNode.position = { x: sourceX + radius, y: sourceY - radius };
     console.log(tempNode);
     addedData.push(tempNode);
@@ -301,9 +301,9 @@ function addSubRegion(evt, regionType, maps, cy, toolKit) {
     tempEdge.data.target = tempNode.data.id;
     console.log(tempEdge);
     addedData.push(tempEdge);
-    cy.add(addedData);
+    displayResources.cy.add(addedData);
     
-    graphVisualizerTool.reLayoutCola(cy);
+    graphVisualizerTool.reLayoutCola(toolKit);
     
     if (regionType === "Country") {
 	if (northeastRegion.has(subRegionName + '\n' + subRegionConcept)) {
@@ -319,18 +319,19 @@ function addSubRegion(evt, regionType, maps, cy, toolKit) {
 	    parentLabel = "Western United States\nboltz:Q12612";
 	}
     }
-    displayResources.setAsCurrentNode(cy, tempNode.data.id, parentLabel);
+    displayResources.setAsCurrentNode(tempNode.data.id, false,
+				      toolKit, parentLabel);
 }
 
-function addCountyFromState(evt, cy, toolKit) {
-    addSubRegion(evt, "State", stateImageMaps, cy, toolKit);
+function addCountyFromState(evt, toolKit) {
+    addSubRegion(evt, "State", stateImageMaps, toolKit);
 }
-function addStateFromRegion(evt, cy, toolKit) {
-    addSubRegion(evt, "Region", regionImageMaps, cy, toolKit);
+function addStateFromRegion(evt, toolKit) {
+    addSubRegion(evt, "Region", regionImageMaps, toolKit);
 }
-function addStateFromCountry(evt, cy, toolKit) {
-    addSubRegion(evt, "Country", countryImageMaps, cy, toolKit);
+function addStateFromCountry(evt, toolKit) {
+    addSubRegion(evt, "Country", countryImageMaps, toolKit);
 }
-function addRegionFromCountry(evt, cy, toolKit) {
-    addSubRegion(evt, "Country", countryToRegionImageMaps, cy, toolKit);
+function addRegionFromCountry(evt, toolKit) {
+    addSubRegion(evt, "Country", countryToRegionImageMaps, toolKit);
 }

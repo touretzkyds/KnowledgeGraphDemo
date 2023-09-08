@@ -133,9 +133,9 @@ function getNearestCounty(stateName, normalizedX, normalizedY) {
   for (let i = 0; i < data.length; i++) {
       let currCounty = data[i];
       let currDistance = distanceBetween(normalizedX, normalizedY, currCounty.x, currCounty.y);
-      if(currDistance < shortestDistance) {
-        shortestDistance = currDistance;
-        nearestCounty = currCounty.countyName;
+      if (currDistance < shortestDistance) {
+          shortestDistance = currDistance;
+          nearestCounty = currCounty.countyName;
       }
   }
   console.log(nearestCounty);
@@ -148,10 +148,9 @@ function getNearestCounty(stateName, normalizedX, normalizedY) {
  * add the clicked county node to the graph
  * 
  * @param {event} evt the clicking event
- * @param {cytoscape object} cy the cytoscape object
  * @param {dictionary} toolKit: our dictionary with all our graph tools 
  */
-function addCounty(evt, cy, toolKit) {
+function addCounty(evt, toolKit) {
     // Tool aliases
     displayResources = toolKit['displayResources'];
     hierarchyPathTool = toolKit['hierachyPathTool'];
@@ -160,7 +159,7 @@ function addCounty(evt, cy, toolKit) {
 
     // Function body
     let node = evt.target;
-    let sourceStateNode = cy.$("#"+node.json().data.sourceID);
+    let sourceStateNode = displayResources.cy.$("#"+node.json().data.sourceID);
     let parentLabel = sourceStateNode.json().data.label;
     
     let normalizedX = getNormalizedPositions(evt).x;
@@ -168,7 +167,7 @@ function addCounty(evt, cy, toolKit) {
     
     let id = node.json().data.sourceID;
     
-    let stateName = cy.$("#"+id).json().data.label.split("\nboltz:")[0];
+    let stateName = displayResources.cy.$("#"+id).json().data.label.split("\nboltz:")[0];
     
     let countyName = getNearestCounty(stateName, normalizedX, normalizedY);
     
@@ -192,8 +191,8 @@ function addCounty(evt, cy, toolKit) {
 	}
     }
     const radius = 400; 
-    const sourceX = cy.$("#" + id).position('x');
-    const sourceY = cy.$("#" + id).position('y');
+    const sourceX = displayResources.cy.$("#" + id).position('x');
+    const sourceY = displayResources.cy.$("#" + id).position('y');
     tempNode.position = {x:sourceX + radius, y:sourceY - radius};
     console.log(tempNode);
     addedData.push(tempNode);
@@ -206,9 +205,9 @@ function addCounty(evt, cy, toolKit) {
     tempEdge.data.target = tempNode.data.id;
     addedData.push(tempEdge);
     console.log(tempEdge);
-    cy.add(addedData);
+    displayResources.cy.add(addedData);
     
-    graphVisualizerTool.reLayoutCola(cy, toolKit);
-    displayResources.setAsCurrentNode(cy, tempNode.data.id, false,
+    graphVisualizerTool.reLayoutCola(toolKit);
+    displayResources.setAsCurrentNode(tempNode.data.id, false,
 				      toolKit, parentLabel);
 }
