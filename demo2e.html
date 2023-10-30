@@ -2552,8 +2552,6 @@
 
     // Shifts entire group of nodes in regards to one singular node
     function shift_nodes(id, desired_position) {
-      console.log('shift regards to:', id);
-      console.log('orig pos:', desired_position);
       let position = cy.$id(id).position();
       let position_to_add = {
         'x': desired_position['x'] - position['x'],
@@ -2877,7 +2875,6 @@
     }
 
     function display_ranks(id, rank, position, expand=false) {
-      console.log('rank:', rank);
       let url = all_ranks_query();
       var taxonomic_rank_nodes = [];
       var taxonomic_rank_edges = [];
@@ -3021,7 +3018,6 @@
         // Default view is collapsed view
         api.collapseAll();
         if (expand) {
-          console.log(cy.nodes(`[id = "${rank}"]`)[0]);
           api.expand(cy.nodes(`[id = "${rank}"]`)[0]);
         }
       });
@@ -3041,6 +3037,7 @@
       // Exec creates both general hierarchy and also the expandable ranks... 
       let url = hierarchy_query(ROOT_NAME, true);
       d3.json(url).then(function (json_result) {
+        console.log("display hierarchy called from exec");
         display_hierarchy(json_result, graphType, { given_data: 'null', taxon_value: "null" }, "root");
       });
 
@@ -3326,13 +3323,14 @@
 
       cy.on('cxttap', 'node[class = "rank hierarchy"]', function(event) { 
         let data = event.target.data();
-        console.log('right click data:', data);
+        console.log("parent:", data.parent);
+        api.collapse(cy.nodes(`[id = "${data.parent}"]`)[0]);
         var nodes_remove = cy.elements('node[class = "rank hierarchy"]');
         cy.remove(nodes_remove);
         num_lower_rank++;
         num_higher_rank++;
+        // console.log(data.parent_pos);
         display_ranks(data.parent_id, data.parent, data.parent_pos, expand=true);
-        
       });
 
       // Updating layout dimensions setting to avoid overlap
@@ -3648,7 +3646,6 @@
             prev_nodes_clicked = [];
           }
         } else {
-          console.log('data:', data);
           //OTHERWISE WE CLICKED A NODE
           if (data.type == "taxon") {
             let name = data.name;
@@ -3896,6 +3893,7 @@
 
 
       change_buttons(new_data, full_json, taxon_qval);
+      console.log("display hierarchy called from transform data");
       display_hierarchy(full_json, 'Concise', { given_data: new_data, taxon_value: taxon_qval }, taxon_qval);
       document.getElementById("Concise").style.background = 'green';
       document.getElementById("Full").style.background = 'black';
